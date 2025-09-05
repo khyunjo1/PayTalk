@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # PayTalk - 반찬 배달 플랫폼
 
 전문 반찬가게와 고객을 연결하는 스마트한 배달 플랫폼입니다.
@@ -94,3 +95,7 @@ src/
 - **전화**: 02-1234-5678
 - **이메일**: support@paytalk.co.kr
 - **운영시간**: 평일 09:00 - 18:00
+=======
+# PayTalk
+This project is a Korean side-dish delivery web app where users log in with Kakao, browse stores, add menus to cart, and place delivery or pickup orders with simulated KakaoPay. Store owners manage orders via their page, while a super admin dashboard lets the operator create stores, manage menus, and handle owner inquiries.
+>>>>>>> 856b227d129f3ff2dc9d567875ae7f9714a5a6f4
