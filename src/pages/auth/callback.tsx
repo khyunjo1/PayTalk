@@ -8,42 +8,53 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        // URL에서 인증 코드 추출
-        const urlParams = new URLSearchParams(window.location.search);
-        const code = urlParams.get('code');
-        const error = urlParams.get('error');
+        console.log('🔄 OAuth 콜백 처리 시작');
+        
+        // Supabase OAuth 콜백 처리
+        const { data, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('카카오 로그인 오류:', error);
+          console.error('❌ 세션 확인 오류:', error);
           navigate('/');
           return;
         }
         
-        if (code) {
-          // 세션 확인
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (data.session) {
+          console.log('✅ 로그인 성공:', data.session.user.email);
           
-          if (sessionError) {
-            console.error('세션 확인 오류:', sessionError);
-          }
-          
-          if (session) {
-            console.log('로그인 성공:', session.user);
+          // 사용자 프로필 확인 (빠른 체크)
+          try {
+            const { data: profileData } = await supabase
+              .from('users')
+              .select('role')
+              .eq('id', data.session.user.id)
+              .single();
+            
+            console.log('👤 사용자 역할:', profileData?.role);
+            
+            // 권한별 리다이렉트
+            if (profileData?.role === 'admin') {
+              console.log('🏪 관리자 - admin-dashboard로 이동');
+              navigate('/admin-dashboard');
+            } else {
+              console.log('👥 일반 사용자 - stores로 이동');
+              navigate('/stores');
+            }
+          } catch (profileError) {
+            console.log('⚠️ 프로필 확인 실패, 기본적으로 stores로 이동');
             navigate('/stores');
-          } else {
-            console.log('세션이 없음, 홈페이지로 이동');
-            navigate('/');
           }
         } else {
-          console.log('인증 코드 없음, 홈페이지로 이동');
+          console.log('❌ 세션이 없음, 홈페이지로 이동');
           navigate('/');
         }
       } catch (error) {
-        console.error('인증 콜백 처리 오류:', error);
+        console.error('❌ 인증 콜백 처리 오류:', error);
         navigate('/');
       }
     };
 
+    // 즉시 실행 (지연 제거)
     handleAuthCallback();
   }, [navigate]);
 

@@ -99,7 +99,7 @@ export default function Dashboard({ showToast }: DashboardProps) {
           <p className="text-sm text-gray-600 mb-4">새로운 매장을 추가하거나 기존 매장을 관리하세요</p>
           <button 
             onClick={() => showToast('매장 관리 페이지로 이동합니다')}
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg whitespace-nowrap cursor-pointer"
+            className="w-full bg-white hover:bg-orange-500 text-gray-700 hover:text-white py-2 px-4 rounded-lg whitespace-nowrap cursor-pointer border border-gray-300 hover:border-orange-500 transition-colors"
           >
             매장 관리하기
           </button>

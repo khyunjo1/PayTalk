@@ -50,6 +50,7 @@ export interface Database {
           name: string
           profile_image: string
           phone: string
+          role: 'customer' | 'owner' | 'admin'
           created_at: string
           updated_at: string
         }
@@ -59,6 +60,7 @@ export interface Database {
           name: string
           profile_image?: string
           phone?: string
+          role?: 'customer' | 'owner' | 'admin'
           created_at?: string
           updated_at?: string
         }
@@ -68,6 +70,33 @@ export interface Database {
           name?: string
           profile_image?: string
           phone?: string
+          role?: 'customer' | 'owner' | 'admin'
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      user_stores: {
+        Row: {
+          id: string
+          user_id: string
+          store_id: string
+          role: 'owner' | 'manager'
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          store_id: string
+          role?: 'owner' | 'manager'
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          store_id?: string
+          role?: 'owner' | 'manager'
           created_at?: string
           updated_at?: string
         }
@@ -143,10 +172,10 @@ export interface Database {
           store_id: string
           name: string
           price: number
-          description: string
           category: string
+          description: string | null
+          image_url: string | null
           is_available: boolean
-          image_url: string
           created_at: string
           updated_at: string
         }
@@ -155,10 +184,10 @@ export interface Database {
           store_id: string
           name: string
           price: number
-          description: string
           category: string
+          description?: string | null
+          image_url?: string | null
           is_available?: boolean
-          image_url: string
           created_at?: string
           updated_at?: string
         }
@@ -167,10 +196,10 @@ export interface Database {
           store_id?: string
           name?: string
           price?: number
-          description?: string
           category?: string
+          description?: string | null
+          image_url?: string | null
           is_available?: boolean
-          image_url?: string
           created_at?: string
           updated_at?: string
         }
@@ -251,26 +280,6 @@ export interface Database {
           menu_id?: string
           quantity?: number
           price?: number
-          created_at?: string
-        }
-      }
-      user_stores: {
-        Row: {
-          id: string
-          user_id: string
-          store_id: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          store_id: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          store_id?: string
           created_at?: string
         }
       }

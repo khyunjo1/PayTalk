@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 import Dashboard from './components/Dashboard';
 import StoreManagement from './components/StoreManagement';
 import MenuManagement from './components/MenuManagement';
@@ -19,16 +20,25 @@ const MENU_ITEMS = [
 
 export default function SuperAdmin() {
   const navigate = useNavigate();
+  const { user, userProfile, loading } = useAuth();
   const [activeMenu, setActiveMenu] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showToast, setShowToast] = useState('');
 
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem('isLoggedIn');
-    if (!isLoggedIn) {
+    if (!loading && (!user || !userProfile)) {
       navigate('/login');
+      return;
     }
-  }, [navigate]);
+
+    // 슈퍼 어드민 권한 확인
+    if (!loading && userProfile && userProfile.role !== 'super_admin') {
+      console.log('슈퍼 어드민 권한이 없습니다. /stores로 리다이렉트합니다.');
+      alert('슈퍼 어드민만 접근할 수 있는 페이지입니다.');
+      navigate('/stores');
+      return;
+    }
+  }, [user, userProfile, loading, navigate]);
 
   const showToastMessage = (message: string) => {
     setShowToast(message);
@@ -39,6 +49,39 @@ export default function SuperAdmin() {
     localStorage.removeItem('isLoggedIn');
     navigate('/login');
   };
+
+  // 로딩 중
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 권한 체크 (렌더링 전)
+  if (!user || !userProfile || userProfile.role !== 'super_admin') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+            <i className="ri-lock-line text-2xl text-red-600"></i>
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">접근 권한 없음</h2>
+          <p className="text-gray-600 mb-4">슈퍼 어드민만 접근할 수 있는 페이지입니다.</p>
+          <button
+            onClick={() => navigate('/stores')}
+            className="bg-white hover:bg-orange-500 text-gray-700 hover:text-white px-4 py-2 rounded-lg border border-gray-300 hover:border-orange-500 transition-colors"
+          >
+            홈으로 이동
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const renderContent = () => {
     switch (activeMenu) {

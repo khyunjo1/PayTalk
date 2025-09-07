@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { getStore, getMenus } from '../../lib/database';
 
 interface MenuItem {
   id: string;
@@ -15,267 +16,123 @@ interface CartItem extends MenuItem {
   quantity: number;
 }
 
-const MENU_DATA: { [storeId: string]: { store: any; menu: MenuItem[] } } = {
-  '1': {
-    store: {
-      id: '1',
-      name: '이천반찬',
-      category: '한식반찬',
-      deliveryArea: '강남구, 서초구',
-      deliveryFee: 2000,
-      phone: '031-123-4567',
-      businessHoursStart: '09:00',
-      businessHoursEnd: '21:00',
-      pickupTimeSlots: ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'],
-      deliveryTimeSlots: [
-        { name: '아침 배송', start: '08:00', end: '10:00', enabled: false },
-        { name: '점심 배송', start: '11:30', end: '14:00', enabled: true },
-        { name: '오후 배송', start: '14:30', end: '17:00', enabled: false },
-        { name: '저녁 배송', start: '17:30', end: '20:00', enabled: true }
-      ],
-      bankAccount: '123456-78-901234',
-      accountHolder: '이천반찬'
-    },
-    menu: [
-      {
-        id: 'm1',
-        name: '김치찌개',
-        price: 8000,
-        description: '매콤하고 시원한 김치찌개',
-        category: '메인메뉴',
-        isAvailable: true,
-        image: 'https://readdy.ai/api/search-image?query=Korean%20kimchi%20jjigae%20stew%20in%20traditional%20stone%20bowl%2C%20spicy%20red%20broth%20with%20kimchi%20and%20pork%2C%20steaming%20hot%2C%20garnished%20with%20green%20onions%2C%20simple%20white%20background%2C%20appetizing%20restaurant%20style%20photography&width=300&height=200&seq=m1&orientation=landscape'
-      },
-      {
-        id: 'm2',
-        name: '된장찌개',
-        price: 7000,
-        description: '구수한 된장찌개',
-        category: '메인메뉴',
-        isAvailable: true,
-        image: 'https://readdy.ai/api/search-image?query=Korean%20doenjang%20jjigae%20soybean%20paste%20stew%20in%20earthenware%20pot%2C%20rich%20brown%20broth%20with%20tofu%20and%20vegetables%2C%20traditional%20Korean%20comfort%20food%2C%20simple%20background%2C%20professional%20food%20photography&width=300&height=200&seq=m2&orientation=landscape'
-      },
-      {
-        id: 'm3',
-        name: '제육볶음',
-        price: 12000,
-        description: '매콤달콤한 제육볶음',
-        category: '메인메뉴',
-        isAvailable: false,
-        image: 'https://readdy.ai/api/search-image?query=Korean%20jeyuk%20bokkeum%20spicy%20stir-fried%20pork%20with%20vegetables%20and%20onions%2C%20glossy%20red%20sauce%2C%20served%20on%20white%20plate%2C%20garnished%20with%20sesame%20seeds%2C%20appetizing%20presentation%20with%20simple%20background&width=300&height=200&seq=m3&orientation=landscape'
-      },
-      {
-        id: 'm4',
-        name: '미역국',
-        price: 6000,
-        description: '시원한 미역국',
-        category: '국물요리',
-        isAvailable: true,
-        image: 'https://readdy.ai/api/search-image?query=Korean%20miyeok%20guk%20seaweed%20soup%20in%20white%20bowl%2C%20clear%20broth%20with%20fresh%20seaweed%2C%20light%20and%20healthy%20appearance%2C%20traditional%20Korean%20soup%2C%20clean%20white%20background%2C%20professional%20food%20photography&width=300&height=200&seq=m4&orientation=landscape'
-      },
-      {
-        id: 'm5',
-        name: '계란말이',
-        price: 5000,
-        description: '부드러운 계란말이',
-        category: '사이드메뉴',
-        isAvailable: true,
-        image: 'https://readdy.ai/api/search-image?query=Korean%20egg%20roll%20gyeran%20mari%20sliced%20and%20arranged%20on%20white%20plate%2C%20fluffy%20yellow%20omelet%20with%20scallions%2C%20clean%20presentation%2C%20simple%20white%20background%2C%20appetizing%20Korean%20side%20dish%20photography&width=300&height=200&seq=m5&orientation=landscape'
-      },
-      {
-        id: 'm6',
-        name: '배추김치',
-        price: 8000,
-        description: '아삭한 배추김치 1kg',
-        category: '김치류',
-        isAvailable: true,
-        image: 'https://readdy.ai/api/search-image?query=Fresh%20Korean%20napa%20cabbage%20kimchi%20in%20glass%20container%2C%20vibrant%20red%20color%20with%20visible%20chili%20flakes%2C%20traditional%20fermented%20vegetable%2C%20clean%20white%20background%2C%20professional%20food%20photography%20showing%20texture%20and%20freshness&width=300&height=200&seq=m6&orientation=landscape'
-      }
-    ]
-  },
-  '2': {
-    store: {
-      id: '2',
-      name: '맛있는 반찬집',
-      category: '한식반찬',
-      deliveryArea: '송파구, 강동구',
-      deliveryFee: 1500,
-      phone: '02-987-6543',
-      businessHoursStart: '08:00',
-      businessHoursEnd: '20:00',
-      pickupTimeSlots: ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'],
-      deliveryTimeSlots: [
-        { name: '아침 배송', start: '07:30', end: '10:00', enabled: true },
-        { name: '점심 배송', start: '11:30', end: '14:00', enabled: true },
-        { name: '오후 배송', start: '14:30', end: '17:00', enabled: true },
-        { name: '저녁 배송', start: '17:30', end: '19:30', enabled: true }
-      ],
-      bankAccount: '987654-32-109876',
-      accountHolder: '맛있는 반찬집'
-    },
-    menu: [
-      {
-        id: 'm7',
-        name: '부대찌개',
-        price: 9000,
-        description: '얼큰한 부대찌개',
-        category: '메인메뉴',
-        isAvailable: true,
-        image: 'https://readdy.ai/api/search-image?query=Korean%20budae%20jjigae%20army%20stew%20with%20sausages%2C%20spam%2C%20ramen%20noodles%2C%20kimchi%20in%20spicy%20red%20broth%2C%20served%20in%20metal%20pot%2C%20steaming%20hot%2C%20appetizing%20presentation%20with%20simple%20background&width=300&height=200&seq=m7&orientation=landscape'
-      },
-      {
-        id: 'm8',
-        name: '갈비탕',
-        price: 15000,
-        description: '진한 갈비탕',
-        category: '국물요리',
-        isAvailable: true,
-        image: 'https://readdy.ai/api/search-image?query=Korean%20galbitang%20beef%20short%20rib%20soup%20in%20white%20bowl%2C%20clear%20rich%20broth%20with%20tender%20meat%20and%20radish%2C%20garnished%20with%20scallions%2C%20traditional%20Korean%20soup%2C%20clean%20presentation%20with%20white%20background&width=300&height=200&seq=m8&orientation=landscape'
-      },
-      {
-        id: 'm9',
-        name: '동그랑땡',
-        price: 6000,
-        description: '바삭한 동그랑땡',
-        category: '사이드메뉴',
-        isAvailable: true,
-        image: 'https://readdy.ai/api/search-image?query=Korean%20donggeuraengttaeng%20fried%20fish%20cake%20patties%20golden%20brown%20and%20crispy%2C%20arranged%20on%20white%20plate%2C%20traditional%20Korean%20side%20dish%2C%20appetizing%20presentation%20with%20simple%20white%20background&width=300&height=200&seq=m9&orientation=landscape'
-      },
-      {
-        id: 'm10',
-        name: '깍두기',
-        price: 7000,
-        description: '아삭한 깍두기 1kg',
-        category: '김치류',
-        isAvailable: true,
-        image: 'https://readdy.ai/api/search-image?query=Korean%20kkakdugi%20cubed%20radish%20kimchi%20in%20glass%20container%2C%20white%20radish%20pieces%20with%20red%20chili%20seasoning%2C%20fresh%20and%20crunchy%20appearance%2C%20traditional%20fermented%20vegetable%2C%20clean%20white%20background%20photography&width=300&height=200&seq=m10&orientation=landscape'
-      }
-    ]
-  },
-  '3': {
-    store: {
-      id: '3',
-      name: '할머니 손맛',
-      category: '한식반찬',
-      deliveryArea: '마포구, 용산구',
-      deliveryFee: 2500,
-      phone: '02-333-4444',
-      businessHoursStart: '10:00',
-      businessHoursEnd: '18:00',
-      pickupTimeSlots: ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'],
-      deliveryTimeSlots: [
-        { name: '아침 배송', start: '08:00', end: '10:00', enabled: false },
-        { name: '점심 배송', start: '11:30', end: '14:00', enabled: true },
-        { name: '오후 배송', start: '14:30', end: '17:00', enabled: false },
-        { name: '저녁 배송', start: '17:30', end: '19:00', enabled: true }
-      ],
-      bankAccount: '555555-66-777777',
-      accountHolder: '할머니 손맛'
-    },
-    menu: [
-      {
-        id: 'm11',
-        name: '순두부찌개',
-        price: 8500,
-        description: '부드러운 순두부찌개',
-        category: '메인메뉴',
-        isAvailable: true,
-        image: 'https://readdy.ai/api/search-image?query=Korean%20sundubu%20jjigae%20soft%20tofu%20stew%20in%20stone%20bowl%2C%20silky%20white%20tofu%20in%20spicy%20red%20broth%2C%20garnished%20with%20scallions%20and%20egg%2C%20traditional%20Korean%20comfort%20food%2C%20simple%20background%20photography&width=300&height=200&seq=m11&orientation=landscape'
-      }
-    ]
-  },
-  '4': {
-    store: {
-      id: '4',
-      name: '건강반찬마켓',
-      category: '한식반찬',
-      deliveryArea: '성북구, 동대문구',
-      deliveryFee: 3000,
-      phone: '02-555-6666',
-      businessHoursStart: '11:00',
-      businessHoursEnd: '19:00',
-      pickupTimeSlots: ['11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'],
-      deliveryTimeSlots: [
-        { name: '아침 배송', start: '08:00', end: '10:00', enabled: false },
-        { name: '점심 배송', start: '11:30', end: '14:00', enabled: true },
-        { name: '오후 배송', start: '14:30', end: '17:00', enabled: true },
-        { name: '저녁 배송', start: '17:30', end: '19:00', enabled: true }
-      ],
-      bankAccount: '111111-22-333333',
-      accountHolder: '건강반찬마켓'
-    },
-    menu: [
-      {
-        id: 'm12',
-        name: '콩나물국',
-        price: 5500,
-        description: '시원한 콩나물국',
-        category: '국물요리',
-        isAvailable: true,
-        image: 'https://readdy.ai/api/search-image?query=Korean%20kongnamul%20guk%20bean%20sprout%20soup%20in%20white%20bowl%2C%20clear%20broth%20with%20fresh%20bean%20sprouts%2C%20light%20and%20refreshing%20Korean%20soup%2C%20clean%20white%20background%2C%20healthy%20appearance&width=300&height=200&seq=m12&orientation=landscape'
-      }
-    ]
-  },
-  '5': {
-    store: {
-      id: '5',
-      name: '전통반찬집',
-      category: '한식반찬',
-      deliveryArea: '중구, 종로구',
-      deliveryFee: 1800,
-      phone: '02-777-8888',
-      businessHoursStart: '10:00',
-      businessHoursEnd: '19:00',
-      pickupTimeSlots: ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'],
-      deliveryTimeSlots: [
-        { name: '아침 배송', start: '08:00', end: '10:00', enabled: false },
-        { name: '점심 배송', start: '11:30', end: '14:00', enabled: true },
-        { name: '오후 배송', start: '14:30', end: '17:00', enabled: true },
-        { name: '저녁 배송', start: '17:30', end: '19:00', enabled: true }
-      ],
-      bankAccount: '999999-88-777777',
-      accountHolder: '전통반찬집'
-    },
-    menu: [
-      {
-        id: 'm13',
-        name: '열무김치',
-        price: 6500,
-        description: '시원한 열무김치 1kg',
-        category: '김치류',
-        isAvailable: true,
-        image: 'https://readdy.ai/api/search-image?query=Korean%20yeolmu%20kimchi%20young%20radish%20kimchi%20in%20glass%20container%2C%20fresh%20green%20leaves%20with%20white%20radish%20in%20red%20seasoning%2C%20traditional%20fermented%20vegetable%2C%20clean%20white%20background%20photography&width=300&height=200&seq=m13&orientation=landscape'
-      }
-    ]
-  }
-};
-
 export default function Menu() {
   const navigate = useNavigate();
   const { storeId } = useParams();
-  const [selectedCategory, setSelectedCategory] = useState('메인메뉴');
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showToast, setShowToast] = useState('');
+  const [store, setStore] = useState<any>(null);
+  const [menu, setMenu] = useState<MenuItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const storeData = storeId ? MENU_DATA[storeId] : null;
-  const categories = ['메인메뉴', '국물요리', '사이드메뉴', '김치류'];
+  // 실제 메뉴 데이터에서 카테고리를 추출하여 존재하는 카테고리만 표시
+  const existingCategories = Array.from(new Set(menu.map(item => item.category))).filter(Boolean);
+  
+  // 실제 존재하는 카테고리만 표시 (하드코딩된 카테고리 제거)
+  const categories = existingCategories;
 
   useEffect(() => {
-    // 테스트용으로 로그인 체크 주석 처리
-    // const isLoggedIn = localStorage.getItem('isLoggedIn');
-    // if (!isLoggedIn) {
-    //   navigate('/login');
-    //   return;
-    // }
+    const loadStoreData = async () => {
+      if (!storeId) {
+        navigate('/stores');
+        return;
+      }
 
-    if (!storeData) {
-      navigate('/stores');
-    }
-  }, [storeData, navigate]);
+      try {
+        setLoading(true);
+        const [storeData, menuData] = await Promise.all([
+          getStore(storeId),
+          getMenus(storeId)
+        ]);
 
-  if (!storeData) return null;
+        if (!storeData) {
+          navigate('/stores');
+          return;
+        }
 
-  const filteredMenu = storeData.menu.filter(item => item.category === selectedCategory);
+        setStore(storeData);
+        
+        // 데이터베이스 필드명을 프론트엔드 필드명으로 매핑
+        const mappedMenuData = menuData.map(menu => ({
+          ...menu,
+          isAvailable: menu.is_available, // snake_case → camelCase
+          image: menu.image_url || '/placeholder-food.jpg'
+        }));
+        
+        setMenu(mappedMenuData);
+        
+        // 디버깅 로그 추가
+        console.log('🏪 매장 정보:', storeData);
+        console.log('🍽️ 원본 메뉴 데이터:', menuData);
+        console.log('🍽️ 매핑된 메뉴 데이터:', mappedMenuData);
+        console.log('📊 메뉴 개수:', menuData?.length || 0);
+        
+        // 각 메뉴의 상세 정보 출력
+        if (mappedMenuData && mappedMenuData.length > 0) {
+          mappedMenuData.forEach((menu, index) => {
+            console.log(`🍽️ 메뉴 ${index + 1}:`, {
+              id: menu.id,
+              name: menu.name,
+              category: menu.category,
+              price: menu.price,
+              isAvailable: menu.isAvailable,
+              is_available: menu.is_available
+            });
+          });
+        }
+        
+        if (mappedMenuData && mappedMenuData.length > 0) {
+          const categories = Array.from(new Set(mappedMenuData.map(item => item.category))).filter(Boolean);
+          console.log('📂 실제 카테고리들:', categories);
+          
+          // 각 카테고리별 메뉴 개수 확인
+          categories.forEach(category => {
+            const categoryMenus = mappedMenuData.filter(item => item.category === category);
+            console.log(`📁 ${category}: ${categoryMenus.length}개 메뉴`, categoryMenus.map(m => m.name));
+          });
+        }
+        
+        // 첫 번째 카테고리를 기본 선택으로 설정 (메뉴가 있으면 해당 카테고리, 없으면 첫 번째 카테고리)
+        if (mappedMenuData && mappedMenuData.length > 0) {
+          const firstCategory = Array.from(new Set(mappedMenuData.map(item => item.category))).filter(Boolean)[0];
+          if (firstCategory) {
+            setSelectedCategory(firstCategory);
+            console.log('🎯 기본 선택 카테고리:', firstCategory);
+          }
+        } else {
+          // 메뉴가 없으면 빈 문자열로 설정
+          setSelectedCategory('');
+          console.log('🎯 메뉴 없음, 카테고리 선택 안함');
+        }
+      } catch (error) {
+        console.error('매장 데이터 로드 오류:', error);
+        navigate('/stores');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStoreData();
+  }, [storeId, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!store) return null;
+
+  // 카테고리가 없으면 모든 메뉴를 표시
+  const filteredMenu = selectedCategory 
+    ? menu.filter(item => item.category === selectedCategory)
+    : menu;
   const totalQuantity = cart.reduce((sum, item) => sum + item.quantity, 0);
   const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
@@ -283,6 +140,7 @@ export default function Menu() {
     if (!menuItem.isAvailable) return;
 
     const existingItem = cart.find(item => item.id === menuItem.id);
+
     if (existingItem) {
       setCart(cart.map(item => 
         item.id === menuItem.id 
@@ -293,144 +151,140 @@ export default function Menu() {
       setCart([...cart, { ...menuItem, quantity: 1 }]);
     }
 
-    setShowToast(`${menuItem.name}이 장바구니에 추가되었습니다`);
+    setShowToast(`${menuItem.name}이(가) 장바구니에 추가되었습니다.`);
     setTimeout(() => setShowToast(''), 2000);
   };
 
-  const updateQuantity = (itemId: string, newQuantity: number) => {
-    if (newQuantity === 0) {
-      setCart(cart.filter(item => item.id !== itemId));
-    } else {
-      setCart(cart.map(item =>
-        item.id === itemId ? { ...item, quantity: newQuantity } : item
-      ));
+  const removeFromCart = (menuItemId: string) => {
+    setCart(cart.filter(item => item.id !== menuItemId));
+  };
+
+  const updateQuantity = (menuItemId: string, quantity: number) => {
+    if (quantity <= 0) {
+      removeFromCart(menuItemId);
+      return;
     }
+
+    setCart(cart.map(item => 
+      item.id === menuItemId 
+        ? { ...item, quantity }
+        : item
+    ));
   };
 
   const handleCartClick = () => {
     localStorage.setItem('cart', JSON.stringify(cart));
-    localStorage.setItem('storeInfo', JSON.stringify(storeData.store));
+    localStorage.setItem('storeInfo', JSON.stringify(store));
     navigate('/cart');
   };
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* 헤더 */}
-      <div className="bg-white shadow-sm border-b sticky top-0 z-40">
-        <div className="px-4 py-4">
-          <div className="flex items-center justify-between mb-4">
+      <div className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="px-4 py-3">
+          <div className="flex items-center justify-between">
             <button
               onClick={() => navigate('/stores')}
               className="p-2 hover:bg-gray-100 rounded-lg cursor-pointer"
             >
               <i className="ri-arrow-left-line text-xl"></i>
             </button>
-            <h1 className="text-lg font-semibold text-center flex-1">{storeData.store.name}</h1>
+            <h1 className="text-lg font-semibold text-center flex-1">{store.name}</h1>
             <div className="w-10"></div>
           </div>
           
           <div className="text-center space-y-2">
-            <p className="text-sm text-gray-600">{storeData.store.category}</p>
+            <p className="text-sm text-gray-600">{store.category}</p>
             <div className="flex items-center justify-center gap-4 text-xs text-gray-500">
               <div className="flex items-center gap-1">
                 <i className="ri-map-pin-line"></i>
-                <span>{storeData.store.deliveryArea}</span>
+                <span>{store.delivery_area}</span>
               </div>
               <div className="flex items-center gap-1">
                 <i className="ri-truck-line"></i>
-                <span>배달비 {storeData.store.deliveryFee.toLocaleString()}원</span>
+                <span>배달비 {store.delivery_fee.toLocaleString()}원</span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 카테고리 탭 */}
-      <div className="bg-white border-b">
-        <div className="flex overflow-x-auto">
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
-              className={`px-4 py-3 whitespace-nowrap text-sm font-medium border-b-2 cursor-pointer ${
-                selectedCategory === category
-                  ? 'border-orange-500 text-orange-500'
-                  : 'border-transparent text-gray-600 hover:text-gray-800'
-              }`}
-            >
-              {category}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 메뉴 목록 */}
-      <div className="p-4">
-        <div className="space-y-4">
-          {filteredMenu.map((item) => {
-            const cartItem = cart.find(cartItem => cartItem.id === item.id);
-            return (
-              <div
-                key={item.id}
-                className={`bg-white rounded-lg shadow-sm overflow-hidden ${
-                  !item.isAvailable ? 'opacity-60' : ''
+      {/* 카테고리 탭 - 실제 존재하는 카테고리만 표시 */}
+      {categories.length > 0 && (
+        <div className="bg-white px-4 py-3 border-b">
+          <div className="flex space-x-1 overflow-x-auto">
+            {categories.map(category => (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                  selectedCategory === category
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
-                <div className="flex">
+                {category}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 메뉴 목록 */}
+      <div className="px-4 py-4 space-y-4">
+        {filteredMenu.length === 0 ? (
+          <div className="text-center py-8">
+            <i className="ri-restaurant-line text-4xl text-gray-300 mb-2"></i>
+            <p className="text-gray-500">이 카테고리에 메뉴가 없습니다.</p>
+          </div>
+        ) : (
+          filteredMenu.map(item => (
+            <div key={item.id} className="bg-white rounded-lg p-4 shadow-sm">
+              <div className="flex gap-4">
+                <div className="w-20 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
                   <img
-                    src={item.image}
+                    src={item.image || '/placeholder-food.jpg'}
                     alt={item.name}
-                    className="w-24 h-24 object-cover object-top"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = '/placeholder-food.jpg';
+                    }}
                   />
-                  <div className="flex-1 p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h3 className={`font-semibold ${!item.isAvailable ? 'text-gray-400' : 'text-gray-800'}`}>
-                          {item.name}
-                          {!item.isAvailable && <span className="text-red-500 text-sm ml-2">(품절)</span>}
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-1">{item.description}</p>
-                        <p className="font-semibold text-orange-500">{item.price.toLocaleString()}원</p>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-3">
-                      {cartItem ? (
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => updateQuantity(item.id, cartItem.quantity - 1)}
-                            className="w-8 h-8 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded-full cursor-pointer"
-                          >
-                            <i className="ri-subtract-line text-sm"></i>
-                          </button>
-                          <span className="font-semibold">{cartItem.quantity}</span>
-                          <button
-                            onClick={() => updateQuantity(item.id, cartItem.quantity + 1)}
-                            className="w-8 h-8 flex items-center justify-center bg-orange-500 hover:bg-orange-600 text-white rounded-full cursor-pointer"
-                          >
-                            <i className="ri-add-line text-sm"></i>
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => addToCart(item)}
-                          disabled={!item.isAvailable}
-                          className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap cursor-pointer ${
-                            item.isAvailable
-                              ? 'bg-orange-500 hover:bg-orange-600 text-white'
-                              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          }`}
-                        >
-                          {item.isAvailable ? '담기' : '품절'}
-                        </button>
-                      )}
-                    </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-start mb-1">
+                    <h3 className="font-medium text-gray-900 truncate">{item.name}</h3>
+                    <span className="text-orange-500 font-semibold ml-2">
+                      {item.price.toLocaleString()}원
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-2 line-clamp-2">{item.description}</p>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      item.isAvailable 
+                        ? 'bg-green-100 text-green-600' 
+                        : 'bg-red-100 text-red-600'
+                    }`}>
+                      {item.isAvailable ? '주문가능' : '품절'}
+                    </span>
+                    <button
+                      onClick={() => addToCart(item)}
+                      disabled={!item.isAvailable}
+                      className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                        item.isAvailable
+                          ? 'bg-white hover:bg-orange-500 text-gray-700 hover:text-white border border-gray-300 hover:border-orange-500'
+                          : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      {item.isAvailable ? '담기' : '품절'}
+                    </button>
                   </div>
                 </div>
               </div>
-            );
-          })}
-        </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* 장바구니 버튼 */}
@@ -438,20 +292,17 @@ export default function Menu() {
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4">
           <button
             onClick={handleCartClick}
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white py-4 px-4 rounded-lg flex items-center justify-between whitespace-nowrap cursor-pointer"
+            className="w-full bg-white hover:bg-orange-500 text-gray-700 hover:text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2 border border-gray-300 hover:border-orange-500 transition-colors"
           >
-            <div className="flex items-center">
-              <i className="ri-shopping-cart-line mr-2"></i>
-              <span>장바구니 ({totalQuantity})</span>
-            </div>
-            <span className="font-semibold">{totalAmount.toLocaleString()}원</span>
+            <i className="ri-shopping-cart-line"></i>
+            장바구니 ({totalQuantity}) - {totalAmount.toLocaleString()}원
           </button>
         </div>
       )}
 
       {/* 토스트 메시지 */}
       {showToast && (
-        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-black text-white px-4 py-2 rounded-lg text-sm z-50">
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-lg text-sm z-50">
           {showToast}
         </div>
       )}

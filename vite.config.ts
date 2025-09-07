@@ -78,8 +78,13 @@ export default defineConfig({
   server: {
     port: 3000,
     host: '0.0.0.0',
+    strictPort: true, // 포트가 사용 중이면 에러 발생
     hmr: {
       overlay: false
     }
+  },
+  preview: {
+    port: 3000,
+    host: '0.0.0.0'
   }
 })

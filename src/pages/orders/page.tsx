@@ -1,22 +1,40 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
+import { getUserOrders } from '../../lib/orderApi';
 
 interface Order {
-  orderId: string;
-  storeInfo: {
+  id: string;
+  user_id: string;
+  store_id: string;
+  order_type: 'delivery' | 'pickup';
+  delivery_address?: string;
+  delivery_time?: string;
+  pickup_time?: string;
+  special_requests?: string;
+  depositor_name?: string;
+  subtotal: number;
+  delivery_fee: number;
+  total: number;
+  status: '입금대기' | '입금확인' | '배달완료';
+  created_at: string;
+  updated_at: string;
+  stores: {
+    id: string;
     name: string;
     phone: string;
   };
-  cart: Array<{
-    name: string;
-    price: number;
+  order_items: Array<{
+    id: string;
+    menu_id: string;
     quantity: number;
+    price: number;
+    menus: {
+      id: string;
+      name: string;
+    };
   }>;
-  orderDate: string;
-  status: string;
-  paymentMethod: 'bank' | 'card';
-  total: number;
 }
 
 const STATUS_COLORS = {
@@ -34,20 +52,36 @@ const PAYMENT_ICONS = {
 
 export default function Orders() {
   const navigate = useNavigate();
+  const { user, userProfile, loading } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
 
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem('isLoggedIn');
-    if (!isLoggedIn) {
+    // 로딩 중이면 대기
+    if (loading) return;
+
+    // 로그인하지 않은 사용자는 로그인 페이지로
+    if (!user) {
       navigate('/login');
       return;
     }
 
-    const savedOrders = localStorage.getItem('orders');
-    if (savedOrders) {
-      setOrders(JSON.parse(savedOrders));
-    }
-  }, [navigate]);
+    // 주문 데이터 로드
+    const loadOrders = async () => {
+      try {
+        setLoadingOrders(true);
+        const userOrders = await getUserOrders(user.id);
+        console.log('사용자 주문 목록:', userOrders);
+        setOrders(userOrders);
+      } catch (error) {
+        console.error('주문 데이터 로드 오류:', error);
+      } finally {
+        setLoadingOrders(false);
+      }
+    };
+
+    loadOrders();
+  }, [user, loading, navigate]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -60,10 +94,46 @@ export default function Orders() {
     };
   };
 
+  // 로딩 중
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">인증 정보를 확인하는 중...</p>
+        </div>
+      </div>
+    );
+  }
+
   const completedOrders = orders.filter(order => order.status === '배달완료').length;
   const totalAmount = orders
     .filter(order => order.status === '배달완료')
     .reduce((sum, order) => sum + order.total, 0);
+
+  if (loadingOrders) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white shadow-sm border-b">
+          <div className="px-4 py-4 flex items-center">
+            <button
+              onClick={() => navigate('/stores')}
+              className="p-2 hover:bg-gray-100 rounded-lg cursor-pointer"
+            >
+              <i className="ri-arrow-left-line text-xl"></i>
+            </button>
+            <h1 className="text-lg font-semibold ml-2">주문내역</h1>
+          </div>
+        </div>
+        <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
+            <p className="text-gray-600">주문 데이터를 불러오는 중...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (orders.length === 0) {
     return (
@@ -136,40 +206,41 @@ export default function Orders() {
         {/* 주문 목록 */}
         <div className="space-y-4">
           {orders.map((order) => {
-            const { date, time } = formatDate(order.orderDate);
+            const { date, time } = formatDate(order.created_at);
             return (
-              <div key={order.orderId} className="bg-white rounded-lg shadow-sm overflow-hidden">
+              <div key={order.id} className="bg-white rounded-lg shadow-sm overflow-hidden">
                 <div className="p-4">
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <h3 className="font-semibold text-gray-800">{order.storeInfo.name}</h3>
+                      <h3 className="font-semibold text-gray-800">{order.stores.name}</h3>
                       <div className="text-sm text-gray-500 mt-1">
                         <div>{date} {time}</div>
-                        <div>주문번호: {order.orderId}</div>
+                        <div>주문번호: {order.id.substring(0, 8)}...</div>
+                        <div>주문방식: {order.order_type === 'delivery' ? '배달' : '픽업'}</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        STATUS_COLORS[order.status as keyof typeof STATUS_COLORS]
+                        STATUS_COLORS[order.status as keyof typeof STATUS_COLORS] || 'bg-gray-100 text-gray-800'
                       }`}>
                         {order.status}
                       </span>
-                      <i className={`${PAYMENT_ICONS[order.paymentMethod]} text-gray-500`}></i>
+                      <i className="ri-bank-line text-gray-500"></i>
                     </div>
                   </div>
 
                   <div className="border-t pt-3">
                     <div className="space-y-1 mb-3">
-                      {order.cart.map((item, index) => (
+                      {order.order_items?.map((item, index) => (
                         <div key={index} className="flex justify-between text-sm">
                           <span className="text-gray-600">
-                            {item.name} x {item.quantity}
+                            {item.menus.name} x {item.quantity}
                           </span>
                           <span className="text-gray-800">
                             {(item.price * item.quantity).toLocaleString()}원
                           </span>
                         </div>
-                      ))}
+                      )) || <div className="text-gray-500 text-sm">주문 상품 정보 없음</div>}
                     </div>
                     
                     <div className="flex justify-between items-center pt-2 border-t">
@@ -180,11 +251,35 @@ export default function Orders() {
                     </div>
                   </div>
 
-                  {/* 매장 연락처 */}
-                  <div className="mt-3 pt-3 border-t">
+                  {/* 주문 상세 정보 */}
+                  <div className="mt-3 pt-3 border-t space-y-2">
+                    {order.delivery_address && (
+                      <div className="flex items-center text-sm text-gray-600">
+                        <i className="ri-map-pin-line mr-2"></i>
+                        <span>배달주소: {order.delivery_address}</span>
+                      </div>
+                    )}
+                    {order.delivery_time && (
+                      <div className="flex items-center text-sm text-gray-600">
+                        <i className="ri-time-line mr-2"></i>
+                        <span>배달시간: {order.delivery_time}</span>
+                      </div>
+                    )}
+                    {order.pickup_time && (
+                      <div className="flex items-center text-sm text-gray-600">
+                        <i className="ri-time-line mr-2"></i>
+                        <span>픽업시간: {order.pickup_time}</span>
+                      </div>
+                    )}
+                    {order.special_requests && (
+                      <div className="flex items-center text-sm text-gray-600">
+                        <i className="ri-message-line mr-2"></i>
+                        <span>요청사항: {order.special_requests}</span>
+                      </div>
+                    )}
                     <div className="flex items-center text-sm text-gray-600">
                       <i className="ri-phone-line mr-2"></i>
-                      <span>매장 문의: {order.storeInfo.phone}</span>
+                      <span>매장 문의: {order.stores.phone}</span>
                     </div>
                   </div>
                 </div>

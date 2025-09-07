@@ -1,53 +1,110 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
 
 interface OrderData {
-  orderId: string;
-  storeInfo: {
+  id: string;
+  status: string;
+  order_type: 'delivery' | 'pickup';
+  delivery_address?: string;
+  delivery_time?: string;
+  pickup_time?: string;
+  special_requests?: string;
+  depositor_name: string;
+  subtotal: number;
+  delivery_fee: number;
+  total: number;
+  created_at: string;
+  stores: {
     name: string;
     phone: string;
+    bank_account: string;
+    account_holder: string;
   };
-  cart: Array<{
-    name: string;
-    price: number;
+  order_items: Array<{
     quantity: number;
+    price: number;
+    menus: {
+      name: string;
+    };
   }>;
-  paymentMethod: 'bank' | 'card';
-  subtotal: number;
-  deliveryFee: number;
-  total: number;
-  depositorName?: string;
 }
 
 export default function OrderComplete() {
   const navigate = useNavigate();
+  const { orderId } = useParams();
   const [orderData, setOrderData] = useState<OrderData | null>(null);
+  const [loading, setLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState(30 * 60); // 30분
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem('isLoggedIn');
-    if (!isLoggedIn) {
-      navigate('/login');
-      return;
-    }
+    const loadOrderData = async () => {
+      if (!orderId) {
+        navigate('/stores');
+        return;
+      }
 
-    const currentOrder = localStorage.getItem('currentOrder');
-    if (currentOrder) {
-      setOrderData(JSON.parse(currentOrder));
-    } else {
-      navigate('/stores');
-    }
-  }, [navigate]);
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('orders')
+          .select(`
+            *,
+            stores (
+              name,
+              phone,
+              bank_account,
+              account_holder
+            ),
+            order_items (
+              quantity,
+              price,
+              menus (
+                name
+              )
+            )
+          `)
+          .eq('id', orderId)
+          .single();
+
+        if (error) {
+          console.error('주문 정보 가져오기 오류:', error);
+          navigate('/stores');
+          return;
+        }
+
+        setOrderData(data);
+      } catch (error) {
+        console.error('주문 정보 로드 오류:', error);
+        navigate('/stores');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadOrderData();
+  }, [orderId, navigate]);
 
   useEffect(() => {
-    if (orderData?.paymentMethod === 'bank' && timeLeft > 0) {
+    if (orderData?.status === '입금대기' && timeLeft > 0) {
       const timer = setInterval(() => {
         setTimeLeft(prev => prev - 1);
       }, 1000);
       return () => clearInterval(timer);
     }
   }, [orderData, timeLeft]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">주문 정보를 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!orderData) return null;
 
@@ -58,9 +115,11 @@ export default function OrderComplete() {
   };
 
   const copyAccountNumber = () => {
-    navigator.clipboard.writeText('123456-78-901234');
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (orderData?.stores?.bank_account) {
+      navigator.clipboard.writeText(orderData.stores.bank_account);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   return (
@@ -76,12 +135,12 @@ export default function OrderComplete() {
         <div className="bg-white rounded-lg p-6 text-center">
           <i className="ri-check-double-line text-4xl text-green-500 mb-3"></i>
           <h2 className="text-xl font-semibold text-gray-800 mb-2">주문이 완료되었습니다!</h2>
-          <p className="text-gray-600 mb-4">주문번호: {orderData.orderId}</p>
-          <p className="text-sm text-gray-500">{orderData.storeInfo.name}</p>
+          <p className="text-gray-600 mb-4">주문번호: {orderData.id}</p>
+          <p className="text-sm text-gray-500">{orderData.stores.name}</p>
         </div>
 
         {/* 결제 방법별 안내 */}
-        {orderData.paymentMethod === 'bank' ? (
+        {orderData.status === '입금대기' ? (
           <div className="bg-white rounded-lg p-4">
             <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
               <i className="ri-bank-line mr-2"></i>
@@ -100,7 +159,7 @@ export default function OrderComplete() {
               <div className="bg-gray-50 rounded-lg p-3">
                 <div className="text-sm text-gray-600 mb-2">입금 계좌</div>
                 <div className="flex items-center justify-between">
-                  <div className="font-medium">국민은행 123456-78-901234</div>
+                  <div className="font-medium">{orderData.stores.account_holder} {orderData.stores.bank_account}</div>
                   <button
                     onClick={copyAccountNumber}
                     className="text-orange-500 hover:text-orange-600 cursor-pointer"
@@ -180,9 +239,9 @@ export default function OrderComplete() {
         <div className="bg-white rounded-lg p-4">
           <h3 className="font-semibold text-gray-800 mb-3">주문 상세</h3>
           <div className="space-y-2">
-            {orderData.cart.map((item, index) => (
+            {orderData.order_items.map((item, index) => (
               <div key={index} className="flex justify-between text-sm">
-                <span>{item.name} x {item.quantity}</span>
+                <span>{item.menus.name} x {item.quantity}</span>
                 <span>{(item.price * item.quantity).toLocaleString()}원</span>
               </div>
             ))}
@@ -193,7 +252,7 @@ export default function OrderComplete() {
               </div>
               <div className="flex justify-between text-sm">
                 <span>배달비</span>
-                <span>{orderData.deliveryFee.toLocaleString()}원</span>
+                <span>{orderData.delivery_fee.toLocaleString()}원</span>
               </div>
               <div className="flex justify-between font-semibold border-t pt-2 mt-2">
                 <span>총 결제 금액</span>
@@ -209,11 +268,11 @@ export default function OrderComplete() {
           <div className="space-y-2">
             <div className="flex items-center">
               <i className="ri-store-3-line text-gray-500 mr-2"></i>
-              <span>{orderData.storeInfo.name}</span>
+              <span>{orderData.stores.name}</span>
             </div>
             <div className="flex items-center">
               <i className="ri-phone-line text-gray-500 mr-2"></i>
-              <span>{orderData.storeInfo.phone}</span>
+              <span>{orderData.stores.phone}</span>
             </div>
           </div>
         </div>

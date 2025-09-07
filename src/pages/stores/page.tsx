@@ -1,14 +1,30 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { getStores } from '../../lib/storeApi';
+import { supabase } from '../../lib/supabase';
 
 interface Store {
   id: string;
   name: string;
   category: string;
-  deliveryArea: string;
-  deliveryFee: number;
-  image: string;
+  delivery_area: string;
+  delivery_fee: number;
+  phone: string;
+  business_hours_start: string;
+  business_hours_end: string;
+  pickup_time_slots: string[];
+  delivery_time_slots: Array<{
+    name: string;
+    start: string;
+    end: string;
+    enabled: boolean;
+  }>;
+  bank_account: string;
+  account_holder: string;
+  created_at: string;
+  updated_at: string;
+  image?: string;
 }
 
 interface OwnerInquiry {
@@ -26,7 +42,7 @@ interface StoreOpeningInquiry {
 
 const MOCK_STORES: Store[] = [
   {
-    id: '1',
+    id: '550e8400-e29b-41d4-a716-446655440001',
     name: '이천반찬',
     category: '한식반찬',
     deliveryArea: '강남구, 서초구',
@@ -34,7 +50,7 @@ const MOCK_STORES: Store[] = [
     image: 'https://readdy.ai/api/search-image?query=Traditional%20Korean%20side%20dishes%20banchan%20in%20clean%20white%20containers%2C%20fresh%20vegetables%2C%20kimchi%2C%20pickled%20radish%2C%20bean%20sprouts%2C%20spinach%2C%20professional%20food%20photography%20with%20simple%20white%20background%2C%20appetizing%20presentation%2C%20high%20quality%20restaurant%20style&width=400&height=240&seq=store1&orientation=landscape'
   },
   {
-    id: '2',
+    id: '550e8400-e29b-41d4-a716-446655440002',
     name: '맛있는 반찬집',
     category: '한식반찬',
     deliveryArea: '송파구, 강동구',
@@ -42,7 +58,7 @@ const MOCK_STORES: Store[] = [
     image: 'https://readdy.ai/api/search-image?query=Korean%20homestyle%20side%20dishes%20banchan%20beautifully%20arranged%20in%20traditional%20bowls%2C%20colorful%20vegetables%2C%20fermented%20foods%2C%20healthy%20meals%2C%20clean%20white%20background%2C%20restaurant%20quality%20presentation%2C%20appetizing%20food%20photography&width=400&height=240&seq=store2&orientation=landscape'
   },
   {
-    id: '4',
+    id: '550e8400-e29b-41d4-a716-446655440004',
     name: '건강반찬마켓',
     category: '한식반찬',
     deliveryArea: '성북구, 동대문구',
@@ -50,7 +66,7 @@ const MOCK_STORES: Store[] = [
     image: 'https://readdy.ai/api/search-image?query=Healthy%20Korean%20side%20dishes%20banchan%20with%20organic%20vegetables%2C%20clean%20modern%20containers%2C%20nutritious%20fermented%20foods%2C%20fresh%20ingredients%2C%20professional%20market%20style%20photography%20with%20white%20background&width=400&height=240&seq=store4&orientation=landscape'
   },
   {
-    id: '5',
+    id: '550e8400-e29b-41d4-a716-446655440005',
     name: '전통반찬집',
     category: '한식반찬',
     deliveryArea: '중구, 종로구',
@@ -60,26 +76,91 @@ const MOCK_STORES: Store[] = [
 ];
 
 const DUMMY_SEARCH_STORES = [
-  { id: '6', name: '집밥반찬', category: '한식반찬' },
-  { id: '7', name: '엄마손반찬', category: '한식반찬' },
-  { id: '8', name: '정성반찬', category: '한식반찬' },
-  { id: '9', name: '새마을반찬', category: '한식반찬' },
-  { id: '3', name: '할머니 손맛', category: '한식반찬' }
+  { id: '550e8400-e29b-41d4-a716-446655440006', name: '집밥반찬', category: '한식반찬' },
+  { id: '550e8400-e29b-41d4-a716-446655440007', name: '엄마손반찬', category: '한식반찬' },
+  { id: '550e8400-e29b-41d4-a716-446655440008', name: '정성반찬', category: '한식반찬' },
+  { id: '550e8400-e29b-41d4-a716-446655440009', name: '새마을반찬', category: '한식반찬' },
+  { id: '550e8400-e29b-41d4-a716-446655440003', name: '할머니 손맛', category: '한식반찬' }
 ];
 
 export default function Stores() {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, userProfile, loading } = useAuth();
   const [stores, setStores] = useState<Store[]>(MOCK_STORES);
 
   useEffect(() => {
     // 로그인하지 않은 사용자는 홈페이지로 리다이렉트
     if (!loading && !user) {
       navigate('/');
+      return;
     }
-  }, [user, loading, navigate]);
+
+    // 관리자(사장님)가 직접 stores 페이지에 접근하면 대시보드로 리다이렉트
+    // 단, URL에 allow=true 파라미터가 있으면 허용 (admin-dashboard에서 온 경우)
+    if (!loading && user && userProfile && userProfile.role === 'admin') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const allowAccess = urlParams.get('allow') === 'true';
+      if (!allowAccess) {
+        navigate('/admin-dashboard');
+      }
+    }
+  }, [user, userProfile, loading, navigate]);
+
+  // 실제 매장 데이터 가져오기
+  useEffect(() => {
+    const fetchStores = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('stores')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          console.error('매장 데이터 가져오기 오류:', error);
+          // 에러가 발생해도 더미 데이터 사용
+          return;
+        }
+        
+        if (data && data.length > 0) {
+          console.log('실제 매장 데이터 로드됨:', data);
+          
+          // 데이터베이스 매장을 컴포넌트 형식으로 변환
+          const formattedStores: Store[] = data.map(store => ({
+            id: store.id,
+            name: store.name,
+            category: store.category || '한식반찬',
+            deliveryFee: store.delivery_fee || 0,
+            deliveryArea: store.delivery_area || '',
+            phone: store.phone || '',
+            businessHours: `${store.business_hours_start || '09:00'} - ${store.business_hours_end || '21:00'}`,
+            rating: 4.5, // 기본값 (추후 리뷰 시스템에서 가져올 예정)
+            reviewCount: 0, // 기본값 (추후 리뷰 시스템에서 가져올 예정)
+            image: '/api/placeholder/300/200', // 기본값
+            description: `${store.category || '한식반찬'} 전문점`,
+            tags: [store.category || '한식반찬'],
+            isOpen: store.is_active !== false, // is_active가 false가 아니면 영업중
+            owner: store.owner_name || '미지정',
+            bankAccount: store.bank_account || '',
+            accountHolder: store.account_holder || '',
+            pickupTimeSlots: store.pickup_time_slots || [],
+            deliveryTimeSlots: store.delivery_time_slots || []
+          }));
+          
+          setStores(formattedStores);
+        } else {
+          console.log('매장 데이터가 없음, 더미 데이터 사용');
+        }
+      } catch (error) {
+        console.error('매장 데이터 가져오기 실패:', error);
+      }
+    };
+
+    if (user) {
+      fetchStores();
+    }
+  }, [user]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredStores, setFilteredStores] = useState<Store[]>(MOCK_STORES);
+  const [filteredStores, setFilteredStores] = useState<Store[]>([]);
   const [showAddStore, setShowAddStore] = useState(false);
   const [addStoreStep, setAddStoreStep] = useState(1);
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -401,7 +482,7 @@ export default function Stores() {
               <div className="flex gap-2">
                 <button
                   onClick={handleStoreOpeningInquirySubmit}
-                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-3 px-4 rounded-lg whitespace-nowrap cursor-pointer"
+                  className="flex-1 bg-white hover:bg-orange-500 text-gray-700 hover:text-white py-3 px-4 rounded-lg whitespace-nowrap cursor-pointer border border-gray-300 hover:border-orange-500 transition-colors"
                 >
                   개설문의하기
                 </button>
@@ -452,13 +533,33 @@ export default function Stores() {
                 <i className="ri-file-list-3-line mr-1"></i>
                 주문내역
               </button>
-              <button
-                onClick={() => navigate('/admin')}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg flex items-center whitespace-nowrap cursor-pointer text-sm"
-              >
-                <i className="ri-store-line mr-1"></i>
-                내 반찬가게 관리
-              </button>
+              {userProfile?.role === 'owner' && (
+                <>
+                  <button
+                    onClick={() => navigate('/owner/orders')}
+                    className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg flex items-center whitespace-nowrap cursor-pointer text-sm"
+                  >
+                    <i className="ri-shopping-cart-line mr-1"></i>
+                    주문관리
+                  </button>
+                  <button
+                    onClick={() => navigate('/owner/menu')}
+                    className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded-lg flex items-center whitespace-nowrap cursor-pointer text-sm"
+                  >
+                    <i className="ri-restaurant-line mr-1"></i>
+                    메뉴관리
+                  </button>
+                </>
+              )}
+              {userProfile?.role === 'admin' && (
+                <button
+                  onClick={() => navigate('/admin')}
+                  className="bg-white hover:bg-orange-500 text-gray-700 hover:text-white px-3 py-2 rounded-lg flex items-center whitespace-nowrap cursor-pointer text-sm border border-gray-300 hover:border-orange-500 transition-colors"
+                >
+                  <i className="ri-store-line mr-1"></i>
+                  내 반찬가게 관리
+                </button>
+              )}
             </div>
           </div>
           
@@ -508,7 +609,7 @@ export default function Stores() {
           </button>
           <button
             onClick={() => setShowStoreOpeningInquiry(true)}
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-lg flex items-center justify-center whitespace-nowrap cursor-pointer"
+            className="w-full bg-white hover:bg-orange-500 text-gray-700 hover:text-white py-3 px-4 rounded-lg flex items-center justify-center whitespace-nowrap cursor-pointer border border-gray-300 hover:border-orange-500 transition-colors"
           >
             <i className="ri-store-line mr-2"></i>
             매장개설 문의
@@ -540,11 +641,11 @@ export default function Stores() {
                   <div className="flex items-center justify-between text-sm text-gray-600">
                     <div className="flex items-center">
                       <i className="ri-map-pin-line mr-1"></i>
-                      <span>{store.deliveryArea}</span>
+                      <span>{store.delivery_area || '배달 지역 정보 없음'}</span>
                     </div>
                     <div className="flex items-center">
                       <i className="ri-truck-line mr-1"></i>
-                      <span>배달비 {store.deliveryFee.toLocaleString()}원</span>
+                      <span>배달비 {store.delivery_fee?.toLocaleString() || '0'}원</span>
                     </div>
                   </div>
                 </div>

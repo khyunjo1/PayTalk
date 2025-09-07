@@ -6,14 +6,20 @@ import { useAuth } from '../../hooks/useAuth';
 export default function Home() {
   const navigate = useNavigate();
   const [showLoginMessage, setShowLoginMessage] = useState(false);
-  const { user, loading } = useAuth();
+  const { user, userProfile, loading } = useAuth();
 
   useEffect(() => {
-    // 로그인된 사용자는 매장 페이지로 리다이렉트
-    if (!loading && user) {
-      navigate('/stores');
+    // 로그인된 사용자는 권한에 따라 다른 페이지로 리다이렉트
+    if (!loading && user && userProfile) {
+      if (userProfile.role === 'admin') {
+        // 관리자(사장님)는 전용 대시보드로
+        navigate('/admin-dashboard');
+      } else {
+        // 일반 고객은 매장 페이지로
+        navigate('/stores');
+      }
     }
-  }, [user, loading, navigate]);
+  }, [user, userProfile, loading, navigate]);
 
   const handleAdminClick = () => {
     navigate('/admin');

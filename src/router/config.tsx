@@ -10,7 +10,10 @@ import Cart from "../pages/cart/page";
 import OrderComplete from "../pages/order-complete/page";
 import Orders from "../pages/orders/page";
 import Admin from "../pages/admin/page";
+import AdminDashboard from "../pages/admin-dashboard/page";
 import SuperAdmin from "../pages/super-admin/page";
+import OwnerOrders from "../pages/owner/orders/page";
+import OwnerMenu from "../pages/owner/menu/page";
 
 const routes: RouteObject[] = [
   {
@@ -38,7 +41,7 @@ const routes: RouteObject[] = [
     element: <Cart />,
   },
   {
-    path: "/order-complete",
+    path: "/order-complete/:orderId",
     element: <OrderComplete />,
   },
   {
@@ -50,8 +53,20 @@ const routes: RouteObject[] = [
     element: <Admin />,
   },
   {
+    path: "/admin-dashboard",
+    element: <AdminDashboard />,
+  },
+  {
     path: "/super-admin",
     element: <SuperAdmin />,
+  },
+  {
+    path: "/owner/orders",
+    element: <OwnerOrders />,
+  },
+  {
+    path: "/owner/menu",
+    element: <OwnerMenu />,
   },
   {
     path: "*",

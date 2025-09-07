@@ -1,20 +1,61 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
 
 export default function Login() {
   const navigate = useNavigate();
   const [showLoginMessage, setShowLoginMessage] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  const handleKakaoLogin = () => {
-    // 카카오 로그인 시뮬레이션
-    localStorage.setItem('isLoggedIn', 'true');
-    navigate('/stores');
+  const handleKakaoLogin = async () => {
+    try {
+      setIsLoggingIn(true);
+      console.log('🚀 Kakao 로그인 시작');
+      
+      // Kakao OAuth 로그인
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'kakao',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`
+        }
+      });
+
+      console.log('📊 OAuth 응답:', { data, error });
+
+      if (error) {
+        console.error('❌ Kakao 로그인 오류:', error);
+        alert(`로그인에 실패했습니다: ${error.message}`);
+        setIsLoggingIn(false);
+        return;
+      }
+      
+      console.log('✅ OAuth 리다이렉트 시작');
+      console.log('📊 OAuth 데이터:', data);
+      
+      // 5초 후에도 리다이렉트가 안 되면 로딩 상태 해제
+      setTimeout(() => {
+        console.log('⚠️ 5초 경과 - 리다이렉트가 안 됨');
+        setIsLoggingIn(false);
+      }, 5000);
+      
+    } catch (error) {
+      console.error('❌ 로그인 처리 중 오류:', error);
+      alert(`로그인 중 오류가 발생했습니다: ${error.message}`);
+      setIsLoggingIn(false);
+    }
   };
 
   const handleOtherPageAccess = () => {
     setShowLoginMessage(true);
     setTimeout(() => setShowLoginMessage(false), 3000);
+  };
+
+  // 테스트용 임시 로그인 (개발 중에만 사용)
+  const handleTestLogin = () => {
+    console.log('🧪 테스트 로그인 시작');
+    localStorage.setItem('isLoggedIn', 'true');
+    navigate('/stores');
   };
 
   return (
@@ -59,10 +100,11 @@ export default function Login() {
         {/* 카카오 로그인 버튼 */}
         <button
           onClick={handleKakaoLogin}
-          className="w-full bg-yellow-400 hover:bg-yellow-500 text-gray-800 font-semibold py-4 px-4 rounded-xl transition-colors duration-200 flex items-center justify-center mb-4 whitespace-nowrap cursor-pointer"
+          disabled={isLoggingIn}
+          className="w-full bg-yellow-400 hover:bg-yellow-500 disabled:bg-yellow-300 disabled:cursor-not-allowed text-gray-800 font-semibold py-4 px-4 rounded-xl transition-colors duration-200 flex items-center justify-center mb-4 whitespace-nowrap cursor-pointer"
         >
           <i className="ri-message-3-fill text-xl mr-3"></i>
-          카카오톡으로 간편 로그인
+          {isLoggingIn ? '로그인 처리중...' : '카카오톡으로 간편 로그인'}
         </button>
 
         {/* 로그인 안내 메시지 */}

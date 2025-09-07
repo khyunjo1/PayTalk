@@ -1,5 +1,6 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getStores } from '../../../lib/storeApi';
+import { getMenus, createMenu, updateMenu, deleteMenu } from '../../../lib/menuApi';
 
 interface MenuItem {
   id: string;
@@ -9,6 +10,7 @@ interface MenuItem {
   description: string;
   isAvailable: boolean;
   storeId: string;
+  image_url?: string;
 }
 
 interface Store {
@@ -21,130 +23,220 @@ interface MenuManagementProps {
 }
 
 export default function MenuManagement({ showToast }: MenuManagementProps) {
-  const [stores] = useState<Store[]>([
-    { id: '1', name: '이천반찬' },
-    { id: '2', name: '맛있는 반찬집' },
-    { id: '3', name: '할머니반찬' }
-  ]);
-
-  const [selectedStore, setSelectedStore] = useState('1');
-  const [menus, setMenus] = useState<MenuItem[]>([
-    {
-      id: 'm1',
-      name: '김치찌개',
-      price: 8000,
-      category: '메인메뉴',
-      description: '매콤하고 시원한 김치찌개',
-      isAvailable: true,
-      storeId: '1'
-    },
-    {
-      id: 'm2',
-      name: '된장찌개',
-      price: 7000,
-      category: '메인메뉴',
-      description: '구수한 된장찌개',
-      isAvailable: true,
-      storeId: '1'
-    },
-    {
-      id: 'm3',
-      name: '제육볶음',
-      price: 12000,
-      category: '메인메뉴',
-      description: '매콤달콤한 제육볶음',
-      isAvailable: false,
-      storeId: '1'
-    },
-    {
-      id: 'm4',
-      name: '부대찌개',
-      price: 9000,
-      category: '메인메뉴',
-      description: '얼큰한 부대찌개',
-      isAvailable: true,
-      storeId: '2'
-    }
-  ]);
-
+  const [stores, setStores] = useState<Store[]>([]);
+  const [selectedStore, setSelectedStore] = useState('');
+  const [menus, setMenus] = useState<MenuItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [editingMenu, setEditingMenu] = useState<MenuItem | null>(null);
-  const [formData, setFormData] = useState({
+
+  // 실제 매장 데이터 로드 (캐싱 추가)
+  useEffect(() => {
+    const loadStores = async () => {
+      // 이미 데이터가 있으면 다시 로드하지 않음
+      if (stores.length > 0) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const storesData = await getStores();
+        
+        const formattedStores: Store[] = storesData.map(store => ({
+          id: store.id,
+          name: store.name
+        }));
+        
+        setStores(formattedStores);
+        if (formattedStores.length > 0) {
+          setSelectedStore(formattedStores[0].id);
+        }
+        console.log('✅ 매장 데이터 로드됨:', formattedStores.length, '개');
+      } catch (error) {
+        console.error('❌ 매장 데이터 로드 실패:', error);
+        showToast('매장 데이터를 불러오는데 실패했습니다.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStores();
+  }, [showToast, stores.length]);
+
+  // 선택된 매장의 메뉴 로드
+  useEffect(() => {
+    if (selectedStore) {
+      loadMenus(selectedStore);
+    }
+  }, [selectedStore]);
+
+  const loadMenus = async (storeId: string) => {
+    try {
+      setLoading(true);
+      const menusData = await getMenus(storeId);
+      
+      const formattedMenus: MenuItem[] = menusData.map(menu => ({
+        id: menu.id,
+        name: menu.name,
+        price: menu.price,
+        category: menu.category || '인기메뉴',
+        description: menu.description || '',
+        isAvailable: menu.is_available !== false,
+        storeId: menu.store_id,
+        image_url: menu.image_url
+      }));
+      
+      setMenus(formattedMenus);
+      console.log('✅ 메뉴 데이터 로드됨:', formattedMenus.length, '개');
+    } catch (error) {
+      console.error('❌ 메뉴 데이터 로드 실패:', error);
+      showToast('메뉴 데이터를 불러오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const [newMenu, setNewMenu] = useState({
     name: '',
     price: 0,
-    category: '메인메뉴',
-    description: ''
+    category: '인기메뉴',
+    description: '',
+    isAvailable: true
   });
 
-  const categories = ['메인메뉴', '국물요리', '사이드메뉴', '김치류'];
-  const filteredMenus = menus.filter(menu => menu.storeId === selectedStore);
-
-  const handleSubmit = () => {
-    if (!formData.name || formData.price <= 0) {
-      alert('메뉴명과 가격을 입력해주세요.');
+  const handleAddMenu = async () => {
+    if (!newMenu.name.trim()) {
+      showToast('메뉴명을 입력해주세요');
+      return;
+    }
+    if (newMenu.price <= 0) {
+      showToast('가격을 입력해주세요');
       return;
     }
 
-    if (editingMenu) {
-      // 수정
-      setMenus(menus.map(menu => 
-        menu.id === editingMenu.id 
-          ? { ...menu, ...formData }
-          : menu
-      ));
-      showToast('메뉴가 수정되었습니다');
-    } else {
-      // 추가
-      const newMenu: MenuItem = {
-        id: Date.now().toString(),
-        ...formData,
-        isAvailable: true,
-        storeId: selectedStore
+    try {
+      const menuData = {
+        name: newMenu.name,
+        price: newMenu.price,
+        category: newMenu.category,
+        description: newMenu.description,
+        is_available: newMenu.isAvailable,
+        store_id: selectedStore
       };
-      setMenus([...menus, newMenu]);
-      showToast('새 메뉴가 등록되었습니다');
-    }
 
-    resetForm();
-  };
+      console.log('🚀 메뉴 추가 시작:', menuData);
+      const createdMenu = await createMenu(menuData);
+      console.log('✅ 메뉴 추가 성공:', createdMenu);
+      
+      // 새 메뉴를 목록에 추가
+      const formattedMenu: MenuItem = {
+        id: createdMenu.id,
+        name: createdMenu.name,
+        price: createdMenu.price,
+        category: createdMenu.category || '인기메뉴',
+        description: createdMenu.description || '',
+        isAvailable: createdMenu.is_available !== false,
+        storeId: createdMenu.store_id,
+        image_url: createdMenu.image_url
+      };
 
-  const resetForm = () => {
-    setFormData({
+      setMenus([...menus, formattedMenu]);
+      setShowAddModal(false);
+      setNewMenu({
       name: '',
       price: 0,
-      category: '메인메뉴',
-      description: ''
-    });
-    setShowAddModal(false);
-    setEditingMenu(null);
-  };
-
-  const handleEdit = (menu: MenuItem) => {
-    setFormData({
-      name: menu.name,
-      price: menu.price,
-      category: menu.category,
-      description: menu.description
-    });
-    setEditingMenu(menu);
-    setShowAddModal(true);
-  };
-
-  const toggleAvailability = (menuId: string) => {
-    setMenus(menus.map(menu => 
-      menu.id === menuId 
-        ? { ...menu, isAvailable: !menu.isAvailable }
-        : menu
-    ));
-    showToast('메뉴 상태가 변경되었습니다');
-  };
-
-  const deleteMenu = (menuId: string) => {
-    if (confirm('정말로 삭제하시겠습니까?')) {
-      setMenus(menus.filter(menu => menu.id !== menuId));
-      showToast('메뉴가 삭제되었습니다');
+        category: '인기메뉴',
+        description: '',
+        isAvailable: true
+      });
+      showToast('새 메뉴가 추가되었습니다');
+    } catch (error) {
+      console.error('❌ 메뉴 추가 실패:', error);
+      showToast('메뉴 추가에 실패했습니다');
     }
   };
+
+  const handleEditMenu = (menu: MenuItem) => {
+    setEditingMenu(menu);
+    setShowEditModal(true);
+  };
+
+  const handleUpdateMenu = async () => {
+    if (!editingMenu) return;
+
+    try {
+      const updateData = {
+        name: editingMenu.name,
+        price: editingMenu.price,
+        category: editingMenu.category,
+        description: editingMenu.description,
+        is_available: editingMenu.isAvailable
+      };
+
+      await updateMenu(editingMenu.id, updateData);
+      
+    setMenus(menus.map(menu => 
+        menu.id === editingMenu.id ? editingMenu : menu
+      ));
+      
+      setShowEditModal(false);
+      setEditingMenu(null);
+      showToast('메뉴 정보가 업데이트되었습니다');
+    } catch (error) {
+      console.error('❌ 메뉴 업데이트 실패:', error);
+      showToast('메뉴 업데이트에 실패했습니다');
+    }
+  };
+
+  const handleDeleteMenu = async (menuId: string) => {
+    if (!confirm('정말로 이 메뉴를 삭제하시겠습니까?')) return;
+
+    try {
+      await deleteMenu(menuId);
+      setMenus(menus.filter(menu => menu.id !== menuId));
+      showToast('메뉴가 삭제되었습니다');
+    } catch (error) {
+      console.error('❌ 메뉴 삭제 실패:', error);
+      showToast('메뉴 삭제에 실패했습니다');
+    }
+  };
+
+  const toggleMenuAvailability = async (menuId: string) => {
+    try {
+      const menu = menus.find(m => m.id === menuId);
+      if (!menu) return;
+
+      // 데이터베이스에 상태 변경 저장
+      await updateMenu(menuId, {
+        is_available: !menu.isAvailable
+      });
+
+      // 로컬 상태 업데이트
+      setMenus(menus.map(menu => 
+        menu.id === menuId 
+          ? { ...menu, isAvailable: !menu.isAvailable }
+          : menu
+      ));
+      
+      showToast('메뉴 상태가 변경되었습니다');
+    } catch (error) {
+      console.error('메뉴 상태 변경 실패:', error);
+      showToast('메뉴 상태 변경에 실패했습니다');
+    }
+  };
+
+  if (loading && stores.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">데이터를 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -156,166 +248,245 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center whitespace-nowrap cursor-pointer"
+          disabled={!selectedStore}
+          className="bg-white hover:bg-orange-500 text-gray-700 hover:text-white px-4 py-2 rounded-lg border border-gray-300 hover:border-orange-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <i className="ri-add-line mr-2"></i>
-          새 메뉴 추가
+          + 새 메뉴 추가
         </button>
       </div>
 
       {/* 매장 선택 */}
-      <div className="bg-white rounded-lg p-4 shadow-sm">
-        <label className="block text-sm font-medium text-gray-700 mb-2">매장 선택</label>
+      <div className="flex items-center space-x-4">
+        <label className="text-sm font-medium text-gray-700">매장 선택:</label>
         <select
           value={selectedStore}
           onChange={(e) => setSelectedStore(e.target.value)}
-          className="w-full md:w-64 p-3 border border-gray-300 rounded-lg text-sm pr-8"
+          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
         >
           {stores.map(store => (
             <option key={store.id} value={store.id}>{store.name}</option>
           ))}
         </select>
+        <div className="text-sm text-gray-600">
+          {menus.length}개 메뉴
+        </div>
       </div>
 
-      {/* 메뉴 테이블 */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">메뉴명</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">가격</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">카테고리</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">설명</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상태</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">액션</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredMenus.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
-                    등록된 메뉴가 없습니다
-                  </td>
-                </tr>
-              ) : (
-                filteredMenus.map((menu) => (
-                  <tr key={menu.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">{menu.name}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+      {/* 메뉴 목록 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {menus.map((menu) => (
+          <div key={menu.id} className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-800">{menu.name}</h3>
+                <p className="text-sm text-gray-600">{menu.category}</p>
+                <p className="text-lg font-bold text-orange-600 mt-1">
                       {menu.price.toLocaleString()}원
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{menu.category}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">{menu.description}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                </p>
+              </div>
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         menu.isAvailable 
                           ? 'bg-green-100 text-green-800' 
                           : 'bg-red-100 text-red-800'
                       }`}>
                         {menu.isAvailable ? '판매중' : '품절'}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center space-x-2">
+            </div>
+
+            {menu.description && (
+              <p className="text-sm text-gray-600 mb-4">{menu.description}</p>
+            )}
+
+            <div className="flex space-x-2">
                         <button
-                          onClick={() => handleEdit(menu)}
-                          className="text-blue-600 hover:text-blue-900 cursor-pointer"
+                onClick={() => handleEditMenu(menu)}
+                className="flex-1 bg-white hover:bg-orange-500 text-gray-700 hover:text-white px-3 py-2 rounded-lg text-sm border border-gray-300 hover:border-orange-500 transition-colors"
                         >
-                          <i className="ri-edit-line"></i>
+                수정
                         </button>
                         <button
-                          onClick={() => toggleAvailability(menu.id)}
-                          className={`${menu.isAvailable ? 'text-red-600 hover:text-red-900' : 'text-green-600 hover:text-green-900'} cursor-pointer`}
-                        >
-                          <i className={`ri-${menu.isAvailable ? 'pause' : 'play'}-circle-line`}></i>
+                onClick={() => toggleMenuAvailability(menu.id)}
+                className={`flex-1 px-3 py-2 rounded-lg text-sm border transition-colors ${
+                  menu.isAvailable
+                    ? 'bg-red-50 hover:bg-red-500 text-red-700 hover:text-white border-red-300 hover:border-red-500'
+                    : 'bg-green-50 hover:bg-green-500 text-green-700 hover:text-white border-green-300 hover:border-green-500'
+                }`}
+              >
+                {menu.isAvailable ? '품절' : '판매'}
                         </button>
                         <button
-                          onClick={() => deleteMenu(menu.id)}
-                          className="text-red-600 hover:text-red-900 cursor-pointer"
+                onClick={() => handleDeleteMenu(menu.id)}
+                className="bg-red-50 hover:bg-red-500 text-red-700 hover:text-white px-3 py-2 rounded-lg text-sm border border-red-300 hover:border-red-500 transition-colors"
                         >
-                          <i className="ri-delete-bin-line"></i>
+                삭제
                         </button>
                       </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
         </div>
+        ))}
       </div>
 
-      {/* 메뉴 추가/수정 모달 */}
+      {menus.length === 0 && !loading && (
+        <div className="text-center py-12">
+          <p className="text-gray-500">등록된 메뉴가 없습니다</p>
+          <p className="text-sm text-gray-400 mt-2">새 메뉴를 추가해보세요</p>
+        </div>
+      )}
+
+      {/* 새 메뉴 추가 모달 */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">
-              {editingMenu ? '메뉴 수정' : '새 메뉴 추가'}
-            </h3>
-            
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">새 메뉴 추가</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">메뉴명 *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">메뉴명</label>
                 <input
                   type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  className="w-full p-3 border border-gray-300 rounded-lg text-sm"
+                  value={newMenu.name}
+                  onChange={(e) => setNewMenu({...newMenu, name: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   placeholder="메뉴명을 입력하세요"
                 />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">가격 *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">가격</label>
                 <input
                   type="number"
-                  value={formData.price}
-                  onChange={(e) => setFormData({...formData, price: parseInt(e.target.value) || 0})}
-                  className="w-full p-3 border border-gray-300 rounded-lg text-sm"
+                  value={newMenu.price}
+                  onChange={(e) => setNewMenu({...newMenu, price: parseInt(e.target.value)})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   placeholder="가격을 입력하세요"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">카테고리</label>
                 <select
-                  value={formData.category}
-                  onChange={(e) => setFormData({...formData, category: e.target.value})}
-                  className="w-full p-3 border border-gray-300 rounded-lg text-sm pr-8"
+                  value={newMenu.category}
+                  onChange={(e) => setNewMenu({...newMenu, category: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 >
-                  {categories.map(category => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
+                  <option value="인기메뉴">인기메뉴</option>
+                  <option value="계절메뉴">계절메뉴</option>
+                  <option value="고기 반찬">고기 반찬</option>
+                  <option value="튀김/전류">튀김/전류</option>
+                  <option value="국">국</option>
+                  <option value="분식">분식</option>
+                  <option value="밑반찬">밑반찬</option>
+                  <option value="아이들 반찬">아이들 반찬</option>
                 </select>
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">설명</label>
                 <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  value={newMenu.description}
+                  onChange={(e) => setNewMenu({...newMenu, description: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   rows={3}
-                  className="w-full p-3 border border-gray-300 rounded-lg text-sm resize-none"
                   placeholder="메뉴 설명을 입력하세요"
                 />
               </div>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="isAvailable"
+                  checked={newMenu.isAvailable}
+                  onChange={(e) => setNewMenu({...newMenu, isAvailable: e.target.checked})}
+                  className="mr-2"
+                />
+                <label htmlFor="isAvailable" className="text-sm text-gray-700">판매 가능</label>
+              </div>
             </div>
-
-            <div className="flex gap-3 mt-6">
+            <div className="flex space-x-3 mt-6">
               <button
-                onClick={handleSubmit}
-                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-3 px-4 rounded-lg whitespace-nowrap cursor-pointer"
-              >
-                {editingMenu ? '수정' : '등록'}
-              </button>
-              <button
-                onClick={resetForm}
-                className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-3 px-4 rounded-lg whitespace-nowrap cursor-pointer"
+                onClick={() => setShowAddModal(false)}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors"
               >
                 취소
+              </button>
+              <button
+                onClick={handleAddMenu}
+                className="flex-1 bg-white hover:bg-orange-500 text-gray-700 hover:text-white px-4 py-2 rounded-lg border border-gray-300 hover:border-orange-500 transition-colors"
+              >
+                추가
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 메뉴 수정 모달 */}
+      {showEditModal && editingMenu && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">메뉴 정보 수정</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">메뉴명</label>
+                <input
+                  type="text"
+                  value={editingMenu.name}
+                  onChange={(e) => setEditingMenu({...editingMenu, name: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">가격</label>
+                <input
+                  type="number"
+                  value={editingMenu.price}
+                  onChange={(e) => setEditingMenu({...editingMenu, price: parseInt(e.target.value)})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">카테고리</label>
+                <select
+                  value={editingMenu.category}
+                  onChange={(e) => setEditingMenu({...editingMenu, category: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                >
+                  <option value="인기메뉴">인기메뉴</option>
+                  <option value="계절메뉴">계절메뉴</option>
+                  <option value="고기 반찬">고기 반찬</option>
+                  <option value="튀김/전류">튀김/전류</option>
+                  <option value="국">국</option>
+                  <option value="분식">분식</option>
+                  <option value="밑반찬">밑반찬</option>
+                  <option value="아이들 반찬">아이들 반찬</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">설명</label>
+                <textarea
+                  value={editingMenu.description}
+                  onChange={(e) => setEditingMenu({...editingMenu, description: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  rows={3}
+                />
+              </div>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="editIsAvailable"
+                  checked={editingMenu.isAvailable}
+                  onChange={(e) => setEditingMenu({...editingMenu, isAvailable: e.target.checked})}
+                  className="mr-2"
+                />
+                <label htmlFor="editIsAvailable" className="text-sm text-gray-700">판매 가능</label>
+              </div>
+            </div>
+            <div className="flex space-x-3 mt-6">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleUpdateMenu}
+                className="flex-1 bg-white hover:bg-orange-500 text-gray-700 hover:text-white px-4 py-2 rounded-lg border border-gray-300 hover:border-orange-500 transition-colors"
+              >
+                수정
               </button>
             </div>
           </div>

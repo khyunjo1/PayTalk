@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { createOrder } from '../../lib/orderApi';
 
 interface CartItem {
   id: string;
@@ -12,12 +13,12 @@ interface CartItem {
 interface StoreInfo {
   id: string;
   name: string;
-  deliveryFee: number;
+  delivery_fee: number; // 데이터베이스 필드명과 일치
   phone: string;
-  businessHoursStart?: string;
-  businessHoursEnd?: string;
-  pickupTimeSlots?: string[];
-  deliveryTimeSlots?: Array<{
+  business_hours_start?: string;
+  business_hours_end?: string;
+  pickup_time_slots?: string[];
+  delivery_time_slots?: Array<{
     name: string;
     start: string;
     end: string;
@@ -54,7 +55,7 @@ export default function Cart() {
       setCart(JSON.parse(savedCart));
       const store = JSON.parse(savedStoreInfo);
       console.log('로드된 매장 정보:', store);
-      console.log('배달 시간대 슬롯:', store.deliveryTimeSlots);
+      console.log('배달 시간대 슬롯:', store.delivery_time_slots);
       setStoreInfo(store);
       
       // 오늘 날짜를 기본값으로 설정
@@ -63,15 +64,15 @@ export default function Cart() {
       setPickupDate(today);
       
       // 배달 가능 시간이 있으면 첫 번째 시간을 기본값으로 설정
-      if (store.deliveryTimeSlots && store.deliveryTimeSlots.length > 0) {
-        const enabledSlots = store.deliveryTimeSlots.filter(slot => slot.enabled);
+      if (store.delivery_time_slots && store.delivery_time_slots.length > 0) {
+        const enabledSlots = store.delivery_time_slots.filter(slot => slot.enabled);
         if (enabledSlots.length > 0) {
           setDeliveryTime(`${enabledSlots[0].name} (${enabledSlots[0].start}-${enabledSlots[0].end})`);
         }
       }
       
-      if (store.pickupTimeSlots && store.pickupTimeSlots.length > 0) {
-        setPickupTime(store.pickupTimeSlots[0]);
+      if (store.pickup_time_slots && store.pickup_time_slots.length > 0) {
+        setPickupTime(store.pickup_time_slots[0]);
       }
     } else {
       navigate('/stores');
@@ -144,7 +145,7 @@ export default function Cart() {
   }
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const deliveryFee = orderType === 'delivery' ? storeInfo.deliveryFee : 0;
+  const deliveryFee = orderType === 'delivery' ? storeInfo.delivery_fee : 0;
   const total = subtotal + deliveryFee;
 
   const updateQuantity = (itemId: string, newQuantity: number) => {
@@ -167,7 +168,12 @@ export default function Cart() {
     localStorage.setItem('cart', JSON.stringify(updatedCart));
   };
 
-  const handleOrder = () => {
+  const handleOrder = async () => {
+    if (!user || !storeInfo) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+
     // 유효성 검사
     if (orderType === 'delivery') {
       if (!deliveryAddress.trim()) {
@@ -198,37 +204,44 @@ export default function Cart() {
       return;
     }
 
-    // 주문 정보 저장
-    const orderData = {
-      orderId: 'ORD' + Date.now(),
-      storeInfo,
-      cart,
-      orderType,
-      deliveryAddress,
-      deliveryDate: orderType === 'delivery' ? deliveryDate : pickupDate,
-      deliveryTime: orderType === 'delivery' ? deliveryTime : pickupTime,
-      specialRequests,
-      paymentMethod,
-      depositorName,
-      subtotal,
-      deliveryFee,
-      total,
-      orderDate: new Date().toISOString(),
-      status: paymentMethod === 'bank' ? '입금대기' : '입금확인'
-    };
+    try {
+      // 주문 데이터 준비
+      const orderData = {
+        user_id: user.id,
+        store_id: storeInfo.id,
+        order_type: orderType,
+        delivery_address: orderType === 'delivery' ? deliveryAddress : null,
+        delivery_time: orderType === 'delivery' ? `${deliveryDate} ${deliveryTime}` : null,
+        pickup_time: orderType === 'pickup' ? `${pickupDate} ${pickupTime}` : null,
+        special_requests: specialRequests || null,
+        depositor_name: depositorName,
+        subtotal: subtotal,
+        delivery_fee: deliveryFee,
+        total: total,
+        items: cart.map(item => ({
+          menu_id: item.id,
+          quantity: item.quantity,
+          price: item.price
+        }))
+      };
 
-    localStorage.setItem('currentOrder', JSON.stringify(orderData));
-    
-    // 기존 주문 내역에 추가
-    const existingOrders = JSON.parse(localStorage.getItem('orders') || '[]');
-    existingOrders.unshift(orderData);
-    localStorage.setItem('orders', JSON.stringify(existingOrders));
-
-    // 장바구니 비우기
-    localStorage.removeItem('cart');
-    localStorage.removeItem('storeInfo');
-
-    navigate('/order-complete');
+      // 주문 생성
+      const order = await createOrder(orderData);
+      
+      if (order) {
+        // 장바구니 및 매장 정보 초기화
+        localStorage.removeItem('cart');
+        localStorage.removeItem('storeInfo');
+        
+        // 주문 완료 페이지로 이동 (주문 ID 전달)
+        navigate(`/order-complete/${order.id}`);
+      } else {
+        alert('주문 생성에 실패했습니다. 다시 시도해주세요.');
+      }
+    } catch (error) {
+      console.error('주문 생성 오류:', error);
+      alert('주문 생성 중 오류가 발생했습니다. 다시 시도해주세요.');
+    }
   };
 
   return (
@@ -261,7 +274,7 @@ export default function Cart() {
             >
               <i className="ri-truck-line text-xl mb-1 block"></i>
               <div className="text-sm font-medium">배달 주문</div>
-              <div className="text-xs text-gray-500">배달비 {storeInfo.deliveryFee.toLocaleString()}원</div>
+              <div className="text-xs text-gray-500">배달비 {storeInfo.delivery_fee.toLocaleString()}원</div>
             </button>
             <button
               onClick={() => setOrderType('pickup')}
@@ -305,7 +318,7 @@ export default function Cart() {
                   className="w-full p-3 border border-gray-300 rounded-lg text-sm pr-8"
                 >
                   {getAvailableDates().map((date) => {
-                    const isPassed = isBusinessHoursPassed(date, storeInfo.businessHoursEnd || '21:00');
+                    const isPassed = isBusinessHoursPassed(date, storeInfo.business_hours_end || '21:00');
                     const dateObj = new Date(date);
                     const today = new Date();
                     const isToday = dateObj.toDateString() === today.toDateString();
@@ -333,8 +346,8 @@ export default function Cart() {
                 </label>
                 <div className="space-y-2">
                   {console.log('렌더링 시 매장 정보:', storeInfo)}
-                  {console.log('배달 시간대 슬롯:', (storeInfo as any)?.deliveryTimeSlots)}
-                  {(storeInfo as any)?.deliveryTimeSlots?.filter((slot: any) => slot.enabled).map((slot: any) => (
+                  {console.log('배달 시간대 슬롯:', (storeInfo as any)?.delivery_time_slots)}
+                  {(storeInfo as any)?.delivery_time_slots?.filter((slot: any) => slot.enabled).map((slot: any) => (
                     <label key={slot.name} className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
                       <input
                         type="radio"
@@ -379,7 +392,7 @@ export default function Cart() {
               <div className="bg-gray-50 p-3 rounded-lg">
                 <div className="font-medium text-gray-800">{storeInfo?.name}</div>
                 <div className="text-sm text-gray-600 mt-1">
-                  <div>영업시간: {(storeInfo as any)?.businessHoursStart || '09:00'} ~ {(storeInfo as any)?.businessHoursEnd || '21:00'}</div>
+                  <div>영업시간: {(storeInfo as any)?.business_hours_start || '09:00'} ~ {(storeInfo as any)?.business_hours_end || '21:00'}</div>
                   <div>전화번호: {storeInfo?.phone}</div>
                 </div>
               </div>
@@ -393,7 +406,7 @@ export default function Cart() {
                   className="w-full p-3 border border-gray-300 rounded-lg text-sm pr-8"
                 >
                   {getAvailableDates().map((date) => {
-                    const isPassed = isBusinessHoursPassed(date, storeInfo.businessHoursEnd || '21:00');
+                    const isPassed = isBusinessHoursPassed(date, storeInfo.business_hours_end || '21:00');
                     const dateObj = new Date(date);
                     const today = new Date();
                     const isToday = dateObj.toDateString() === today.toDateString();
@@ -425,7 +438,7 @@ export default function Cart() {
                   className="w-full p-3 border border-gray-300 rounded-lg text-sm pr-8"
                 >
                   <option value="">시간을 선택하세요</option>
-                  {(storeInfo as any)?.pickupTimeSlots?.map((time: string) => (
+                  {(storeInfo as any)?.pickup_time_slots?.map((time: string) => (
                     <option key={time} value={time}>
                       {time}
                     </option>
