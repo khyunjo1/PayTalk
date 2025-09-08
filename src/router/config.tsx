@@ -2,7 +2,6 @@
 import type { RouteObject } from "react-router-dom";
 import NotFound from "../pages/NotFound";
 import Home from "../pages/home/page";
-import Login from "../pages/login/page";
 import AuthCallback from "../pages/auth/callback";
 import Stores from "../pages/stores/page";
 import Menu from "../pages/menu/page";
@@ -22,7 +21,7 @@ const routes: RouteObject[] = [
   },
   {
     path: "/login",
-    element: <Login />,
+    element: <Home />,
   },
   {
     path: "/auth/callback",

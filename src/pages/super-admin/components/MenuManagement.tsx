@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { getStores } from '../../../lib/storeApi';
 import { getMenus, createMenu, updateMenu, deleteMenu } from '../../../lib/menuApi';
 import type { MenuItem, Store } from '../../../types';
-import ImageUpload from '../../../components/ImageUpload';
 
 interface MenuManagementProps {
   showToast: (message: string) => void;
@@ -83,7 +82,6 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
         description: menu.description || '',
         isAvailable: menu.is_available !== false,
         storeId: menu.store_id,
-        image_url: menu.image_url
       }));
       
       setMenus(formattedMenus);
@@ -101,8 +99,7 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
     price: 0,
     category: '인기메뉴',
     description: '',
-    isAvailable: true,
-    image_url: ''
+    isAvailable: true
   });
 
   const handleAddMenu = async () => {
@@ -135,7 +132,6 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
         category: newMenu.category,
         description: newMenu.description,
         is_available: newMenu.isAvailable,
-        image_url: newMenu.image_url || undefined,
         store_id: selectedStore
       };
 
@@ -152,7 +148,6 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
         description: createdMenu.description || '',
         isAvailable: createdMenu.is_available !== false,
         storeId: createdMenu.store_id,
-        image_url: createdMenu.image_url
       };
 
       setMenus([...menus, formattedMenu]);
@@ -163,7 +158,6 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
         category: '인기메뉴',
         description: '',
         isAvailable: true,
-        image_url: ''
       });
       showToast('새 메뉴가 추가되었습니다');
     } catch (error) {
@@ -205,7 +199,6 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
         category: editingMenu.category,
         description: editingMenu.description,
         is_available: editingMenu.isAvailable,
-        image_url: editingMenu.image_url || undefined
       };
 
       await updateMenu(editingMenu.id, updateData);
@@ -309,16 +302,6 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {menus.map((menu) => (
           <div key={menu.id} className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
-            {/* 메뉴 이미지 */}
-            {menu.image_url && (
-              <div className="mb-4">
-                <img
-                  src={menu.image_url}
-                  alt={menu.name}
-                  className="w-full h-32 object-cover rounded-lg"
-                />
-              </div>
-            )}
             
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1">
@@ -440,12 +423,6 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
                 <label htmlFor="isAvailable" className="text-sm text-gray-700">판매 가능</label>
               </div>
               
-              {/* 이미지 업로드 */}
-              <ImageUpload
-                currentImageUrl={newMenu.image_url}
-                onImageChange={(imageUrl) => setNewMenu({...newMenu, image_url: imageUrl || ''})}
-                placeholder="메뉴 이미지를 선택하세요"
-              />
             </div>
             <div className="flex space-x-3 mt-6">
               <button
@@ -526,12 +503,6 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
                 <label htmlFor="editIsAvailable" className="text-sm text-gray-700">판매 가능</label>
               </div>
               
-              {/* 이미지 업로드 */}
-              <ImageUpload
-                currentImageUrl={editingMenu.image_url}
-                onImageChange={(imageUrl) => setEditingMenu({...editingMenu, image_url: imageUrl || ''})}
-                placeholder="메뉴 이미지를 선택하세요"
-              />
             </div>
             <div className="flex space-x-3 mt-6">
               <button

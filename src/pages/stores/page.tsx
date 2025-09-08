@@ -2,7 +2,24 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { getStores } from '../../lib/storeApi';
-import { supabase } from '../../lib/supabase';
+
+// 시간 형식을 읽기 쉽게 변환하는 함수
+const formatTime = (timeString: string): string => {
+  if (!timeString) return '오후 3시';
+  
+  const [hour, minute] = timeString.split(':').map(Number);
+  
+  if (hour === 0) {
+    return minute === 0 ? '자정' : `오전 12시 ${minute}분`;
+  } else if (hour < 12) {
+    return minute === 0 ? `오전 ${hour}시` : `오전 ${hour}시 ${minute}분`;
+  } else if (hour === 12) {
+    return minute === 0 ? '정오' : `오후 12시 ${minute}분`;
+  } else {
+    const pmHour = hour - 12;
+    return minute === 0 ? `오후 ${pmHour}시` : `오후 ${pmHour}시 ${minute}분`;
+  }
+};
 
 interface Store {
   id: string;
@@ -13,6 +30,7 @@ interface Store {
   phone: string;
   business_hours_start: string;
   business_hours_end: string;
+  order_cutoff_time?: string;
   pickup_time_slots: string[];
   delivery_time_slots: Array<{
     name: string;
@@ -24,7 +42,6 @@ interface Store {
   account_holder: string;
   created_at: string;
   updated_at: string;
-  image?: string;
 }
 
 interface OwnerInquiry {
@@ -45,33 +62,65 @@ const MOCK_STORES: Store[] = [
     id: '550e8400-e29b-41d4-a716-446655440001',
     name: '이천반찬',
     category: '한식반찬',
-    deliveryArea: '강남구, 서초구',
-    deliveryFee: 2000,
-    image: 'https://readdy.ai/api/search-image?query=Traditional%20Korean%20side%20dishes%20banchan%20in%20clean%20white%20containers%2C%20fresh%20vegetables%2C%20kimchi%2C%20pickled%20radish%2C%20bean%20sprouts%2C%20spinach%2C%20professional%20food%20photography%20with%20simple%20white%20background%2C%20appetizing%20presentation%2C%20high%20quality%20restaurant%20style&width=400&height=240&seq=store1&orientation=landscape'
+    delivery_area: '강남구, 서초구',
+    delivery_fee: 2000,
+    phone: '02-1234-5678',
+    business_hours_start: '09:00',
+    business_hours_end: '21:00',
+    pickup_time_slots: ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'],
+    delivery_time_slots: [],
+    bank_account: '123-456-789',
+    account_holder: '이천반찬',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   },
   {
     id: '550e8400-e29b-41d4-a716-446655440002',
     name: '맛있는 반찬집',
     category: '한식반찬',
-    deliveryArea: '송파구, 강동구',
-    deliveryFee: 1500,
-    image: 'https://readdy.ai/api/search-image?query=Korean%20homestyle%20side%20dishes%20banchan%20beautifully%20arranged%20in%20traditional%20bowls%2C%20colorful%20vegetables%2C%20fermented%20foods%2C%20healthy%20meals%2C%20clean%20white%20background%2C%20restaurant%20quality%20presentation%2C%20appetizing%20food%20photography&width=400&height=240&seq=store2&orientation=landscape'
+    delivery_area: '송파구, 강동구',
+    delivery_fee: 1500,
+    phone: '02-2345-6789',
+    business_hours_start: '09:00',
+    business_hours_end: '21:00',
+    pickup_time_slots: ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'],
+    delivery_time_slots: [],
+    bank_account: '234-567-890',
+    account_holder: '맛있는 반찬집',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   },
   {
     id: '550e8400-e29b-41d4-a716-446655440004',
     name: '건강반찬마켓',
     category: '한식반찬',
-    deliveryArea: '성북구, 동대문구',
-    deliveryFee: 3000,
-    image: 'https://readdy.ai/api/search-image?query=Healthy%20Korean%20side%20dishes%20banchan%20with%20organic%20vegetables%2C%20clean%20modern%20containers%2C%20nutritious%20fermented%20foods%2C%20fresh%20ingredients%2C%20professional%20market%20style%20photography%20with%20white%20background&width=400&height=240&seq=store4&orientation=landscape'
+    delivery_area: '성북구, 동대문구',
+    delivery_fee: 3000,
+    phone: '02-3456-7890',
+    business_hours_start: '09:00',
+    business_hours_end: '21:00',
+    pickup_time_slots: ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'],
+    delivery_time_slots: [],
+    bank_account: '345-678-901',
+    account_holder: '건강반찬마켓',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   },
   {
     id: '550e8400-e29b-41d4-a716-446655440005',
     name: '전통반찬집',
     category: '한식반찬',
-    deliveryArea: '중구, 종로구',
-    deliveryFee: 1800,
-    image: 'https://readdy.ai/api/search-image?query=Traditional%20Korean%20banchan%20side%20dishes%20in%20authentic%20style%2C%20classic%20fermented%20vegetables%2C%20kimchi%20varieties%2C%20traditional%20presentation%20in%20ceramic%20dishes%2C%20heritage%20Korean%20food%20photography%20with%20simple%20background&width=400&height=240&seq=store5&orientation=landscape'
+    delivery_area: '중구, 종로구',
+    delivery_fee: 1800,
+    phone: '02-4567-8901',
+    business_hours_start: '09:00',
+    business_hours_end: '21:00',
+    pickup_time_slots: ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'],
+    delivery_time_slots: [],
+    bank_account: '456-789-012',
+    account_holder: '전통반찬집',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   }
 ];
 
@@ -86,7 +135,47 @@ const DUMMY_SEARCH_STORES = [
 export default function Stores() {
   const navigate = useNavigate();
   const { user, userProfile, loading } = useAuth();
-  const [stores, setStores] = useState<Store[]>(MOCK_STORES);
+  const [stores, setStores] = useState<Store[]>([]);
+  const [loadingStores, setLoadingStores] = useState(true);
+
+  // 실제 매장 데이터 로드
+  useEffect(() => {
+    const loadStores = async () => {
+      try {
+        setLoadingStores(true);
+        const storesData = await getStores();
+        
+        // 데이터베이스 매장을 컴포넌트 형식으로 변환
+        const formattedStores: Store[] = storesData.map(store => ({
+          id: store.id,
+          name: store.name,
+          category: store.category || '한식반찬',
+          delivery_area: store.delivery_area || '',
+          delivery_fee: store.delivery_fee || 0,
+          phone: store.phone || '',
+          business_hours_start: store.business_hours_start || '09:00',
+          business_hours_end: store.business_hours_end || '22:00',
+          pickup_time_slots: store.pickup_time_slots || [],
+          delivery_time_slots: store.delivery_time_slots || [],
+          bank_account: store.bank_account || '',
+          account_holder: store.account_holder || '',
+          created_at: store.created_at,
+          updated_at: store.updated_at,
+        }));
+        
+        setStores(formattedStores);
+        console.log('✅ Stores 페이지 매장 데이터 로드됨:', formattedStores.length, '개');
+      } catch (error) {
+        console.error('❌ 매장 데이터 로드 실패:', error);
+        // 실패 시 Mock 데이터 사용
+        setStores(MOCK_STORES);
+      } finally {
+        setLoadingStores(false);
+      }
+    };
+
+    loadStores();
+  }, []);
 
   useEffect(() => {
     // 로그인하지 않은 사용자는 홈페이지로 리다이렉트
@@ -106,59 +195,6 @@ export default function Stores() {
     }
   }, [user, userProfile, loading, navigate]);
 
-  // 실제 매장 데이터 가져오기
-  useEffect(() => {
-    const fetchStores = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('stores')
-          .select('*')
-          .order('created_at', { ascending: false });
-        
-        if (error) {
-          console.error('매장 데이터 가져오기 오류:', error);
-          // 에러가 발생해도 더미 데이터 사용
-          return;
-        }
-        
-        if (data && data.length > 0) {
-          console.log('실제 매장 데이터 로드됨:', data);
-          
-          // 데이터베이스 매장을 컴포넌트 형식으로 변환
-          const formattedStores: Store[] = data.map(store => ({
-            id: store.id,
-            name: store.name,
-            category: store.category || '한식반찬',
-            deliveryFee: store.delivery_fee || 0,
-            deliveryArea: store.delivery_area || '',
-            phone: store.phone || '',
-            businessHours: `${store.business_hours_start || '09:00'} - ${store.business_hours_end || '21:00'}`,
-            rating: 4.5, // 기본값 (추후 리뷰 시스템에서 가져올 예정)
-            reviewCount: 0, // 기본값 (추후 리뷰 시스템에서 가져올 예정)
-            image: '/api/placeholder/300/200', // 기본값
-            description: `${store.category || '한식반찬'} 전문점`,
-            tags: [store.category || '한식반찬'],
-            isOpen: store.is_active !== false, // is_active가 false가 아니면 영업중
-            owner: store.owner_name || '미지정',
-            bankAccount: store.bank_account || '',
-            accountHolder: store.account_holder || '',
-            pickupTimeSlots: store.pickup_time_slots || [],
-            deliveryTimeSlots: store.delivery_time_slots || []
-          }));
-          
-          setStores(formattedStores);
-        } else {
-          console.log('매장 데이터가 없음, 더미 데이터 사용');
-        }
-      } catch (error) {
-        console.error('매장 데이터 가져오기 실패:', error);
-      }
-    };
-
-    if (user) {
-      fetchStores();
-    }
-  }, [user]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredStores, setFilteredStores] = useState<Store[]>([]);
   const [showAddStore, setShowAddStore] = useState(false);
@@ -195,7 +231,7 @@ export default function Stores() {
       const filtered = stores.filter(store =>
         store.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         store.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        store.deliveryArea.toLowerCase().includes(searchTerm.toLowerCase())
+        store.delivery_area.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredStores(filtered);
     } else {
@@ -231,9 +267,17 @@ export default function Stores() {
       id: selectedStore.id,
       name: selectedStore.name,
       category: selectedStore.category,
-      deliveryArea: '강남구',
-      deliveryFee: 2000,
-      image: 'https://readdy.ai/api/search-image?query=Fresh%20Korean%20banchan%20side%20dishes%20in%20modern%20containers%2C%20healthy%20vegetables%2C%20traditional%20Korean%20food%2C%20clean%20white%20background%2C%20professional%20food%20photography%2C%20appetizing%20presentation&width=400&height=240&seq=' + selectedStore.id + '&orientation=landscape'
+            delivery_area: '강남구',
+            delivery_fee: 2000,
+      phone: '02-0000-0000',
+      business_hours_start: '09:00',
+      business_hours_end: '21:00',
+      pickup_time_slots: ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'],
+      delivery_time_slots: [],
+      bank_account: '000-000-000',
+      account_holder: selectedStore.name,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
 
     setStores([...stores, newStore]);
@@ -619,18 +663,27 @@ export default function Stores() {
         {/* 매장 목록 */}
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-3">등록된 매장</h2>
-          <div className="space-y-4">
-            {filteredStores.map((store) => (
+          {loadingStores ? (
+            <div className="space-y-4">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="bg-white rounded-lg shadow-sm overflow-hidden animate-pulse">
+                  <div className="w-full h-32 bg-gray-200"></div>
+                  <div className="p-4">
+                    <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded mb-1"></div>
+                    <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredStores.map((store) => (
               <div
                 key={store.id}
                 onClick={() => handleStoreClick(store.id)}
                 className="bg-white rounded-lg shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
               >
-                <img
-                  src={store.image}
-                  alt={store.name}
-                  className="w-full h-32 object-cover object-top"
-                />
                 <div className="p-4">
                   <div className="flex items-start justify-between mb-2">
                     <div>
@@ -638,20 +691,41 @@ export default function Stores() {
                       <p className="text-sm text-gray-600">{store.category}</p>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between text-sm text-gray-600">
+                  <div className="flex items-center justify-between text-sm text-gray-600 mb-3">
                     <div className="flex items-center">
                       <i className="ri-map-pin-line mr-1"></i>
-                      <span>{store.delivery_area || '배달 지역 정보 없음'}</span>
+                      <span>배달가능지역: {store.delivery_area || '정보 없음'}</span>
                     </div>
                     <div className="flex items-center">
                       <i className="ri-truck-line mr-1"></i>
                       <span>배달비 {store.delivery_fee?.toLocaleString() || '0'}원</span>
                     </div>
                   </div>
+                  
+                  {/* 주문접수안내 */}
+                  <div className="flex items-center text-sm text-gray-600 mb-3">
+                    <i className="ri-time-line mr-1 text-orange-500"></i>
+                    <span>
+                      <span className="font-medium text-gray-700">주문마감:</span> {formatTime(store.order_cutoff_time || '15:00')} 이후 주문은 다음날 배달
+                    </span>
+                  </div>
+                  
+                  {/* 반찬보기 버튼 */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleStoreClick(store.id);
+                    }}
+                    className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-lg flex items-center whitespace-nowrap cursor-pointer text-sm"
+                  >
+                    <i className="ri-restaurant-line mr-1"></i>
+                    반찬보기
+                  </button>
                 </div>
               </div>
             ))}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -681,7 +755,7 @@ export default function Stores() {
                 </div>
                 <div className="flex items-center gap-2">
                   <i className="ri-mail-line text-orange-500"></i>
-                  <span>support@paytalk.co.kr</span>
+                  <span>mnkijo424@gmail.com</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <i className="ri-time-line text-orange-500"></i>
@@ -695,8 +769,8 @@ export default function Stores() {
           <div className="border-t border-gray-200 pt-4">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
               <div className="text-gray-600 text-sm">
-                <p>© 2024 페이톡. 모든 권리 보유.</p>
-                <p className="mt-1">사업자등록번호: 123-45-67890 | 대표: 김페이톡</p>
+                <p>© 2025 페이톡. 모든 권리 보유.</p>
+                <p className="mt-1">사업자등록번호: 227-09-52974 | 대표: 조광현</p>
               </div>
               <div className="flex gap-4 text-sm text-gray-500">
                 <a href="#" className="hover:text-orange-500 transition-colors">이용약관</a>

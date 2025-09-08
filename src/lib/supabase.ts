@@ -174,7 +174,6 @@ export interface Database {
           price: number
           category: string
           description: string | null
-          image_url: string | null
           is_available: boolean
           created_at: string
           updated_at: string
@@ -186,7 +185,6 @@ export interface Database {
           price: number
           category: string
           description?: string | null
-          image_url?: string | null
           is_available?: boolean
           created_at?: string
           updated_at?: string
@@ -198,7 +196,6 @@ export interface Database {
           price?: number
           category?: string
           description?: string | null
-          image_url?: string | null
           is_available?: boolean
           created_at?: string
           updated_at?: string

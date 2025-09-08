@@ -37,11 +37,11 @@ export interface StoreDB {
   phone: string;
   business_hours_start?: string;
   business_hours_end?: string;
+  order_cutoff_time?: string;
   pickup_time_slots?: string[];
   delivery_time_slots?: DeliveryTimeSlot[];
   bank_account: string;
   account_holder: string;
-  image_url?: string;
   is_active?: boolean;
   created_at: string;
   updated_at: string;
@@ -59,11 +59,11 @@ export interface Store {
   deliveryArea: string;
   businessHoursStart: string;
   businessHoursEnd: string;
+  orderCutoffTime: string;
   pickupTimeSlots: string[];
   deliveryTimeSlots: DeliveryTimeSlot[];
   bankAccount: string;
   accountHolder: string;
-  image_url?: string;
 }
 
 // 메뉴 인터페이스 (데이터베이스)
@@ -74,7 +74,6 @@ export interface MenuDB {
   price: number;
   category: string;
   description?: string;
-  image_url?: string;
   is_available: boolean;
   created_at: string;
   updated_at: string;
@@ -89,7 +88,6 @@ export interface MenuItem {
   description: string;
   isAvailable: boolean;
   storeId: string;
-  image_url?: string;
 }
 
 // 메뉴 생성 데이터 타입
@@ -99,7 +97,6 @@ export interface CreateMenuData {
   price: number;
   category?: string;
   description?: string;
-  image_url?: string;
   is_available?: boolean;
 }
 
@@ -109,7 +106,6 @@ export interface UpdateMenuData {
   price?: number;
   category?: string;
   description?: string;
-  image_url?: string;
   is_available?: boolean;
 }
 
@@ -123,11 +119,11 @@ export interface CreateStoreData {
   phone: string;
   business_hours_start?: string;
   business_hours_end?: string;
+  order_cutoff_time?: string;
   pickup_time_slots?: string[];
   delivery_time_slots?: DeliveryTimeSlot[];
   bank_account: string;
   account_holder: string;
-  image_url?: string;
   is_active?: boolean;
 }
 
@@ -141,11 +137,11 @@ export interface UpdateStoreData {
   phone?: string;
   business_hours_start?: string;
   business_hours_end?: string;
+  order_cutoff_time?: string;
   pickup_time_slots?: string[];
   delivery_time_slots?: DeliveryTimeSlot[];
   bank_account?: string;
   account_holder?: string;
-  image_url?: string;
   is_active?: boolean;
 }
 

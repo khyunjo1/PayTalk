@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getStores, createStore, updateStore, deleteStore } from '../../../lib/storeApi';
 import type { Store } from '../../../types';
-import ImageUpload from '../../../components/ImageUpload';
 
 interface StoreManagementProps {
   showToast: (message: string) => void;
@@ -42,11 +41,13 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
           deliveryArea: store.delivery_area || '',
           businessHoursStart: store.business_hours_start || '09:00',
           businessHoursEnd: store.business_hours_end || '22:00',
+          orderCutoffTime: store.order_cutoff_time || '15:00',
           pickupTimeSlots: store.pickup_time_slots || [],
           deliveryTimeSlots: store.delivery_time_slots || [],
           bankAccount: store.bank_account || '',
-          accountHolder: store.account_holder || ''
+          accountHolder: store.account_holder || '',
         }));
+
         
         setStores(formattedStores);
         console.log('✅ 매장 데이터 로드됨:', formattedStores.length, '개');
@@ -70,9 +71,9 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
     deliveryArea: '',
     businessHoursStart: '09:00',
     businessHoursEnd: '22:00',
+    orderCutoffTime: '15:00',
     bankAccount: '',
     accountHolder: '',
-    image_url: '',
     pickupTimeSlots: ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'],
     deliveryTimeSlots: [
       { name: '아침 배송', start: '08:00', end: '10:00', enabled: false },
@@ -82,11 +83,13 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
     ]
   });
 
-  const filteredStores = stores.filter(store => 
-    selectedStatus === 'all' || store.status === selectedStatus
+  const filteredStores = useMemo(() => 
+    stores.filter(store => 
+      selectedStatus === 'all' || store.status === selectedStatus
+    ), [stores, selectedStatus]
   );
 
-  const handleAddStore = async () => {
+  const handleAddStore = useCallback(async () => {
     // 폼 검증
     if (!newStore.name.trim()) {
       showToast('매장명을 입력해주세요');
@@ -127,13 +130,15 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
         delivery_area: newStore.deliveryArea,
         business_hours_start: newStore.businessHoursStart,
         business_hours_end: newStore.businessHoursEnd,
+        order_cutoff_time: newStore.orderCutoffTime,
         bank_account: newStore.bankAccount,
         account_holder: newStore.accountHolder,
-        image_url: newStore.image_url || undefined,
         is_active: true,
         pickup_time_slots: newStore.pickupTimeSlots,
         delivery_time_slots: newStore.deliveryTimeSlots
       };
+
+      console.log('🔄 매장 생성 데이터:', storeData);
 
       const createdStore = await createStore(storeData);
       
@@ -149,11 +154,11 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
         deliveryArea: createdStore.delivery_area || '',
         businessHoursStart: createdStore.business_hours_start || '09:00',
         businessHoursEnd: createdStore.business_hours_end || '22:00',
+        orderCutoffTime: createdStore.order_cutoff_time || '15:00',
         pickupTimeSlots: createdStore.pickup_time_slots || [],
         deliveryTimeSlots: createdStore.delivery_time_slots || [],
         bankAccount: createdStore.bank_account || '',
         accountHolder: createdStore.account_holder || '',
-        image_url: createdStore.image_url
       };
 
       setStores([...stores, formattedStore]);
@@ -167,9 +172,9 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
       deliveryArea: '',
         businessHoursStart: '09:00',
         businessHoursEnd: '22:00',
+        orderCutoffTime: '15:00',
         bankAccount: '',
         accountHolder: '',
-        image_url: '',
         pickupTimeSlots: ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'],
         deliveryTimeSlots: [
           { name: '아침 배송', start: '08:00', end: '10:00', enabled: false },
@@ -183,7 +188,7 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
       console.error('❌ 매장 추가 실패:', error);
       showToast('매장 추가에 실패했습니다');
     }
-  };
+  }, [newStore, showToast, stores]);
 
   const handleEditStore = (store: Store) => {
     setEditingStore(store);
@@ -233,12 +238,14 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
         delivery_area: editingStore.deliveryArea,
         business_hours_start: editingStore.businessHoursStart,
         business_hours_end: editingStore.businessHoursEnd,
+        order_cutoff_time: editingStore.orderCutoffTime,
         bank_account: editingStore.bankAccount,
         account_holder: editingStore.accountHolder,
-        image_url: editingStore.image_url || undefined,
         pickup_time_slots: editingStore.pickupTimeSlots,
         delivery_time_slots: editingStore.deliveryTimeSlots
       };
+
+      console.log('🔄 매장 수정 데이터:', updateData);
 
       await updateStore(editingStore.id, updateData);
       
@@ -345,16 +352,6 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredStores.map((store) => (
           <div key={store.id} className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
-            {/* 매장 이미지 */}
-            {store.image_url && (
-              <div className="mb-4">
-                <img
-                  src={store.image_url}
-                  alt={store.name}
-                  className="w-full h-32 object-cover rounded-lg"
-                />
-              </div>
-            )}
             
             <div className="flex items-start justify-between mb-4">
               <div>
@@ -390,6 +387,10 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
               <div className="flex items-center">
                 <span className="w-16 font-medium">운영시간:</span>
                 <span>{store.businessHoursStart} - {store.businessHoursEnd}</span>
+              </div>
+              <div className="flex items-center">
+                <span className="w-16 font-medium">주문마감:</span>
+                <span>{store.orderCutoffTime || '15:00'}</span>
               </div>
             </div>
 
@@ -520,6 +521,16 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
                 </div>
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">주문마감시간</label>
+                <input
+                  type="time"
+                  value={newStore.orderCutoffTime}
+                  onChange={(e) => setNewStore({...newStore, orderCutoffTime: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">이 시간 이후 주문은 다음날 배달됩니다</p>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">계좌번호</label>
                 <input
                   type="text"
@@ -540,12 +551,6 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
                 />
               </div>
               
-              {/* 이미지 업로드 */}
-              <ImageUpload
-                currentImageUrl={newStore.image_url}
-                onImageChange={(imageUrl) => setNewStore({...newStore, image_url: imageUrl || ''})}
-                placeholder="매장 이미지를 선택하세요"
-              />
               
               {/* 픽업시간 설정 */}
               <div>
@@ -731,6 +736,16 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
                 </div>
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">주문마감시간</label>
+                <input
+                  type="time"
+                  value={editingStore.orderCutoffTime}
+                  onChange={(e) => setEditingStore({...editingStore, orderCutoffTime: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">이 시간 이후 주문은 다음날 배달됩니다</p>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">계좌번호</label>
                 <input
                   type="text"
@@ -749,12 +764,6 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
                 />
               </div>
               
-              {/* 이미지 업로드 */}
-              <ImageUpload
-                currentImageUrl={editingStore.image_url}
-                onImageChange={(imageUrl) => setEditingStore({...editingStore, image_url: imageUrl || ''})}
-                placeholder="매장 이미지를 선택하세요"
-              />
               
               {/* 픽업시간 설정 */}
               <div>

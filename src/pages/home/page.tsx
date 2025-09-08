@@ -21,13 +21,6 @@ export default function Home() {
     }
   }, [user, userProfile, loading, navigate]);
 
-  const handleAdminClick = () => {
-    navigate('/admin');
-  };
-
-  const handleSuperAdminClick = () => {
-    navigate('/super-admin');
-  };
 
   const handleKakaoLogin = async () => {
     try {
@@ -47,10 +40,10 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white">
-      {/* 모바일 최적화 헤더 */}
+      {/* 로고 및 브랜딩 - 왼쪽 상단 */}
       <div className="bg-white shadow-sm sticky top-0 z-50">
         <div className="px-4 py-3">
-          <div className="flex items-center justify-center">
+          <div className="flex items-center">
             <div className="flex items-center gap-2">
               <img 
                 src="https://static.readdy.ai/image/912b0945f01d9fdb4ff4544659653c90/2d4890bd82abce85d430bd82d04df8d6.png" 
@@ -103,21 +96,6 @@ export default function Home() {
             </div>
           )}
           
-          {/* 다른 페이지 접근 버튼들 */}
-          <div className="space-y-2">
-            <button
-              onClick={handleAdminClick}
-              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg text-sm transition-colors duration-200"
-            >
-              사장님 페이지 (테스트)
-            </button>
-            <button
-              onClick={handleSuperAdminClick}
-              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg text-sm transition-colors duration-200"
-            >
-              슈퍼 어드민 페이지 (테스트)
-            </button>
-          </div>
         </div>
 
       </div>
@@ -143,7 +121,7 @@ export default function Home() {
                 </div>
                 <div className="flex items-center gap-2">
                   <i className="ri-mail-line text-orange-500"></i>
-                  <span>support@paytalk.co.kr</span>
+                  <span>mnkijo424@gmail.com</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <i className="ri-time-line text-orange-500"></i>
@@ -157,8 +135,8 @@ export default function Home() {
           <div className="border-t border-gray-200 pt-4">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
               <div className="text-gray-600 text-sm">
-                <p>© 2024 페이톡. 모든 권리 보유.</p>
-                <p className="mt-1">사업자등록번호: 123-45-67890 | 대표: 김페이톡</p>
+                <p>© 2025 페이톡. 모든 권리 보유.</p>
+                <p className="mt-1">사업자등록번호: 227-09-52974 | 대표: 조광현</p>
               </div>
               <div className="flex gap-4 text-sm text-gray-500">
                 <a href="#" className="hover:text-orange-500 transition-colors">이용약관</a>

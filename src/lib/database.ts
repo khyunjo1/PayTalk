@@ -68,7 +68,6 @@ export const createMenu = async (menuData: {
   price: number
   category: string
   description?: string | null
-  image_url?: string | null
   is_available?: boolean
 }): Promise<Menu> => {
   const { data, error } = await supabase
@@ -79,7 +78,6 @@ export const createMenu = async (menuData: {
       price: menuData.price,
       category: menuData.category,
       description: menuData.description || null,
-      image_url: menuData.image_url || null,
       is_available: menuData.is_available ?? true
     })
     .select()
@@ -99,7 +97,6 @@ export const updateMenu = async (menuId: string, menuData: {
   price?: number
   category?: string
   description?: string | null
-  image_url?: string | null
   is_available?: boolean
 }): Promise<Menu> => {
   const { data, error } = await supabase

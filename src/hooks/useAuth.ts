@@ -19,8 +19,12 @@ export const useAuth = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
+    // 이미 초기화되었으면 중복 실행 방지
+    if (isInitialized) return;
+    
     const fetchUserProfile = async (userId: string) => {
       try {
         return await getUserProfile(userId);
@@ -102,6 +106,7 @@ export const useAuth = () => {
       } finally {
         setLoading(false);
         setInitialLoadComplete(true);
+        setIsInitialized(true);
       }
     };
 
@@ -137,8 +142,10 @@ export const useAuth = () => {
       }
     );
 
-    return () => subscription.unsubscribe();
-  }, [initialLoadComplete]);
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [isInitialized]);
 
   return { user, userProfile, loading };
 };

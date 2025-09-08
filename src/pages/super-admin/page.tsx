@@ -28,13 +28,17 @@ export default function SuperAdmin() {
   const [showToast, setShowToast] = useState('');
 
   useEffect(() => {
-    if (!loading && (!user || !userProfile)) {
+    // 로딩 중이면 아무것도 하지 않음
+    if (loading) return;
+
+    // 사용자가 없으면 로그인 페이지로
+    if (!user || !userProfile) {
       navigate('/login');
       return;
     }
 
     // 슈퍼 어드민 권한 확인
-    if (!loading && userProfile && userProfile.role !== 'super_admin') {
+    if (userProfile.role !== 'super_admin') {
       console.log('슈퍼 어드민 권한이 없습니다. /stores로 리다이렉트합니다.');
       alert('슈퍼 어드민만 접근할 수 있는 페이지입니다.');
       navigate('/stores');

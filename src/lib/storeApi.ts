@@ -3,10 +3,18 @@
 
 import { supabase } from './supabase';
 import { StoreDB, CreateStoreData, UpdateStoreData } from '../types';
+import { cache, CACHE_KEYS } from './cache';
 
 // 모든 매장 목록 가져오기
 export const getStores = async (): Promise<StoreDB[]> => {
   console.log('📡 getStores API 호출 시작');
+  
+  // 캐시에서 먼저 확인
+  const cachedData = cache.get<StoreDB[]>(CACHE_KEYS.STORES);
+  if (cachedData) {
+    console.log('✅ getStores 캐시에서 반환:', cachedData.length, '개');
+    return cachedData;
+  }
   
   const { data, error } = await supabase
     .from('stores')
@@ -18,8 +26,13 @@ export const getStores = async (): Promise<StoreDB[]> => {
     throw new Error(`매장 목록을 불러오는데 실패했습니다: ${error.message}`);
   }
 
-  console.log('✅ getStores API 응답:', data);
-  return data || [];
+  const result = data || [];
+  console.log('✅ getStores API 응답:', result);
+  
+  // 캐시에 저장 (5분 TTL)
+  cache.set(CACHE_KEYS.STORES, result, 5 * 60 * 1000);
+  
+  return result;
 };
 
 // 특정 매장 정보 가져오기
@@ -78,6 +91,9 @@ export const createStore = async (storeData: CreateStoreData): Promise<StoreDB> 
     throw new Error(`매장 생성에 실패했습니다: ${error.message}`);
   }
 
+  // 캐시 무효화
+  cache.delete(CACHE_KEYS.STORES);
+  
   return data;
 };
 
@@ -108,6 +124,9 @@ export const updateStore = async (storeId: string, updateData: UpdateStoreData):
     throw new Error(`매장 수정에 실패했습니다: ${error.message}`);
   }
 
+  // 캐시 무효화
+  cache.delete(CACHE_KEYS.STORES);
+  
   return data;
 };
 
@@ -126,4 +145,7 @@ export const deleteStore = async (storeId: string): Promise<void> => {
     console.error('매장 삭제 오류:', error);
     throw new Error(`매장 삭제에 실패했습니다: ${error.message}`);
   }
+
+  // 캐시 무효화
+  cache.delete(CACHE_KEYS.STORES);
 };

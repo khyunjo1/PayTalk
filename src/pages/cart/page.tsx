@@ -17,6 +17,7 @@ interface StoreInfo {
   phone: string;
   business_hours_start?: string;
   business_hours_end?: string;
+  order_cutoff_time?: string;
   pickup_time_slots?: string[];
   delivery_time_slots?: Array<{
     name: string;
@@ -26,6 +27,24 @@ interface StoreInfo {
   }>;
 }
 
+// 시간 형식을 읽기 쉽게 변환하는 함수
+const formatTime = (timeString: string): string => {
+  if (!timeString) return '오후 3시';
+  
+  const [hour, minute] = timeString.split(':').map(Number);
+  
+  if (hour === 0) {
+    return minute === 0 ? '자정' : `오전 12시 ${minute}분`;
+  } else if (hour < 12) {
+    return minute === 0 ? `오전 ${hour}시` : `오전 ${hour}시 ${minute}분`;
+  } else if (hour === 12) {
+    return minute === 0 ? '정오' : `오후 12시 ${minute}분`;
+  } else {
+    const pmHour = hour - 12;
+    return minute === 0 ? `오후 ${pmHour}시` : `오후 ${pmHour}시 ${minute}분`;
+  }
+};
+
 export default function Cart() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
@@ -33,9 +52,7 @@ export default function Cart() {
   const [storeInfo, setStoreInfo] = useState<StoreInfo | null>(null);
   const [orderType, setOrderType] = useState<'delivery' | 'pickup'>('delivery');
   const [deliveryAddress, setDeliveryAddress] = useState('');
-  const [deliveryDate, setDeliveryDate] = useState('');
   const [deliveryTime, setDeliveryTime] = useState('');
-  const [pickupDate, setPickupDate] = useState('');
   const [pickupTime, setPickupTime] = useState('');
   const [specialRequests, setSpecialRequests] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'bank' | 'card'>('bank');
@@ -58,10 +75,6 @@ export default function Cart() {
       console.log('배달 시간대 슬롯:', store.delivery_time_slots);
       setStoreInfo(store);
       
-      // 오늘 날짜를 기본값으로 설정
-      const today = new Date().toISOString().split('T')[0];
-      setDeliveryDate(today);
-      setPickupDate(today);
       
       // 배달 가능 시간이 있으면 첫 번째 시간을 기본값으로 설정
       if (store.delivery_time_slots && store.delivery_time_slots.length > 0) {
@@ -79,39 +92,6 @@ export default function Cart() {
     }
   }, [navigate]);
 
-  // 영업시간 검증 함수
-  const isBusinessHoursPassed = (date: string, businessHoursEnd: string) => {
-    const today = new Date().toISOString().split('T')[0];
-    const selectedDate = new Date(date);
-    const currentDate = new Date(today);
-    
-    // 오늘이 아니면 항상 주문 가능
-    if (selectedDate.getTime() !== currentDate.getTime()) {
-      return false;
-    }
-    
-    // 오늘인 경우 현재 시간과 영업 종료 시간 비교
-    const now = new Date();
-    const currentTime = now.getHours() * 60 + now.getMinutes();
-    const [endHour, endMinute] = businessHoursEnd.split(':').map(Number);
-    const businessEndTime = endHour * 60 + endMinute;
-    
-    return currentTime >= businessEndTime;
-  };
-
-  // 선택 가능한 날짜 목록 생성
-  const getAvailableDates = () => {
-    const dates = [];
-    const today = new Date();
-    
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      dates.push(date.toISOString().split('T')[0]);
-    }
-    
-    return dates;
-  };
 
   // 로딩 중일 때
   if (loading) {
@@ -180,19 +160,11 @@ export default function Cart() {
         alert('배달 주소를 입력해주세요.');
         return;
       }
-      if (!deliveryDate) {
-        alert('배달 날짜를 선택해주세요.');
-        return;
-      }
       if (!deliveryTime) {
         alert('배달 희망 시간을 선택해주세요.');
         return;
       }
     } else {
-      if (!pickupDate) {
-        alert('픽업 날짜를 선택해주세요.');
-        return;
-      }
       if (!pickupTime) {
         alert('픽업 희망 시간을 선택해주세요.');
         return;
@@ -205,6 +177,20 @@ export default function Cart() {
     }
 
     try {
+      // 주문접수시간 확인 후 배달날짜 자동 설정
+      const now = new Date();
+      const cutoffTime = storeInfo.order_cutoff_time || '15:00'; // 기본값 오후 3시
+      const [cutoffHour, cutoffMinute] = cutoffTime.split(':').map(Number);
+      
+      const today = new Date();
+      const cutoffToday = new Date(today);
+      cutoffToday.setHours(cutoffHour, cutoffMinute, 0, 0);
+      
+      // 현재 시간이 주문접수시간을 지났으면 다음날로 설정
+      const deliveryDate = now > cutoffToday 
+        ? new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        : today.toISOString().split('T')[0];
+
       // 주문 데이터 준비
       const orderData = {
         user_id: user.id,
@@ -212,7 +198,7 @@ export default function Cart() {
         order_type: orderType,
         delivery_address: orderType === 'delivery' ? deliveryAddress : null,
         delivery_time: orderType === 'delivery' ? `${deliveryDate} ${deliveryTime}` : null,
-        pickup_time: orderType === 'pickup' ? `${pickupDate} ${pickupTime}` : null,
+        pickup_time: orderType === 'pickup' ? `${deliveryDate} ${pickupTime}` : null,
         special_requests: specialRequests || null,
         depositor_name: depositorName,
         subtotal: subtotal,
@@ -295,6 +281,17 @@ export default function Cart() {
         {orderType === 'delivery' && (
           <div className="bg-white rounded-lg p-4">
             <h2 className="font-semibold text-gray-800 mb-3">배달 정보</h2>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <div className="flex items-center text-blue-800">
+                <i className="ri-information-line mr-2"></i>
+                <div className="text-sm">
+                  <div className="font-medium">주문 접수 안내</div>
+                  <div>
+                    {formatTime(storeInfo?.order_cutoff_time || '15:00')} 이후 주문은 다음날 배달됩니다.
+                  </div>
+                </div>
+              </div>
+            </div>
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -307,38 +304,6 @@ export default function Cart() {
                   placeholder="상세 주소를 입력해주세요"
                   className="w-full p-3 border border-gray-300 rounded-lg text-sm"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  배달 날짜 <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={deliveryDate}
-                  onChange={(e) => setDeliveryDate(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg text-sm pr-8"
-                >
-                  {getAvailableDates().map((date) => {
-                    const isPassed = isBusinessHoursPassed(date, storeInfo.business_hours_end || '21:00');
-                    const dateObj = new Date(date);
-                    const today = new Date();
-                    const isToday = dateObj.toDateString() === today.toDateString();
-                    const dayName = isToday ? '오늘' : 
-                      dateObj.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', weekday: 'short' });
-                    
-                    return (
-                      <option 
-                        key={date} 
-                        value={date}
-                        disabled={isPassed}
-                      >
-                        {dayName} {isPassed ? '(영업시간 종료)' : ''}
-                      </option>
-                    );
-                  })}
-                </select>
-                <div className="text-xs text-gray-500 mt-1">
-                  영업시간이 지난 당일은 주문할 수 없습니다
-                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -388,44 +353,23 @@ export default function Cart() {
         {orderType === 'pickup' && (
           <div className="bg-white rounded-lg p-4">
             <h2 className="font-semibold text-gray-800 mb-3">픽업 정보</h2>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <div className="flex items-center text-blue-800">
+                <i className="ri-information-line mr-2"></i>
+                <div className="text-sm">
+                  <div className="font-medium">주문 접수 안내</div>
+                  <div>
+                    {formatTime(storeInfo?.order_cutoff_time || '15:00')} 이후 주문은 다음날 픽업됩니다.
+                  </div>
+                </div>
+              </div>
+            </div>
             <div className="space-y-3">
               <div className="bg-gray-50 p-3 rounded-lg">
                 <div className="font-medium text-gray-800">{storeInfo?.name}</div>
                 <div className="text-sm text-gray-600 mt-1">
                   <div>영업시간: {(storeInfo as any)?.business_hours_start || '09:00'} ~ {(storeInfo as any)?.business_hours_end || '21:00'}</div>
                   <div>전화번호: {storeInfo?.phone}</div>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  픽업 날짜 <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={pickupDate}
-                  onChange={(e) => setPickupDate(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg text-sm pr-8"
-                >
-                  {getAvailableDates().map((date) => {
-                    const isPassed = isBusinessHoursPassed(date, storeInfo.business_hours_end || '21:00');
-                    const dateObj = new Date(date);
-                    const today = new Date();
-                    const isToday = dateObj.toDateString() === today.toDateString();
-                    const dayName = isToday ? '오늘' : 
-                      dateObj.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', weekday: 'short' });
-                    
-                    return (
-                      <option 
-                        key={date} 
-                        value={date}
-                        disabled={isPassed}
-                      >
-                        {dayName} {isPassed ? '(영업시간 종료)' : ''}
-                      </option>
-                    );
-                  })}
-                </select>
-                <div className="text-xs text-gray-500 mt-1">
-                  영업시간이 지난 당일은 픽업할 수 없습니다
                 </div>
               </div>
               <div>

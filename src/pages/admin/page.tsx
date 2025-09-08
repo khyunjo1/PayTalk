@@ -51,6 +51,7 @@ export default function Admin() {
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'delivery' | 'orders' | 'statistics'>('delivery');
+  const [searchTerm, setSearchTerm] = useState<string>('');
   
   // URL에서 매장 정보 가져오기
   const storeId = searchParams.get('storeId');
@@ -105,20 +106,20 @@ export default function Admin() {
           console.log(`매장 ${storeName}의 주문:`, allOrders);
         } else {
           // 일반 admin 사용자 또는 슈퍼 어드민이 전체 보기를 원하는 경우
-          const userStores = await getUserStores(user.id);
-          console.log('사용자 매장 목록:', userStores);
+        const userStores = await getUserStores(user.id);
+        console.log('사용자 매장 목록:', userStores);
 
-          if (userStores.length === 0) {
-            console.log('관리하는 매장이 없습니다.');
-            setOrders([]);
-            return;
-          }
+        if (userStores.length === 0) {
+          console.log('관리하는 매장이 없습니다.');
+          setOrders([]);
+          return;
+        }
 
-          // 모든 매장의 주문 데이터 가져오기
-          for (const store of userStores) {
-            const storeOrders = await getStoreOrders(store.id);
-            console.log(`매장 ${store.name}의 주문:`, storeOrders);
-            allOrders.push(...storeOrders);
+        // 모든 매장의 주문 데이터 가져오기
+        for (const store of userStores) {
+          const storeOrders = await getStoreOrders(store.id);
+          console.log(`매장 ${store.name}의 주문:`, storeOrders);
+          allOrders.push(...storeOrders);
           }
         }
 
@@ -160,7 +161,7 @@ export default function Admin() {
     try {
       // updateOrderStatus API 사용 (알림톡 발송 포함)
       const updatedOrder = await updateOrderStatus(orderId, newStatus);
-      
+
       // 로컬 상태 업데이트
       setOrders(orders.map(order => 
         order.id === orderId ? { ...order, status: newStatus } : order
@@ -196,6 +197,7 @@ export default function Admin() {
       setSelectedDate('');
     }
   };
+
 
   // 배달날짜 추출 함수
   const getDeliveryDate = (order: Order) => {
@@ -265,9 +267,22 @@ export default function Admin() {
   };
 
   const filteredOrdersByPeriod = filterOrdersByPeriod(orders, selectedPeriod, selectedDate);
-  const filteredOrders = selectedStatus === 'all'
+  const filteredOrdersByStatus = selectedStatus === 'all'
     ? filteredOrdersByPeriod
     : filteredOrdersByPeriod.filter(order => order.status === selectedStatus);
+  
+  // 검색 기능 적용
+  const finalFilteredOrders = filteredOrdersByStatus.filter(order => {
+    if (!searchTerm.trim()) return true;
+    
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      order.depositor_name?.toLowerCase().includes(searchLower) ||
+      order.delivery_address?.toLowerCase().includes(searchLower) ||
+      order.users.name.toLowerCase().includes(searchLower) ||
+      order.users.phone.includes(searchTerm)
+    );
+  });
   
   const popularMenus = getPopularMenus(filteredOrdersByPeriod);
 
@@ -400,6 +415,20 @@ export default function Admin() {
       </div>
 
       <div className="p-4">
+        {/* 검색바 */}
+        <div className="mb-4">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="입금자명, 배달주소, 고객명, 전화번호로 검색..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full p-3 pr-12 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+            />
+            <i className="ri-search-line absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+          </div>
+        </div>
+
         {/* 탭 메뉴 */}
         <div className="flex mb-6 bg-gray-100 rounded-lg p-1">
           <button
@@ -445,7 +474,7 @@ export default function Admin() {
               <p className="text-sm text-gray-600">배달에 필요한 핵심 정보만 표시됩니다</p>
             </div>
 
-            {/* 기간 필터 버튼 */}
+        {/* 기간 필터 버튼 */}
         <div className="flex flex-wrap gap-2 mb-4">
           {[
             { key: 'today', label: '오늘' },
@@ -526,7 +555,7 @@ export default function Admin() {
                 <p className="text-gray-600">주문 데이터를 불러오는 중...</p>
               </div>
             </div>
-          ) : filteredOrders.length === 0 ? (
+          ) : finalFilteredOrders.length === 0 ? (
             <div className="bg-white rounded-lg p-8 shadow-sm">
               <div className="text-center text-gray-500">
                 <i className="ri-shopping-cart-line text-4xl mb-4"></i>
@@ -534,7 +563,7 @@ export default function Admin() {
               </div>
             </div>
           ) : (
-            filteredOrders.map((order) => {
+            finalFilteredOrders.map((order) => {
               const { date, time } = {
                 date: new Date(order.created_at).toLocaleDateString('ko-KR'),
                 time: new Date(order.created_at).toLocaleTimeString('ko-KR', { 
@@ -762,7 +791,7 @@ export default function Admin() {
                     <p className="text-gray-600">주문 데이터를 불러오는 중...</p>
                   </div>
                 </div>
-              ) : filteredOrders.length === 0 ? (
+              ) : finalFilteredOrders.length === 0 ? (
                 <div className="bg-white rounded-lg p-8 shadow-sm">
                   <div className="text-center text-gray-500">
                     <i className="ri-shopping-cart-line text-4xl mb-4"></i>
@@ -770,103 +799,103 @@ export default function Admin() {
                   </div>
                 </div>
               ) : (
-                filteredOrders.map((order) => {
-                  const { date, time } = {
-                    date: new Date(order.created_at).toLocaleDateString('ko-KR'),
-                    time: new Date(order.created_at).toLocaleTimeString('ko-KR', { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })
-                  };
-                  
-                  return (
-                    <div key={order.id} className="bg-white rounded-lg shadow-sm overflow-hidden">
-                      <div className="p-4">
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <h3 className="font-semibold text-gray-800">주문번호: {getShortOrderId(order.id)}</h3>
-                            <div className="text-sm text-gray-500 mt-1">
+                finalFilteredOrders.map((order) => {
+              const { date, time } = {
+                date: new Date(order.created_at).toLocaleDateString('ko-KR'),
+                time: new Date(order.created_at).toLocaleTimeString('ko-KR', { 
+                  hour: '2-digit', 
+                  minute: '2-digit' 
+                })
+              };
+              
+              return (
+                <div key={order.id} className="bg-white rounded-lg shadow-sm overflow-hidden">
+                  <div className="p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="font-semibold text-gray-800">주문번호: {getShortOrderId(order.id)}</h3>
+                        <div className="text-sm text-gray-500 mt-1">
                               <div>주문일시: {date} {time}</div>
-                              <div>고객: {order.users.name} ({order.users.phone})</div>
-                              <div>주문방식: {order.order_type === 'delivery' ? '배달' : '픽업'}</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                              {order.status}
-                            </span>
-                            <i className="ri-bank-line text-gray-500"></i>
-                          </div>
+                          <div>고객: {order.users.name} ({order.users.phone})</div>
+                          <div>주문방식: {order.order_type === 'delivery' ? '배달' : '픽업'}</div>
                         </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                          {order.status}
+                        </span>
+                        <i className="ri-bank-line text-gray-500"></i>
+                      </div>
+                    </div>
 
-                        <div className="border-t pt-3">
-                          <div className="space-y-1 mb-3">
-                            {order.order_items?.map((item, index) => (
-                              <div key={index} className="flex justify-between text-sm">
-                                <span className="text-gray-600">
-                                  {item.menus.name} x {item.quantity}
-                                </span>
-                                <span className="text-gray-800">
-                                  {(item.price * item.quantity).toLocaleString()}원
-                                </span>
-                              </div>
-                            )) || <div className="text-gray-500 text-sm">주문 상품 정보 없음</div>}
-                          </div>
-                          
-                          <div className="flex justify-between items-center pt-2 border-t">
-                            <span className="font-semibold text-gray-800">총 결제 금액</span>
-                            <span className="font-bold text-lg text-orange-500">
-                              {order.total.toLocaleString()}원
+                    <div className="border-t pt-3">
+                      <div className="space-y-1 mb-3">
+                        {order.order_items?.map((item, index) => (
+                          <div key={index} className="flex justify-between text-sm">
+                            <span className="text-gray-600">
+                              {item.menus.name} x {item.quantity}
+                            </span>
+                            <span className="text-gray-800">
+                              {(item.price * item.quantity).toLocaleString()}원
                             </span>
                           </div>
-                        </div>
+                        )) || <div className="text-gray-500 text-sm">주문 상품 정보 없음</div>}
+                      </div>
+                      
+                      <div className="flex justify-between items-center pt-2 border-t">
+                        <span className="font-semibold text-gray-800">총 결제 금액</span>
+                        <span className="font-bold text-lg text-orange-500">
+                          {order.total.toLocaleString()}원
+                        </span>
+                      </div>
+                    </div>
 
-                        {/* 주문 상세 정보 */}
-                        <div className="mt-3 pt-3 border-t space-y-2">
-                          {order.delivery_address && (
-                            <div className="flex items-center text-sm text-gray-600">
-                              <i className="ri-map-pin-line mr-2"></i>
-                              <span>배달주소: {order.delivery_address}</span>
-                            </div>
-                          )}
-                          {order.delivery_time && (
-                            <div className="flex items-center text-sm text-gray-600">
-                              <i className="ri-time-line mr-2"></i>
-                              <span>배달시간: {order.delivery_time} ({parseDeliveryTime(order.delivery_time)})</span>
-                            </div>
-                          )}
-                          {order.pickup_time && (
-                            <div className="flex items-center text-sm text-gray-600">
-                              <i className="ri-time-line mr-2"></i>
-                              <span>픽업시간: {order.pickup_time}</span>
-                            </div>
-                          )}
-                          {order.depositor_name && (
-                            <div className="flex items-center text-sm text-gray-600">
-                              <i className="ri-user-line mr-2"></i>
-                              <span>입금자명: {order.depositor_name}</span>
-                            </div>
-                          )}
-                          {order.special_requests && (
-                            <div className="flex items-center text-sm text-gray-600">
-                              <i className="ri-message-line mr-2"></i>
-                              <span>요청사항: {order.special_requests}</span>
-                            </div>
-                          )}
+                    {/* 주문 상세 정보 */}
+                    <div className="mt-3 pt-3 border-t space-y-2">
+                      {order.delivery_address && (
+                        <div className="flex items-center text-sm text-gray-600">
+                          <i className="ri-map-pin-line mr-2"></i>
+                          <span>배달주소: {order.delivery_address}</span>
                         </div>
+                      )}
+                      {order.delivery_time && (
+                        <div className="flex items-center text-sm text-gray-600">
+                          <i className="ri-time-line mr-2"></i>
+                          <span>배달시간: {order.delivery_time} ({parseDeliveryTime(order.delivery_time)})</span>
+                        </div>
+                      )}
+                      {order.pickup_time && (
+                        <div className="flex items-center text-sm text-gray-600">
+                          <i className="ri-time-line mr-2"></i>
+                          <span>픽업시간: {order.pickup_time}</span>
+                        </div>
+                      )}
+                      {order.depositor_name && (
+                        <div className="flex items-center text-sm text-gray-600">
+                          <i className="ri-user-line mr-2"></i>
+                          <span>입금자명: {order.depositor_name}</span>
+                        </div>
+                      )}
+                      {order.special_requests && (
+                        <div className="flex items-center text-sm text-gray-600">
+                          <i className="ri-message-line mr-2"></i>
+                          <span>요청사항: {order.special_requests}</span>
+                        </div>
+                      )}
+                    </div>
 
-                        {/* 관리 버튼 */}
-                        <div className="mt-4 pt-3 border-t">
-                          <div className="flex flex-wrap gap-2">
+                    {/* 관리 버튼 */}
+                    <div className="mt-4 pt-3 border-t">
+                      <div className="flex flex-wrap gap-2">
                             {/* 입금대기 상태일 때 */}
-                            {order.status === '입금대기' && (
+                        {order.status === '입금대기' && (
                               <>
-                                <button
-                                  onClick={() => handleStatusChange(order.id, '입금확인')}
-                                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
-                                >
-                                  입금확인
-                                </button>
+                          <button
+                            onClick={() => handleStatusChange(order.id, '입금확인')}
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                          >
+                            입금확인
+                          </button>
                                 <button
                                   onClick={() => handleStatusChange(order.id, '배달완료')}
                                   className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
@@ -877,7 +906,7 @@ export default function Admin() {
                             )}
                             
                             {/* 입금확인 상태일 때 */}
-                            {order.status === '입금확인' && (
+                        {order.status === '입금확인' && (
                               <>
                                 <button
                                   onClick={() => handleStatusChange(order.id, '입금대기')}
@@ -885,12 +914,12 @@ export default function Admin() {
                                 >
                                   입금대기로
                                 </button>
-                                <button
-                                  onClick={() => handleStatusChange(order.id, '배달완료')}
-                                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
-                                >
-                                  배달완료
-                                </button>
+                          <button
+                            onClick={() => handleStatusChange(order.id, '배달완료')}
+                            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                          >
+                            배달완료
+                          </button>
                               </>
                             )}
                             
@@ -912,22 +941,22 @@ export default function Admin() {
                               </>
                             )}
                             
-                            {canCancel(order.status) && (
-                              <button
-                                onClick={() => handleCancelOrder(order.id)}
-                                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
-                              >
-                                주문취소
-                              </button>
-                            )}
-                          </div>
-                        </div>
+                        {canCancel(order.status) && (
+                          <button
+                            onClick={() => handleCancelOrder(order.id)}
+                            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                          >
+                            주문취소
+                          </button>
+                        )}
                       </div>
                     </div>
-                  );
-                })
-              )}
-            </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
           </>
         )}
 

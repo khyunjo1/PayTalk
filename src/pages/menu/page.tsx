@@ -56,8 +56,7 @@ export default function Menu() {
         // 데이터베이스 필드명을 프론트엔드 필드명으로 매핑
         const mappedMenuData = menuData.map(menu => ({
           ...menu,
-          isAvailable: menu.is_available, // snake_case → camelCase
-          image: menu.image_url || '/placeholder-food.jpg'
+          isAvailable: menu.is_available // snake_case → camelCase
         }));
         
         setMenu(mappedMenuData);
@@ -147,16 +146,22 @@ export default function Menu() {
           ? { ...item, quantity: item.quantity + 1 }
           : item
       ));
+      setShowToast(`${menuItem.name} 수량이 증가했습니다.`);
     } else {
       setCart([...cart, { ...menuItem, quantity: 1 }]);
+      setShowToast(`${menuItem.name}이(가) 장바구니에 추가되었습니다.`);
     }
 
-    setShowToast(`${menuItem.name}이(가) 장바구니에 추가되었습니다.`);
     setTimeout(() => setShowToast(''), 2000);
   };
 
   const removeFromCart = (menuItemId: string) => {
-    setCart(cart.filter(item => item.id !== menuItemId));
+    const itemToRemove = cart.find(item => item.id === menuItemId);
+    if (itemToRemove) {
+      setCart(cart.filter(item => item.id !== menuItemId));
+      setShowToast(`${itemToRemove.name}이(가) 장바구니에서 제거되었습니다.`);
+      setTimeout(() => setShowToast(''), 2000);
+    }
   };
 
   const updateQuantity = (menuItemId: string, quantity: number) => {
@@ -165,11 +170,22 @@ export default function Menu() {
       return;
     }
 
-    setCart(cart.map(item => 
-      item.id === menuItemId 
-        ? { ...item, quantity }
-        : item
-    ));
+    const itemToUpdate = cart.find(item => item.id === menuItemId);
+    if (itemToUpdate) {
+      setCart(cart.map(item => 
+        item.id === menuItemId 
+          ? { ...item, quantity }
+          : item
+      ));
+      
+      // 수량 변경 토스트 메시지
+      if (quantity > itemToUpdate.quantity) {
+        setShowToast(`${itemToUpdate.name} 수량이 증가했습니다.`);
+      } else {
+        setShowToast(`${itemToUpdate.name} 수량이 감소했습니다.`);
+      }
+      setTimeout(() => setShowToast(''), 2000);
+    }
   };
 
   const handleCartClick = () => {
@@ -242,16 +258,6 @@ export default function Menu() {
           filteredMenu.map(item => (
             <div key={item.id} className="bg-white rounded-lg p-4 shadow-sm">
               <div className="flex gap-4">
-                <div className="w-20 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
-                  <img
-                    src={item.image || '/placeholder-food.jpg'}
-                    alt={item.name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = '/placeholder-food.jpg';
-                    }}
-                  />
-                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-1">
                     <h3 className="font-medium text-gray-900 truncate">{item.name}</h3>
@@ -268,17 +274,62 @@ export default function Menu() {
                     }`}>
                       {item.isAvailable ? '주문가능' : '품절'}
                     </span>
-                    <button
-                      onClick={() => addToCart(item)}
-                      disabled={!item.isAvailable}
-                      className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                        item.isAvailable
-                          ? 'bg-white hover:bg-orange-500 text-gray-700 hover:text-white border border-gray-300 hover:border-orange-500'
-                          : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      }`}
-                    >
-                      {item.isAvailable ? '담기' : '품절'}
-                    </button>
+                    {/* 장바구니 수량 조절 UI */}
+                    {(() => {
+                      const cartItem = cart.find(cartItem => cartItem.id === item.id);
+                      
+                      if (!cartItem) {
+                        // 장바구니에 없는 경우 - 담기 버튼
+                        return (
+                          <button
+                            onClick={() => addToCart(item)}
+                            disabled={!item.isAvailable}
+                            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                              item.isAvailable
+                                ? 'bg-white hover:bg-orange-500 text-gray-700 hover:text-white border border-gray-300 hover:border-orange-500'
+                                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            }`}
+                          >
+                            {item.isAvailable ? '담기' : '품절'}
+                          </button>
+                        );
+                      } else {
+                        // 장바구니에 있는 경우 - 수량 조절 UI
+                        return (
+                          <div className="flex items-center gap-2">
+                            {/* 수량 조절 버튼들 */}
+                            <div className="flex items-center bg-white border border-gray-300 rounded-full">
+                              <button
+                                onClick={() => updateQuantity(item.id, cartItem.quantity - 1)}
+                                className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-orange-500 hover:bg-orange-50 rounded-l-full transition-colors"
+                              >
+                                <i className="ri-subtract-line text-sm"></i>
+                              </button>
+                              <span className="px-3 py-1 text-sm font-medium text-gray-700 min-w-[2rem] text-center">
+                                {cartItem.quantity}
+                              </span>
+                              <button
+                                onClick={() => updateQuantity(item.id, cartItem.quantity + 1)}
+                                className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-orange-500 hover:bg-orange-50 rounded-r-full transition-colors"
+                              >
+                                <i className="ri-add-line text-sm"></i>
+                              </button>
+                            </div>
+                            
+                            {/* 삭제 버튼 (1개일 때만 표시) */}
+                            {cartItem.quantity === 1 && (
+                              <button
+                                onClick={() => removeFromCart(item.id)}
+                                className="w-8 h-8 flex items-center justify-center text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors"
+                                title="메뉴 삭제"
+                              >
+                                <i className="ri-delete-bin-line text-sm"></i>
+                              </button>
+                            )}
+                          </div>
+                        );
+                      }
+                    })()}
                   </div>
                 </div>
               </div>

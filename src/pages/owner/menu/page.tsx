@@ -10,7 +10,6 @@ interface Menu {
   price: number;
   category: string;
   description: string | null;
-  image_url: string | null;
   is_available: boolean;
   created_at: string;
   updated_at: string;
@@ -57,7 +56,6 @@ export default function OwnerMenu() {
     price: 0,
     category: '인기메뉴',
     description: '',
-    image_url: '',
     is_available: true
   });
 
@@ -122,7 +120,6 @@ export default function OwnerMenu() {
         price: menuForm.price,
         category: menuForm.category,
         description: menuForm.description || null,
-        image_url: menuForm.image_url || null,
         is_available: menuForm.is_available
       });
 
@@ -149,7 +146,6 @@ export default function OwnerMenu() {
         price: menuForm.price,
         category: menuForm.category,
         description: menuForm.description || null,
-        image_url: menuForm.image_url || null,
         is_available: menuForm.is_available
       });
 
@@ -196,7 +192,6 @@ export default function OwnerMenu() {
       price: menu.price,
       category: menu.category,
       description: menu.description || '',
-      image_url: menu.image_url || '',
       is_available: menu.is_available
     });
   };
@@ -310,15 +305,8 @@ export default function OwnerMenu() {
             filteredMenus.map(menu => (
               <div key={menu.id} className="bg-white rounded-lg p-4 shadow-sm">
                 <div className="flex gap-4">
-                  <div className="w-20 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
-                    <img
-                      src={menu.image_url || '/placeholder-food.jpg'}
-                      alt={menu.name}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = '/placeholder-food.jpg';
-                      }}
-                    />
+                  <div className="w-20 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
+                    <i className="ri-restaurant-line text-2xl text-gray-400"></i>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start mb-1">
@@ -420,14 +408,6 @@ export default function OwnerMenu() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">이미지 URL</label>
-                <input
-                  type="url"
-                  value={menuForm.image_url}
-                  onChange={(e) => setMenuForm({...menuForm, image_url: e.target.value})}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="이미지 URL을 입력하세요"
-                />
               </div>
 
               <div className="flex items-center">
