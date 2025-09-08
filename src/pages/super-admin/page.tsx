@@ -8,11 +8,13 @@ import MenuManagement from './components/MenuManagement';
 import UserManagement from './components/UserManagement';
 import InquiryManagement from './components/InquiryManagement';
 import Statistics from './components/Statistics';
+import OrdersManagement from './components/OrdersManagement';
 
 const MENU_ITEMS = [
   { id: 'dashboard', label: '대시보드', icon: 'ri-dashboard-line' },
   { id: 'stores', label: '매장 관리', icon: 'ri-store-line' },
   { id: 'menus', label: '메뉴 관리', icon: 'ri-restaurant-line' },
+  { id: 'orders', label: '주문 관리', icon: 'ri-shopping-cart-line' },
   { id: 'users', label: '유저 관리', icon: 'ri-user-line' },
   { id: 'inquiries', label: '문의 관리', icon: 'ri-question-line' },
   { id: 'statistics', label: '통계', icon: 'ri-bar-chart-line' }
@@ -91,6 +93,8 @@ export default function SuperAdmin() {
         return <StoreManagement showToast={showToastMessage} />;
       case 'menus':
         return <MenuManagement showToast={showToastMessage} />;
+      case 'orders':
+        return <OrdersManagement showToast={showToastMessage} />;
       case 'users':
         return <UserManagement showToast={showToastMessage} />;
       case 'inquiries':

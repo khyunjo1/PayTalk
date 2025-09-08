@@ -1,6 +1,10 @@
 -- 테스트 데이터 삽입
 -- 개발 및 테스트를 위한 샘플 데이터
 
+-- 0. 테스트용 슈퍼 어드민 사용자 (실제 auth.users에 먼저 생성되어야 함)
+-- INSERT INTO public.users (id, email, name, role) VALUES
+-- ('00000000-0000-0000-0000-000000000000', 'admin@paytalk.co.kr', '조광현', 'super_admin');
+
 -- 1. 테스트용 매장 데이터
 INSERT INTO public.stores (id, name, category, delivery_area, delivery_fee, phone, bank_account, account_holder) VALUES
 ('11111111-1111-1111-1111-111111111111', '이천반찬', '한식반찬', '강남구, 서초구', 2000, '031-123-4567', '123-456-789012', '김사장'),

@@ -92,41 +92,6 @@ export default function Dashboard({ showToast }: DashboardProps) {
         </div>
       </div>
 
-      {/* 빠른 액션 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg p-6 shadow-sm">
-          <h4 className="font-semibold text-gray-800 mb-3">매장 관리</h4>
-          <p className="text-sm text-gray-600 mb-4">새로운 매장을 추가하거나 기존 매장을 관리하세요</p>
-          <button 
-            onClick={() => showToast('매장 관리 페이지로 이동합니다')}
-            className="w-full bg-white hover:bg-orange-500 text-gray-700 hover:text-white py-2 px-4 rounded-lg whitespace-nowrap cursor-pointer border border-gray-300 hover:border-orange-500 transition-colors"
-          >
-            매장 관리하기
-          </button>
-        </div>
-
-        <div className="bg-white rounded-lg p-6 shadow-sm">
-          <h4 className="font-semibold text-gray-800 mb-3">문의 처리</h4>
-          <p className="text-sm text-gray-600 mb-4">대기중인 매장개설 문의를 확인하고 처리하세요</p>
-          <button 
-            onClick={() => showToast('문의 관리 페이지로 이동합니다')}
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 px-4 rounded-lg whitespace-nowrap cursor-pointer"
-          >
-            문의 확인하기
-          </button>
-        </div>
-
-        <div className="bg-white rounded-lg p-6 shadow-sm">
-          <h4 className="font-semibold text-gray-800 mb-3">통계 보기</h4>
-          <p className="text-sm text-gray-600 mb-4">플랫폼 전체의 상세한 통계를 확인하세요</p>
-          <button 
-            onClick={() => showToast('통계 페이지로 이동합니다')}
-            className="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg whitespace-nowrap cursor-pointer"
-          >
-            통계 보기
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

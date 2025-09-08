@@ -17,7 +17,7 @@ CREATE TABLE public.users (
   name TEXT NOT NULL,
   profile_image TEXT,
   phone TEXT,
-  role TEXT NOT NULL DEFAULT 'customer' CHECK (role IN ('customer', 'owner', 'admin')),
+  role TEXT NOT NULL DEFAULT 'customer' CHECK (role IN ('customer', 'admin', 'super_admin')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -36,6 +36,7 @@ CREATE TABLE public.stores (
   delivery_time_slots JSONB DEFAULT '[]'::jsonb,
   bank_account TEXT NOT NULL,
   account_holder TEXT NOT NULL,
+  image_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

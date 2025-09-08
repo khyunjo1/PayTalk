@@ -1,22 +1,8 @@
 import { useState, useEffect } from 'react';
 import { getStores } from '../../../lib/storeApi';
 import { getMenus, createMenu, updateMenu, deleteMenu } from '../../../lib/menuApi';
-
-interface MenuItem {
-  id: string;
-  name: string;
-  price: number;
-  category: string;
-  description: string;
-  isAvailable: boolean;
-  storeId: string;
-  image_url?: string;
-}
-
-interface Store {
-  id: string;
-  name: string;
-}
+import type { MenuItem, Store } from '../../../types';
+import ImageUpload from '../../../components/ImageUpload';
 
 interface MenuManagementProps {
   showToast: (message: string) => void;
@@ -46,7 +32,19 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
         
         const formattedStores: Store[] = storesData.map(store => ({
           id: store.id,
-          name: store.name
+          name: store.name,
+          category: store.category || '한식반찬',
+          owner: store.owner_name || '미지정',
+          phone: store.phone || '',
+          status: store.is_active ? 'active' : 'inactive',
+          deliveryFee: store.delivery_fee || 0,
+          deliveryArea: store.delivery_area || '',
+          businessHoursStart: store.business_hours_start || '09:00',
+          businessHoursEnd: store.business_hours_end || '22:00',
+          pickupTimeSlots: store.pickup_time_slots || [],
+          deliveryTimeSlots: store.delivery_time_slots || [],
+          bankAccount: store.bank_account || '',
+          accountHolder: store.account_holder || ''
         }));
         
         setStores(formattedStores);
@@ -63,7 +61,7 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
     };
 
     loadStores();
-  }, [showToast, stores.length]);
+  }, [showToast]); // stores.length 제거하여 무한루프 방지
 
   // 선택된 매장의 메뉴 로드
   useEffect(() => {
@@ -103,16 +101,30 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
     price: 0,
     category: '인기메뉴',
     description: '',
-    isAvailable: true
+    isAvailable: true,
+    image_url: ''
   });
 
   const handleAddMenu = async () => {
+    // 폼 검증
     if (!newMenu.name.trim()) {
       showToast('메뉴명을 입력해주세요');
       return;
     }
+    if (newMenu.name.trim().length < 2) {
+      showToast('메뉴명은 2글자 이상 입력해주세요');
+      return;
+    }
     if (newMenu.price <= 0) {
       showToast('가격을 입력해주세요');
+      return;
+    }
+    if (newMenu.price > 100000) {
+      showToast('가격은 100,000원 이하로 입력해주세요');
+      return;
+    }
+    if (!selectedStore) {
+      showToast('매장을 선택해주세요');
       return;
     }
 
@@ -123,6 +135,7 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
         category: newMenu.category,
         description: newMenu.description,
         is_available: newMenu.isAvailable,
+        image_url: newMenu.image_url || undefined,
         store_id: selectedStore
       };
 
@@ -149,7 +162,8 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
       price: 0,
         category: '인기메뉴',
         description: '',
-        isAvailable: true
+        isAvailable: true,
+        image_url: ''
       });
       showToast('새 메뉴가 추가되었습니다');
     } catch (error) {
@@ -166,13 +180,32 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
   const handleUpdateMenu = async () => {
     if (!editingMenu) return;
 
+    // 폼 검증
+    if (!editingMenu.name.trim()) {
+      showToast('메뉴명을 입력해주세요');
+      return;
+    }
+    if (editingMenu.name.trim().length < 2) {
+      showToast('메뉴명은 2글자 이상 입력해주세요');
+      return;
+    }
+    if (editingMenu.price <= 0) {
+      showToast('가격을 입력해주세요');
+      return;
+    }
+    if (editingMenu.price > 100000) {
+      showToast('가격은 100,000원 이하로 입력해주세요');
+      return;
+    }
+
     try {
       const updateData = {
         name: editingMenu.name,
         price: editingMenu.price,
         category: editingMenu.category,
         description: editingMenu.description,
-        is_available: editingMenu.isAvailable
+        is_available: editingMenu.isAvailable,
+        image_url: editingMenu.image_url || undefined
       };
 
       await updateMenu(editingMenu.id, updateData);
@@ -276,6 +309,17 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {menus.map((menu) => (
           <div key={menu.id} className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+            {/* 메뉴 이미지 */}
+            {menu.image_url && (
+              <div className="mb-4">
+                <img
+                  src={menu.image_url}
+                  alt={menu.name}
+                  className="w-full h-32 object-cover rounded-lg"
+                />
+              </div>
+            )}
+            
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-gray-800">{menu.name}</h3>
@@ -395,6 +439,13 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
                 />
                 <label htmlFor="isAvailable" className="text-sm text-gray-700">판매 가능</label>
               </div>
+              
+              {/* 이미지 업로드 */}
+              <ImageUpload
+                currentImageUrl={newMenu.image_url}
+                onImageChange={(imageUrl) => setNewMenu({...newMenu, image_url: imageUrl || ''})}
+                placeholder="메뉴 이미지를 선택하세요"
+              />
             </div>
             <div className="flex space-x-3 mt-6">
               <button
@@ -474,6 +525,13 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
                 />
                 <label htmlFor="editIsAvailable" className="text-sm text-gray-700">판매 가능</label>
               </div>
+              
+              {/* 이미지 업로드 */}
+              <ImageUpload
+                currentImageUrl={editingMenu.image_url}
+                onImageChange={(imageUrl) => setEditingMenu({...editingMenu, image_url: imageUrl || ''})}
+                placeholder="메뉴 이미지를 선택하세요"
+              />
             </div>
             <div className="flex space-x-3 mt-6">
               <button

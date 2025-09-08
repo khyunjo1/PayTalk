@@ -252,27 +252,28 @@ export const updateOrderStatus = async (orderId: string, status: '입금대기' 
           `${item.menus?.name || '메뉴'} x${item.quantity}`
         ).join(', ');
 
+        // TODO: 알림톡 기능은 나중에 구현
         // 고객에게 주문 상태 변경 알림톡 발송
-        const notification = await sendOrderStatusNotification({
-          customerName: data.users.name,
-          customerPhone: data.users.phone,
-          storeName: data.stores.name,
-          orderId: data.id,
-          orderItems: orderItemsText,
-          totalAmount: data.total,
-          deliveryAddress: data.delivery_address,
-          deliveryTime: data.delivery_time,
-          pickupTime: data.pickup_time,
-          depositorName: data.depositor_name
-        }, status);
+        // const notification = await sendOrderStatusNotification({
+        //   customerName: data.users.name,
+        //   customerPhone: data.users.phone,
+        //   storeName: data.stores.name,
+        //   orderId: data.id,
+        //   orderItems: orderItemsText,
+        //   totalAmount: data.total,
+        //   deliveryAddress: data.delivery_address,
+        //   deliveryTime: data.delivery_time,
+        //   pickupTime: data.pickup_time,
+        //   depositorName: data.depositor_name
+        // }, status);
 
         // 알림톡 발송 로그 저장
-        await logAlimtalkSent({
-          orderId: data.id,
-          recipientPhone: data.users.phone,
-          templateId: status === '입금확인' ? 'PAYMENT_CONFIRMED_TEMPLATE' : 'DELIVERY_COMPLETED_TEMPLATE',
-          success: notification
-        });
+        // await logAlimtalkSent({
+        //   orderId: data.id,
+        //   recipientPhone: data.users.phone,
+        //   templateId: status === '입금확인' ? 'PAYMENT_CONFIRMED_TEMPLATE' : 'DELIVERY_COMPLETED_TEMPLATE',
+        //   success: notification
+        // });
       }
     } catch (alimtalkError) {
       console.error('주문 상태 변경 알림톡 발송 오류:', alimtalkError);

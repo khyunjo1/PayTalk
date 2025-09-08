@@ -1,33 +1,15 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getStores, createStore, updateStore, deleteStore } from '../../../lib/storeApi';
-
-interface Store {
-  id: string;
-  name: string;
-  category: string;
-  owner: string;
-  phone: string;
-  status: 'active' | 'inactive';
-  deliveryFee: number;
-  deliveryArea: string;
-  businessHoursStart: string;
-  businessHoursEnd: string;
-  pickupTimeSlots: string[];
-  deliveryTimeSlots: Array<{
-    name: string;
-    start: string;
-    end: string;
-    enabled: boolean;
-  }>;
-  bankAccount: string;
-  accountHolder: string;
-}
+import type { Store } from '../../../types';
+import ImageUpload from '../../../components/ImageUpload';
 
 interface StoreManagementProps {
   showToast: (message: string) => void;
 }
 
 export default function StoreManagement({ showToast }: StoreManagementProps) {
+  const navigate = useNavigate();
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -77,7 +59,7 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
     };
 
     loadStores();
-  }, [showToast, stores.length]);
+  }, [showToast]); // stores.length 제거하여 무한루프 방지
 
   const [newStore, setNewStore] = useState({
     name: '',
@@ -90,6 +72,7 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
     businessHoursEnd: '22:00',
     bankAccount: '',
     accountHolder: '',
+    image_url: '',
     pickupTimeSlots: ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'],
     deliveryTimeSlots: [
       { name: '아침 배송', start: '08:00', end: '10:00', enabled: false },
@@ -104,8 +87,33 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
   );
 
   const handleAddStore = async () => {
+    // 폼 검증
     if (!newStore.name.trim()) {
       showToast('매장명을 입력해주세요');
+      return;
+    }
+    if (newStore.name.trim().length < 2) {
+      showToast('매장명은 2글자 이상 입력해주세요');
+      return;
+    }
+    if (!newStore.phone.trim()) {
+      showToast('전화번호를 입력해주세요');
+      return;
+    }
+    if (!newStore.deliveryArea.trim()) {
+      showToast('배달지역을 입력해주세요');
+      return;
+    }
+    if (!newStore.bankAccount.trim()) {
+      showToast('계좌번호를 입력해주세요');
+      return;
+    }
+    if (!newStore.accountHolder.trim()) {
+      showToast('예금주명을 입력해주세요');
+      return;
+    }
+    if (newStore.deliveryFee < 0) {
+      showToast('배달비는 0원 이상이어야 합니다');
       return;
     }
 
@@ -121,6 +129,7 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
         business_hours_end: newStore.businessHoursEnd,
         bank_account: newStore.bankAccount,
         account_holder: newStore.accountHolder,
+        image_url: newStore.image_url || undefined,
         is_active: true,
         pickup_time_slots: newStore.pickupTimeSlots,
         delivery_time_slots: newStore.deliveryTimeSlots
@@ -143,7 +152,8 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
         pickupTimeSlots: createdStore.pickup_time_slots || [],
         deliveryTimeSlots: createdStore.delivery_time_slots || [],
         bankAccount: createdStore.bank_account || '',
-        accountHolder: createdStore.account_holder || ''
+        accountHolder: createdStore.account_holder || '',
+        image_url: createdStore.image_url
       };
 
       setStores([...stores, formattedStore]);
@@ -159,6 +169,7 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
         businessHoursEnd: '22:00',
         bankAccount: '',
         accountHolder: '',
+        image_url: '',
         pickupTimeSlots: ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'],
         deliveryTimeSlots: [
           { name: '아침 배송', start: '08:00', end: '10:00', enabled: false },
@@ -182,6 +193,36 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
   const handleUpdateStore = async () => {
     if (!editingStore) return;
 
+    // 폼 검증
+    if (!editingStore.name.trim()) {
+      showToast('매장명을 입력해주세요');
+      return;
+    }
+    if (editingStore.name.trim().length < 2) {
+      showToast('매장명은 2글자 이상 입력해주세요');
+      return;
+    }
+    if (!editingStore.phone.trim()) {
+      showToast('전화번호를 입력해주세요');
+      return;
+    }
+    if (!editingStore.deliveryArea.trim()) {
+      showToast('배달지역을 입력해주세요');
+      return;
+    }
+    if (!editingStore.bankAccount.trim()) {
+      showToast('계좌번호를 입력해주세요');
+      return;
+    }
+    if (!editingStore.accountHolder.trim()) {
+      showToast('예금주명을 입력해주세요');
+      return;
+    }
+    if (editingStore.deliveryFee < 0) {
+      showToast('배달비는 0원 이상이어야 합니다');
+      return;
+    }
+
     try {
       const updateData = {
         name: editingStore.name,
@@ -194,6 +235,7 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
         business_hours_end: editingStore.businessHoursEnd,
         bank_account: editingStore.bankAccount,
         account_holder: editingStore.accountHolder,
+        image_url: editingStore.image_url || undefined,
         pickup_time_slots: editingStore.pickupTimeSlots,
         delivery_time_slots: editingStore.deliveryTimeSlots
       };
@@ -224,6 +266,12 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
       console.error('❌ 매장 삭제 실패:', error);
       showToast('매장 삭제에 실패했습니다');
     }
+  };
+
+  const handleViewStoreAdmin = (store: Store) => {
+    // 매장 관리자 페이지로 이동 (storeId를 쿼리 파라미터로 전달)
+    navigate(`/admin?storeId=${store.id}&storeName=${encodeURIComponent(store.name)}`);
+    showToast(`${store.name} 관리자 페이지로 이동합니다`);
   };
 
   const toggleStoreStatus = async (storeId: string) => {
@@ -297,6 +345,17 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredStores.map((store) => (
           <div key={store.id} className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+            {/* 매장 이미지 */}
+            {store.image_url && (
+              <div className="mb-4">
+                <img
+                  src={store.image_url}
+                  alt={store.name}
+                  className="w-full h-32 object-cover rounded-lg"
+                />
+              </div>
+            )}
+            
             <div className="flex items-start justify-between mb-4">
               <div>
                 <h3 className="text-lg font-semibold text-gray-800">{store.name}</h3>
@@ -334,30 +393,42 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
               </div>
             </div>
 
-            <div className="flex space-x-2">
-                      <button
-                onClick={() => handleEditStore(store)}
-                className="flex-1 bg-white hover:bg-orange-500 text-gray-700 hover:text-white px-3 py-2 rounded-lg text-sm border border-gray-300 hover:border-orange-500 transition-colors"
-                      >
-                수정
-                      </button>
-                      <button
-                onClick={() => toggleStoreStatus(store.id)}
-                className={`flex-1 px-3 py-2 rounded-lg text-sm border transition-colors ${
-                  store.status === 'active'
-                    ? 'bg-red-50 hover:bg-red-500 text-red-700 hover:text-white border-red-300 hover:border-red-500'
-                    : 'bg-green-50 hover:bg-green-500 text-green-700 hover:text-white border-green-300 hover:border-green-500'
-                }`}
+            <div className="space-y-2">
+              {/* 관리자 페이지 버튼 */}
+              <button
+                onClick={() => handleViewStoreAdmin(store)}
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center"
               >
-                {store.status === 'active' ? '중단' : '재개'}
-                      </button>
-                      <button
-                onClick={() => handleDeleteStore(store.id)}
-                className="bg-red-50 hover:bg-red-500 text-red-700 hover:text-white px-3 py-2 rounded-lg text-sm border border-red-300 hover:border-red-500 transition-colors"
-                      >
-                삭제
-                      </button>
-                    </div>
+                <i className="ri-admin-line mr-2"></i>
+                관리자 페이지 보기
+              </button>
+              
+              {/* 기존 버튼들 */}
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => handleEditStore(store)}
+                  className="flex-1 bg-white hover:bg-orange-500 text-gray-700 hover:text-white px-3 py-2 rounded-lg text-sm border border-gray-300 hover:border-orange-500 transition-colors"
+                >
+                  수정
+                </button>
+                <button
+                  onClick={() => toggleStoreStatus(store.id)}
+                  className={`flex-1 px-3 py-2 rounded-lg text-sm border transition-colors ${
+                    store.status === 'active'
+                      ? 'bg-red-50 hover:bg-red-500 text-red-700 hover:text-white border-red-300 hover:border-red-500'
+                      : 'bg-green-50 hover:bg-green-500 text-green-700 hover:text-white border-green-300 hover:border-green-500'
+                  }`}
+                >
+                  {store.status === 'active' ? '중단' : '재개'}
+                </button>
+                <button
+                  onClick={() => handleDeleteStore(store.id)}
+                  className="bg-red-50 hover:bg-red-500 text-red-700 hover:text-white px-3 py-2 rounded-lg text-sm border border-red-300 hover:border-red-500 transition-colors"
+                >
+                  삭제
+                </button>
+              </div>
+            </div>
           </div>
               ))}
       </div>
@@ -468,6 +539,13 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
                   placeholder="예금주명을 입력하세요"
                 />
               </div>
+              
+              {/* 이미지 업로드 */}
+              <ImageUpload
+                currentImageUrl={newStore.image_url}
+                onImageChange={(imageUrl) => setNewStore({...newStore, image_url: imageUrl || ''})}
+                placeholder="매장 이미지를 선택하세요"
+              />
               
               {/* 픽업시간 설정 */}
               <div>
@@ -670,6 +748,13 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
+              
+              {/* 이미지 업로드 */}
+              <ImageUpload
+                currentImageUrl={editingStore.image_url}
+                onImageChange={(imageUrl) => setEditingStore({...editingStore, image_url: imageUrl || ''})}
+                placeholder="매장 이미지를 선택하세요"
+              />
               
               {/* 픽업시간 설정 */}
               <div>

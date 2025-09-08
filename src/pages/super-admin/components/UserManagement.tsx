@@ -6,7 +6,7 @@ import { getStores } from '../../../lib/storeApi';
 interface User {
   id: string;
   name: string;
-  role: 'customer' | 'owner' | 'admin' | 'super_admin';
+  role: 'customer' | 'admin' | 'super_admin';
   storeName?: string;
   phone: string;
   email: string;
@@ -49,7 +49,7 @@ export default function UserManagement({ showToast }: UserManagementProps) {
         const formattedUsers: User[] = usersData.map(user => ({
           id: user.id,
           name: user.name,
-          role: user.role as 'customer' | 'owner' | 'admin' | 'super_admin',
+          role: user.role as 'customer' | 'admin' | 'super_admin',
           phone: user.phone || '',
           email: user.email,
           status: 'active' as const
@@ -87,9 +87,8 @@ export default function UserManagement({ showToast }: UserManagementProps) {
   const getRoleLabel = (role: string) => {
     switch (role) {
       case 'customer': return '고객';
-      case 'owner': return '사장님';
-      case 'admin': return '관리자';
-      case 'super_admin': return '슈퍼 어드민';
+      case 'admin': return '사장님';
+      case 'super_admin': return '관리자';
       default: return role;
     }
   };
@@ -97,9 +96,8 @@ export default function UserManagement({ showToast }: UserManagementProps) {
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'customer': return 'bg-blue-100 text-blue-800';
-      case 'owner': return 'bg-green-100 text-green-800';
-      case 'admin': return 'bg-purple-100 text-purple-800';
-      case 'super_admin': return 'bg-red-100 text-red-800';
+      case 'admin': return 'bg-green-100 text-green-800';
+      case 'super_admin': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -238,9 +236,9 @@ export default function UserManagement({ showToast }: UserManagementProps) {
             고객
           </button>
           <button
-            onClick={() => setSelectedRole('owner')}
+            onClick={() => setSelectedRole('admin')}
             className={`px-4 py-2 rounded-lg text-sm font-medium cursor-pointer ${
-              selectedRole === 'owner'
+              selectedRole === 'admin'
                 ? 'bg-orange-500 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
@@ -248,9 +246,9 @@ export default function UserManagement({ showToast }: UserManagementProps) {
             사장님
           </button>
           <button
-            onClick={() => setSelectedRole('admin')}
+            onClick={() => setSelectedRole('super_admin')}
             className={`px-4 py-2 rounded-lg text-sm font-medium cursor-pointer ${
-              selectedRole === 'admin'
+              selectedRole === 'super_admin'
                 ? 'bg-orange-500 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
@@ -312,7 +310,7 @@ export default function UserManagement({ showToast }: UserManagementProps) {
                           <i className="ri-vip-crown-line"></i>
                         </button>
                       )}
-                      {user.role === 'owner' && (
+                      {user.role === 'admin' && (
                         <button
                           onClick={() => revokeOwnerRole(user.id)}
                           className="text-red-600 hover:text-red-900 cursor-pointer"

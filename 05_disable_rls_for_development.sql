@@ -20,3 +20,4 @@ ALTER TABLE public.orders DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.order_items DISABLE ROW LEVEL SECURITY;
 
 SELECT 'RLS 정책 비활성화 완료! (개발용)' as message;
+

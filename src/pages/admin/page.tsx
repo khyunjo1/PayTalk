@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { getUserStores } from '../../lib/database';
-import { getStoreOrders } from '../../lib/orderApi';
+import { getStoreOrders, updateOrderStatus } from '../../lib/orderApi';
 import { supabase } from '../../lib/supabase';
 
 interface Order {
@@ -42,12 +42,34 @@ interface Order {
 
 export default function Admin() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, userProfile, loading } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedPeriod, setSelectedPeriod] = useState<string>('today');
-  const [activeTab, setActiveTab] = useState<'orders' | 'menus' | 'statistics'>('orders');
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'delivery' | 'orders' | 'statistics'>('delivery');
+  
+  // URL에서 매장 정보 가져오기
+  const storeId = searchParams.get('storeId');
+  const storeName = searchParams.get('storeName');
+
+  // 달력 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (showDatePicker && !target.closest('.date-picker-container')) {
+        setShowDatePicker(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDatePicker]);
 
   useEffect(() => {
     // 로딩 중이면 대기
@@ -59,8 +81,8 @@ export default function Admin() {
       return;
     }
 
-    // admin 권한이 없는 사용자는 매장 목록으로
-    if (userProfile && userProfile.role !== 'admin') {
+    // admin 또는 super_admin 권한이 없는 사용자는 매장 목록으로
+    if (userProfile && userProfile.role !== 'admin' && userProfile.role !== 'super_admin') {
       navigate('/stores');
       return;
     }
@@ -69,27 +91,35 @@ export default function Admin() {
   // 실제 주문 데이터 로드
   useEffect(() => {
     const loadOrders = async () => {
-      if (!user || !userProfile || userProfile.role !== 'admin') return;
+      if (!user || !userProfile || (userProfile.role !== 'admin' && userProfile.role !== 'super_admin')) return;
 
       try {
         setLoadingOrders(true);
         
-        // 사용자가 관리하는 매장들 가져오기
-        const userStores = await getUserStores(user.id);
-        console.log('사용자 매장 목록:', userStores);
+        let allOrders: Order[] = [];
+        
+        // 슈퍼 어드민이 특정 매장을 선택한 경우
+        if (userProfile.role === 'super_admin' && storeId) {
+          // 특정 매장의 주문만 가져오기
+          allOrders = await getStoreOrders(storeId);
+          console.log(`매장 ${storeName}의 주문:`, allOrders);
+        } else {
+          // 일반 admin 사용자 또는 슈퍼 어드민이 전체 보기를 원하는 경우
+          const userStores = await getUserStores(user.id);
+          console.log('사용자 매장 목록:', userStores);
 
-        if (userStores.length === 0) {
-          console.log('관리하는 매장이 없습니다.');
-          setOrders([]);
-          return;
-        }
+          if (userStores.length === 0) {
+            console.log('관리하는 매장이 없습니다.');
+            setOrders([]);
+            return;
+          }
 
-        // 모든 매장의 주문 데이터 가져오기
-        const allOrders: Order[] = [];
-        for (const store of userStores) {
-          const storeOrders = await getStoreOrders(store.id);
-          console.log(`매장 ${store.name}의 주문:`, storeOrders);
-          allOrders.push(...storeOrders);
+          // 모든 매장의 주문 데이터 가져오기
+          for (const store of userStores) {
+            const storeOrders = await getStoreOrders(store.id);
+            console.log(`매장 ${store.name}의 주문:`, storeOrders);
+            allOrders.push(...storeOrders);
+          }
         }
 
         // 주문 아이템 정보도 함께 가져오기
@@ -124,25 +154,13 @@ export default function Admin() {
     };
 
     loadOrders();
-  }, [user, userProfile]);
+  }, [user, userProfile, storeId, storeName]);
 
   const handleStatusChange = async (orderId: string, newStatus: Order['status']) => {
     try {
-      // 데이터베이스에서 주문 상태 업데이트
-      const { error } = await supabase
-        .from('orders')
-        .update({ 
-          status: newStatus,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', orderId);
-
-      if (error) {
-        console.error('주문 상태 변경 오류:', error);
-        alert('주문 상태 변경에 실패했습니다.');
-        return;
-      }
-
+      // updateOrderStatus API 사용 (알림톡 발송 포함)
+      const updatedOrder = await updateOrderStatus(orderId, newStatus);
+      
       // 로컬 상태 업데이트
       setOrders(orders.map(order => 
         order.id === orderId ? { ...order, status: newStatus } : order
@@ -166,30 +184,63 @@ export default function Admin() {
     navigate('/login');
   };
 
-  // 날짜 필터링 함수
-  const filterOrdersByPeriod = (orders: Order[], period: string) => {
+  const handleDateSelect = (date: string) => {
+    setSelectedDate(date);
+    setSelectedPeriod('custom');
+    setShowDatePicker(false);
+  };
+
+  const handlePeriodSelect = (period: string) => {
+    setSelectedPeriod(period);
+    if (period !== 'custom') {
+      setSelectedDate('');
+    }
+  };
+
+  // 배달날짜 추출 함수
+  const getDeliveryDate = (order: Order) => {
+    if (order.delivery_time) {
+      // "2024-01-20 점심배송 (11:00-13:00)" 형태에서 날짜 추출
+      const dateMatch = order.delivery_time.match(/(\d{4}-\d{2}-\d{2})/);
+      if (dateMatch) {
+        return dateMatch[1];
+      }
+    }
+    if (order.pickup_time) {
+      // 픽업 시간에서도 날짜 추출 시도
+      const dateMatch = order.pickup_time.match(/(\d{4}-\d{2}-\d{2})/);
+      if (dateMatch) {
+        return dateMatch[1];
+      }
+    }
+    // 배달/픽업 시간이 없으면 주문 날짜 사용
+    return new Date(order.created_at).toISOString().split('T')[0];
+  };
+
+  // 날짜 필터링 함수 (배달날짜 기준)
+  const filterOrdersByPeriod = (orders: Order[], period: string, customDate?: string) => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
     switch (period) {
       case 'today':
         return orders.filter(order => {
-          const orderDate = new Date(order.created_at);
-          return orderDate >= today;
+          const deliveryDate = getDeliveryDate(order);
+          return deliveryDate === today.toISOString().split('T')[0];
         });
-      case 'week':
-        const weekAgo = new Date(today);
-        weekAgo.setDate(weekAgo.getDate() - 7);
+      case 'yesterday':
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayDateString = yesterday.toISOString().split('T')[0];
         return orders.filter(order => {
-          const orderDate = new Date(order.created_at);
-          return orderDate >= weekAgo;
+          const deliveryDate = getDeliveryDate(order);
+          return deliveryDate === yesterdayDateString;
         });
-      case 'month':
-        const monthAgo = new Date(today);
-        monthAgo.setMonth(monthAgo.getMonth() - 1);
+      case 'custom':
+        if (!customDate) return orders;
         return orders.filter(order => {
-          const orderDate = new Date(order.created_at);
-          return orderDate >= monthAgo;
+          const deliveryDate = getDeliveryDate(order);
+          return deliveryDate === customDate;
         });
       default:
         return orders;
@@ -213,7 +264,7 @@ export default function Admin() {
       .slice(0, 4);
   };
 
-  const filteredOrdersByPeriod = filterOrdersByPeriod(orders, selectedPeriod);
+  const filteredOrdersByPeriod = filterOrdersByPeriod(orders, selectedPeriod, selectedDate);
   const filteredOrders = selectedStatus === 'all'
     ? filteredOrdersByPeriod
     : filteredOrdersByPeriod.filter(order => order.status === selectedStatus);
@@ -298,7 +349,7 @@ export default function Admin() {
   }
 
   // 권한 체크
-  if (!user || (userProfile && userProfile.role !== 'admin')) {
+  if (!user || (userProfile && userProfile.role !== 'admin' && userProfile.role !== 'super_admin')) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -334,7 +385,7 @@ export default function Admin() {
                 <i className="ri-arrow-left-line text-xl text-gray-600"></i>
               </button>
               <h1 className="text-xl font-bold text-gray-800" style={{ fontFamily: "Pacifico, serif" }}>
-                매장 관리자
+                {storeName ? `${storeName} 관리자` : '매장 관리자'}
               </h1>
             </div>
             <button
@@ -352,6 +403,17 @@ export default function Admin() {
         {/* 탭 메뉴 */}
         <div className="flex mb-6 bg-gray-100 rounded-lg p-1">
           <button
+            onClick={() => setActiveTab('delivery')}
+            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'delivery'
+                ? 'bg-white text-orange-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            <i className="ri-truck-line mr-2"></i>
+            배달 현황
+          </button>
+          <button
             onClick={() => setActiveTab('orders')}
             className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
               activeTab === 'orders'
@@ -359,19 +421,8 @@ export default function Admin() {
                 : 'text-gray-600 hover:text-gray-800'
             }`}
           >
-            <i className="ri-shopping-cart-line mr-2"></i>
-            주문 관리
-          </button>
-          <button
-            onClick={() => setActiveTab('menus')}
-            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'menus'
-                ? 'bg-white text-orange-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-800'
-            }`}
-          >
-            <i className="ri-restaurant-line mr-2"></i>
-            메뉴 관리
+            <i className="ri-file-list-3-line mr-2"></i>
+            주문 내역
           </button>
           <button
             onClick={() => setActiveTab('statistics')}
@@ -386,20 +437,23 @@ export default function Admin() {
           </button>
         </div>
 
-        {activeTab === 'orders' && (
+        {activeTab === 'delivery' && (
           <>
+            {/* 배달 현황 탭 */}
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">배달 현황</h3>
+              <p className="text-sm text-gray-600">배달에 필요한 핵심 정보만 표시됩니다</p>
+            </div>
 
-
-        {/* 기간 필터 버튼 */}
+            {/* 기간 필터 버튼 */}
         <div className="flex flex-wrap gap-2 mb-4">
           {[
-            { key: 'today', label: '하루치' },
-            { key: 'week', label: '이번주' },
-            { key: 'month', label: '이번달' }
+            { key: 'today', label: '오늘' },
+            { key: 'yesterday', label: '어제' }
           ].map((period) => (
             <button
               key={period.key}
-              onClick={() => setSelectedPeriod(period.key)}
+              onClick={() => handlePeriodSelect(period.key)}
               className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer ${
                 selectedPeriod === period.key
                   ? 'bg-blue-500 text-white'
@@ -409,6 +463,41 @@ export default function Admin() {
               {period.label}
             </button>
           ))}
+          
+          {/* 날짜 선택 버튼 */}
+          <div className="relative date-picker-container">
+            <button
+              onClick={() => setShowDatePicker(!showDatePicker)}
+              className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer flex items-center ${
+                selectedPeriod === 'custom'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <i className="ri-calendar-line mr-2"></i>
+              {selectedDate ? selectedDate : '날짜 선택'}
+            </button>
+            
+            {/* 달력 드롭다운 */}
+            {showDatePicker && (
+              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 p-3">
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      onChange={(e) => handleDateSelect(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                <div className="flex justify-end mt-2">
+                  <button
+                    onClick={() => setShowDatePicker(false)}
+                    className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+                  >
+                    닫기
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* 상태 필터 버튼 */}
@@ -458,104 +547,120 @@ export default function Admin() {
                 <div key={order.id} className="bg-white rounded-lg shadow-sm overflow-hidden">
                   <div className="p-4">
                     <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="font-semibold text-gray-800">주문번호: {getShortOrderId(order.id)}</h3>
-                        <div className="text-sm text-gray-500 mt-1">
-                          <div>{date} {time}</div>
-                          <div>고객: {order.users.name} ({order.users.phone})</div>
-                          <div>주문방식: {order.order_type === 'delivery' ? '배달' : '픽업'}</div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                            {order.status}
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            {order.order_type === 'delivery' ? '배달' : '픽업'}
+                          </span>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                          {order.status}
-                        </span>
-                        <i className="ri-bank-line text-gray-500"></i>
-                      </div>
-                    </div>
-
-                    <div className="border-t pt-3">
-                      <div className="space-y-1 mb-3">
-                        {order.order_items?.map((item, index) => (
-                          <div key={index} className="flex justify-between text-sm">
-                            <span className="text-gray-600">
-                              {item.menus.name} x {item.quantity}
-                            </span>
-                            <span className="text-gray-800">
-                              {(item.price * item.quantity).toLocaleString()}원
-                            </span>
-                          </div>
-                        )) || <div className="text-gray-500 text-sm">주문 상품 정보 없음</div>}
+                        
+                        {/* 핵심 정보만 표시 */}
+                        <div className="space-y-2">
+                          {order.delivery_address && (
+                            <div className="flex items-start text-sm">
+                              <i className="ri-map-pin-line mr-2 mt-0.5 text-gray-500"></i>
+                              <span className="text-gray-800 font-medium">{order.delivery_address}</span>
+                            </div>
+                          )}
+                          
+                          {order.delivery_time && (
+                            <div className="flex items-center text-sm">
+                              <i className="ri-time-line mr-2 text-gray-500"></i>
+                              <span className="text-gray-800">{parseDeliveryTime(order.delivery_time)}</span>
+                            </div>
+                          )}
+                          
+                          {order.pickup_time && (
+                            <div className="flex items-center text-sm">
+                              <i className="ri-time-line mr-2 text-gray-500"></i>
+                              <span className="text-gray-800">픽업: {order.pickup_time}</span>
+                            </div>
+                          )}
+                          
+                          {order.depositor_name && (
+                            <div className="flex items-center text-sm">
+                              <i className="ri-user-line mr-2 text-gray-500"></i>
+                              <span className="text-gray-800">입금자: {order.depositor_name}</span>
+                            </div>
+                          )}
+                          
+                          {order.special_requests && (
+                            <div className="flex items-start text-sm">
+                              <i className="ri-message-line mr-2 mt-0.5 text-gray-500"></i>
+                              <span className="text-gray-800">{order.special_requests}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       
-                      <div className="flex justify-between items-center pt-2 border-t">
-                        <span className="font-semibold text-gray-800">총 결제 금액</span>
-                        <span className="font-bold text-lg text-orange-500">
+                      <div className="text-right ml-4">
+                        <div className="text-lg font-bold text-orange-500">
                           {order.total.toLocaleString()}원
-                        </span>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {order.order_items?.length || 0}개 상품
+                        </div>
                       </div>
-                    </div>
-
-                    {/* 주문 상세 정보 */}
-                    <div className="mt-3 pt-3 border-t space-y-2">
-                      {order.delivery_address && (
-                        <div className="flex items-center text-sm text-gray-600">
-                          <i className="ri-map-pin-line mr-2"></i>
-                          <span>배달주소: {order.delivery_address}</span>
-                        </div>
-                      )}
-                      {order.delivery_time && (
-                        <div className="flex items-center text-sm text-gray-600">
-                          <i className="ri-time-line mr-2"></i>
-                          <span>배달시간: {order.delivery_time} ({parseDeliveryTime(order.delivery_time)})</span>
-                        </div>
-                      )}
-                      {order.pickup_time && (
-                        <div className="flex items-center text-sm text-gray-600">
-                          <i className="ri-time-line mr-2"></i>
-                          <span>픽업시간: {order.pickup_time}</span>
-                        </div>
-                      )}
-                      {order.depositor_name && (
-                        <div className="flex items-center text-sm text-gray-600">
-                          <i className="ri-user-line mr-2"></i>
-                          <span>입금자명: {order.depositor_name}</span>
-                        </div>
-                      )}
-                      {order.special_requests && (
-                        <div className="flex items-center text-sm text-gray-600">
-                          <i className="ri-message-line mr-2"></i>
-                          <span>요청사항: {order.special_requests}</span>
-                        </div>
-                      )}
                     </div>
 
                     {/* 관리 버튼 */}
                     <div className="mt-4 pt-3 border-t">
                       <div className="flex flex-wrap gap-2">
+                        {/* 입금대기 상태일 때 */}
                         {order.status === '입금대기' && (
-                          <button
-                            onClick={() => handleStatusChange(order.id, '입금확인')}
-                            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
-                          >
-                            입금확인
-                          </button>
+                          <>
+                            <button
+                              onClick={() => handleStatusChange(order.id, '입금확인')}
+                              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                            >
+                              입금확인
+                            </button>
+                            <button
+                              onClick={() => handleStatusChange(order.id, '배달완료')}
+                              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                            >
+                              배달완료
+                            </button>
+                          </>
                         )}
+                        
+                        {/* 입금확인 상태일 때 */}
                         {order.status === '입금확인' && (
-                          <button
-                            onClick={() => handleStatusChange(order.id, '배달완료')}
-                            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
-                          >
-                            배달완료
-                          </button>
+                          <>
+                            <button
+                              onClick={() => handleStatusChange(order.id, '입금대기')}
+                              className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                            >
+                              입금대기로
+                            </button>
+                            <button
+                              onClick={() => handleStatusChange(order.id, '배달완료')}
+                              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                            >
+                              배달완료
+                            </button>
+                          </>
                         )}
-                        {canCancel(order.status) && (
-                          <button
-                            onClick={() => handleCancelOrder(order.id)}
-                            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
-                          >
-                            주문취소
-                          </button>
+                        
+                        {/* 배달완료 상태일 때 */}
+                        {order.status === '배달완료' && (
+                          <>
+                            <button
+                              onClick={() => handleStatusChange(order.id, '입금대기')}
+                              className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                            >
+                              입금대기로
+                            </button>
+                            <button
+                              onClick={() => handleStatusChange(order.id, '입금확인')}
+                              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                            >
+                              입금확인으로
+                            </button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -568,16 +673,264 @@ export default function Admin() {
           </>
         )}
 
-        {activeTab === 'menus' && (
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">메뉴 관리</h3>
-            <div className="text-center text-gray-500 py-8">
-              <i className="ri-restaurant-line text-4xl mb-4"></i>
-              <p>메뉴 관리 기능은 곧 추가될 예정입니다.</p>
-              <p className="text-sm mt-2">현재는 super-admin 페이지에서 메뉴를 관리할 수 있습니다.</p>
+        {activeTab === 'orders' && (
+          <>
+            {/* 주문 내역 탭 */}
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">주문 내역</h3>
+              <p className="text-sm text-gray-600">모든 주문 정보를 상세하게 확인할 수 있습니다</p>
             </div>
-          </div>
+
+            {/* 기간 필터 버튼 */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              {[
+                { key: 'today', label: '오늘' },
+                { key: 'yesterday', label: '어제' }
+              ].map((period) => (
+                <button
+                  key={period.key}
+                  onClick={() => handlePeriodSelect(period.key)}
+                  className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer ${
+                    selectedPeriod === period.key
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {period.label}
+                </button>
+              ))}
+              
+              {/* 날짜 선택 버튼 */}
+              <div className="relative date-picker-container">
+                <button
+                  onClick={() => setShowDatePicker(!showDatePicker)}
+                  className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer flex items-center ${
+                    selectedPeriod === 'custom'
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <i className="ri-calendar-line mr-2"></i>
+                  {selectedDate ? selectedDate : '날짜 선택'}
+                </button>
+                
+                {/* 달력 드롭다운 */}
+                {showDatePicker && (
+                  <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 p-3">
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      onChange={(e) => handleDateSelect(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <div className="flex justify-end mt-2">
+                      <button
+                        onClick={() => setShowDatePicker(false)}
+                        className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+                      >
+                        닫기
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 상태 필터 버튼 */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              {['all', '입금대기', '입금확인', '배달완료'].map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setSelectedStatus(status)}
+                  className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer ${
+                    selectedStatus === status
+                      ? 'bg-orange-500 text-white'
+                      : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {status === 'all' ? '전체' : status}
+                </button>
+              ))}
+            </div>
+
+            {/* 주문 상세 목록 */}
+            <div className="space-y-4">
+              {loadingOrders ? (
+                <div className="bg-white rounded-lg p-8 shadow-sm">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
+                    <p className="text-gray-600">주문 데이터를 불러오는 중...</p>
+                  </div>
+                </div>
+              ) : filteredOrders.length === 0 ? (
+                <div className="bg-white rounded-lg p-8 shadow-sm">
+                  <div className="text-center text-gray-500">
+                    <i className="ri-shopping-cart-line text-4xl mb-4"></i>
+                    <p>선택한 조건에 해당하는 주문이 없습니다.</p>
+                  </div>
+                </div>
+              ) : (
+                filteredOrders.map((order) => {
+                  const { date, time } = {
+                    date: new Date(order.created_at).toLocaleDateString('ko-KR'),
+                    time: new Date(order.created_at).toLocaleTimeString('ko-KR', { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })
+                  };
+                  
+                  return (
+                    <div key={order.id} className="bg-white rounded-lg shadow-sm overflow-hidden">
+                      <div className="p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <h3 className="font-semibold text-gray-800">주문번호: {getShortOrderId(order.id)}</h3>
+                            <div className="text-sm text-gray-500 mt-1">
+                              <div>주문일시: {date} {time}</div>
+                              <div>고객: {order.users.name} ({order.users.phone})</div>
+                              <div>주문방식: {order.order_type === 'delivery' ? '배달' : '픽업'}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                              {order.status}
+                            </span>
+                            <i className="ri-bank-line text-gray-500"></i>
+                          </div>
+                        </div>
+
+                        <div className="border-t pt-3">
+                          <div className="space-y-1 mb-3">
+                            {order.order_items?.map((item, index) => (
+                              <div key={index} className="flex justify-between text-sm">
+                                <span className="text-gray-600">
+                                  {item.menus.name} x {item.quantity}
+                                </span>
+                                <span className="text-gray-800">
+                                  {(item.price * item.quantity).toLocaleString()}원
+                                </span>
+                              </div>
+                            )) || <div className="text-gray-500 text-sm">주문 상품 정보 없음</div>}
+                          </div>
+                          
+                          <div className="flex justify-between items-center pt-2 border-t">
+                            <span className="font-semibold text-gray-800">총 결제 금액</span>
+                            <span className="font-bold text-lg text-orange-500">
+                              {order.total.toLocaleString()}원
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* 주문 상세 정보 */}
+                        <div className="mt-3 pt-3 border-t space-y-2">
+                          {order.delivery_address && (
+                            <div className="flex items-center text-sm text-gray-600">
+                              <i className="ri-map-pin-line mr-2"></i>
+                              <span>배달주소: {order.delivery_address}</span>
+                            </div>
+                          )}
+                          {order.delivery_time && (
+                            <div className="flex items-center text-sm text-gray-600">
+                              <i className="ri-time-line mr-2"></i>
+                              <span>배달시간: {order.delivery_time} ({parseDeliveryTime(order.delivery_time)})</span>
+                            </div>
+                          )}
+                          {order.pickup_time && (
+                            <div className="flex items-center text-sm text-gray-600">
+                              <i className="ri-time-line mr-2"></i>
+                              <span>픽업시간: {order.pickup_time}</span>
+                            </div>
+                          )}
+                          {order.depositor_name && (
+                            <div className="flex items-center text-sm text-gray-600">
+                              <i className="ri-user-line mr-2"></i>
+                              <span>입금자명: {order.depositor_name}</span>
+                            </div>
+                          )}
+                          {order.special_requests && (
+                            <div className="flex items-center text-sm text-gray-600">
+                              <i className="ri-message-line mr-2"></i>
+                              <span>요청사항: {order.special_requests}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 관리 버튼 */}
+                        <div className="mt-4 pt-3 border-t">
+                          <div className="flex flex-wrap gap-2">
+                            {/* 입금대기 상태일 때 */}
+                            {order.status === '입금대기' && (
+                              <>
+                                <button
+                                  onClick={() => handleStatusChange(order.id, '입금확인')}
+                                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                                >
+                                  입금확인
+                                </button>
+                                <button
+                                  onClick={() => handleStatusChange(order.id, '배달완료')}
+                                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                                >
+                                  배달완료
+                                </button>
+                              </>
+                            )}
+                            
+                            {/* 입금확인 상태일 때 */}
+                            {order.status === '입금확인' && (
+                              <>
+                                <button
+                                  onClick={() => handleStatusChange(order.id, '입금대기')}
+                                  className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                                >
+                                  입금대기로
+                                </button>
+                                <button
+                                  onClick={() => handleStatusChange(order.id, '배달완료')}
+                                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                                >
+                                  배달완료
+                                </button>
+                              </>
+                            )}
+                            
+                            {/* 배달완료 상태일 때 */}
+                            {order.status === '배달완료' && (
+                              <>
+                                <button
+                                  onClick={() => handleStatusChange(order.id, '입금대기')}
+                                  className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                                >
+                                  입금대기로
+                                </button>
+                                <button
+                                  onClick={() => handleStatusChange(order.id, '입금확인')}
+                                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                                >
+                                  입금확인으로
+                                </button>
+                              </>
+                            )}
+                            
+                            {canCancel(order.status) && (
+                              <button
+                                onClick={() => handleCancelOrder(order.id)}
+                                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                              >
+                                주문취소
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </>
         )}
+
 
         {activeTab === 'statistics' && (
           <>
@@ -637,13 +990,12 @@ export default function Admin() {
             {/* 기간 필터 버튼 */}
             <div className="flex flex-wrap gap-2 mb-4">
               {[
-                { key: 'today', label: '하루치' },
-                { key: 'week', label: '이번주' },
-                { key: 'month', label: '이번달' }
+                { key: 'today', label: '오늘' },
+                { key: 'yesterday', label: '어제' }
               ].map((period) => (
                 <button
                   key={period.key}
-                  onClick={() => setSelectedPeriod(period.key)}
+                  onClick={() => handlePeriodSelect(period.key)}
                   className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer ${
                     selectedPeriod === period.key
                       ? 'bg-orange-500 text-white'
@@ -653,6 +1005,42 @@ export default function Admin() {
                   {period.label}
                 </button>
               ))}
+              
+              {/* 날짜 선택 버튼 */}
+              <div className="relative date-picker-container">
+                <button
+                  onClick={() => setShowDatePicker(!showDatePicker)}
+                  className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer flex items-center ${
+                    selectedPeriod === 'custom'
+                      ? 'bg-orange-500 text-white'
+                      : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <i className="ri-calendar-line mr-2"></i>
+                  {selectedDate ? selectedDate : '날짜 선택'}
+                </button>
+                
+                {/* 달력 드롭다운 */}
+                {showDatePicker && (
+                  <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 p-3">
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      onChange={(e) => handleDateSelect(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      max={new Date().toISOString().split('T')[0]}
+                    />
+                    <div className="flex justify-end mt-2">
+                      <button
+                        onClick={() => setShowDatePicker(false)}
+                        className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+                      >
+                        닫기
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* 인기 메뉴 */}
