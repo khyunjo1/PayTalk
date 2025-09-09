@@ -2,8 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { getUserStores } from '../../lib/database';
+import { getStores } from '../../lib/storeApi';
 import { getStoreOrders, updateOrderStatus } from '../../lib/orderApi';
+import { getMenus, createMenu, updateMenu, deleteMenu } from '../../lib/menuApi';
 import { supabase } from '../../lib/supabase';
+import Footer from '../../components/Footer';
 
 interface Order {
   id: string;
@@ -16,7 +19,6 @@ interface Order {
   special_requests?: string;
   depositor_name?: string;
   subtotal: number;
-  delivery_fee: number;
   total: number;
   status: '입금대기' | '입금확인' | '배달완료';
   created_at: string;
@@ -38,6 +40,18 @@ interface Order {
   }>;
 }
 
+interface Menu {
+  id: string;
+  store_id: string;
+  name: string;
+  description?: string;
+  price: number;
+  category: string;
+  is_available: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 // Mock 데이터 제거 - 실제 데이터베이스에서 주문 데이터를 가져옴
 
 export default function Admin() {
@@ -50,12 +64,44 @@ export default function Admin() {
   const [selectedPeriod, setSelectedPeriod] = useState<string>('today');
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'delivery' | 'orders' | 'statistics'>('delivery');
+  const [activeTab, setActiveTab] = useState<'orders' | 'statistics' | 'menus' | 'store'>('orders');
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage] = useState<number>(15);
+  const [printMode, setPrintMode] = useState<boolean>(false);
+  
+  // 표준 카테고리 정의
+  const STANDARD_CATEGORIES = [
+    '메인요리',
+    '국물류', 
+    '김치류',
+    '젓갈류',
+    '나물류',
+    '조림류',
+    '특별반찬',
+    '인기메뉴'
+  ];
+
+  // 메뉴 관련 상태
+  const [menus, setMenus] = useState<Menu[]>([]);
+  const [loadingMenus, setLoadingMenus] = useState(false);
+  const [showMenuModal, setShowMenuModal] = useState(false);
+  const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
+  const [menuForm, setMenuForm] = useState({
+    name: '',
+    description: '',
+    price: '',
+    category: '',
+    is_available: true
+  });
   
   // URL에서 매장 정보 가져오기
   const storeId = searchParams.get('storeId');
   const storeName = searchParams.get('storeName');
+  
+  // 사용자의 매장 정보
+  const [userStores, setUserStores] = useState<any[]>([]);
+  const [currentStore, setCurrentStore] = useState<any>(null);
 
   // 달력 외부 클릭 시 닫기
   useEffect(() => {
@@ -71,6 +117,82 @@ export default function Admin() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showDatePicker]);
+
+  // 필터나 검색어 변경 시 페이지 리셋
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedStatus, selectedPeriod, selectedDate, searchTerm]);
+
+  // 메뉴 데이터 로드
+  const loadMenus = async () => {
+    if (!user?.id || !userProfile) return;
+    
+    try {
+      setLoadingMenus(true);
+      
+      // storeId가 있으면 해당 매장의 메뉴를, 없으면 사용자의 첫 번째 매장 메뉴를 로드
+      let targetStoreId = storeId;
+      
+      if (!targetStoreId) {
+        if (userProfile.role === 'admin') {
+          // admin 사용자의 경우 user_stores 테이블을 통해 소유한 매장을 가져오기
+          const { data: userStores } = await supabase
+            .from('user_stores')
+            .select(`
+              stores (
+                id,
+                name,
+                category,
+                delivery_area,
+                phone,
+                business_hours_start,
+                business_hours_end,
+                pickup_time_slots,
+                delivery_time_slots,
+                bank_account,
+                account_holder
+              )
+            `)
+            .eq('user_id', user.id)
+            .eq('role', 'owner');
+          
+          if (userStores && userStores.length > 0) {
+            targetStoreId = userStores[0].stores.id;
+          } else {
+            console.log('관리하는 매장이 없습니다.');
+            setMenus([]);
+            return;
+          }
+        } else if (userProfile.role === 'super_admin') {
+          // 슈퍼 어드민의 경우 모든 매장에서 첫 번째 매장 사용
+          const allStores = await getStores();
+          if (allStores.length > 0) {
+            targetStoreId = allStores[0].id;
+          } else {
+            console.log('등록된 매장이 없습니다.');
+            setMenus([]);
+            return;
+          }
+        }
+      }
+      
+      console.log('🎯 메뉴 로드 대상 매장 ID:', targetStoreId);
+      const menusData = await getMenus(targetStoreId);
+      console.log('📋 로드된 메뉴 데이터:', menusData);
+      setMenus(menusData);
+    } catch (error) {
+      console.error('❌ 메뉴 데이터 로드 실패:', error);
+    } finally {
+      setLoadingMenus(false);
+    }
+  };
+
+  // 메뉴 탭이 활성화될 때 메뉴 데이터 로드
+  useEffect(() => {
+    if (activeTab === 'menus' && user?.id && userProfile) {
+      loadMenus();
+    }
+  }, [activeTab, user?.id, userProfile]);
 
   useEffect(() => {
     // 로딩 중이면 대기
@@ -188,11 +310,13 @@ export default function Admin() {
   const handleDateSelect = (date: string) => {
     setSelectedDate(date);
     setSelectedPeriod('custom');
+    setCurrentPage(1); // 페이지 리셋
     setShowDatePicker(false);
   };
 
   const handlePeriodSelect = (period: string) => {
     setSelectedPeriod(period);
+    setCurrentPage(1); // 페이지 리셋
     if (period !== 'custom') {
       setSelectedDate('');
     }
@@ -283,6 +407,205 @@ export default function Admin() {
       order.users.phone.includes(searchTerm)
     );
   });
+
+  // 페이지네이션 계산
+  const totalPages = Math.ceil(finalFilteredOrders.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedOrders = finalFilteredOrders.slice(startIndex, endIndex);
+
+  // 페이지 변경 시 상단으로 스크롤
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // 프린트 함수
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const printContent = document.querySelector('.print-content');
+    if (!printContent) return;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>주문 내역 프린트</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              margin: 0;
+              padding: 20px;
+              font-size: 12px;
+              line-height: 1.4;
+            }
+            .print-header {
+              text-align: center;
+              margin-bottom: 20px;
+              border-bottom: 2px solid #333;
+              padding-bottom: 10px;
+            }
+            .print-order {
+              margin-bottom: 15px;
+              padding: 10px;
+              border: 1px solid #ddd;
+              page-break-inside: avoid;
+            }
+            .print-order-header {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 8px;
+              font-weight: bold;
+            }
+            .print-order-details {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 10px;
+              margin-bottom: 8px;
+            }
+            .print-order-items {
+              margin-bottom: 8px;
+            }
+            .print-order-item {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 2px;
+            }
+            .print-order-total {
+              text-align: right;
+              font-weight: bold;
+              border-top: 1px solid #ddd;
+              padding-top: 5px;
+            }
+            @media print {
+              body { margin: 0; padding: 15px; }
+            }
+          </style>
+        </head>
+        <body>
+          ${printContent.innerHTML}
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 500);
+  };
+
+  // 메뉴 관련 핸들러 함수들
+  const handleMenuSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.id || !userProfile) return;
+
+    try {
+      // storeId가 있으면 해당 매장을, 없으면 사용자의 첫 번째 매장을 사용
+      let targetStoreId = storeId;
+      
+      if (!targetStoreId) {
+        if (userProfile.role === 'admin') {
+          // admin 사용자의 경우 user_stores 테이블을 통해 소유한 매장을 가져오기
+          const { data: userStores } = await supabase
+            .from('user_stores')
+            .select(`
+              stores (
+                id,
+                name,
+                category,
+                delivery_area,
+                phone,
+                business_hours_start,
+                business_hours_end,
+                pickup_time_slots,
+                delivery_time_slots,
+                bank_account,
+                account_holder
+              )
+            `)
+            .eq('user_id', user.id)
+            .eq('role', 'owner');
+          
+          if (userStores && userStores.length > 0) {
+            targetStoreId = userStores[0].stores.id;
+          } else {
+            alert('관리하는 매장이 없습니다.');
+            return;
+          }
+        } else if (userProfile.role === 'super_admin') {
+          // 슈퍼 어드민의 경우 모든 매장에서 첫 번째 매장 사용
+          const allStores = await getStores();
+          if (allStores.length > 0) {
+            targetStoreId = allStores[0].id;
+          } else {
+            alert('등록된 매장이 없습니다.');
+            return;
+          }
+        }
+      }
+
+      const menuData = {
+        store_id: targetStoreId,
+        name: menuForm.name,
+        description: menuForm.description,
+        price: parseFloat(menuForm.price),
+        category: menuForm.category,
+        is_available: menuForm.is_available
+      };
+
+      if (editingMenu) {
+        await updateMenu(editingMenu.id, menuData);
+      } else {
+        await createMenu(menuData);
+      }
+
+      setShowMenuModal(false);
+      setEditingMenu(null);
+      setMenuForm({ name: '', description: '', price: '', category: '', is_available: true });
+      loadMenus();
+    } catch (error) {
+      console.error('❌ 메뉴 저장 실패:', error);
+      alert('메뉴 저장에 실패했습니다.');
+    }
+  };
+
+  const handleEditMenu = (menu: Menu) => {
+    setEditingMenu(menu);
+    setMenuForm({
+      name: menu.name,
+      description: menu.description || '',
+      price: menu.price.toString(),
+      category: menu.category,
+      is_available: menu.is_available
+    });
+    setShowMenuModal(true);
+  };
+
+  const handleDeleteMenu = async (menuId: string) => {
+    if (!confirm('정말로 이 메뉴를 삭제하시겠습니까?')) return;
+
+    try {
+      await deleteMenu(menuId);
+      loadMenus();
+    } catch (error) {
+      console.error('❌ 메뉴 삭제 실패:', error);
+      alert('메뉴 삭제에 실패했습니다.');
+    }
+  };
+
+  const handleToggleMenuAvailability = async (menu: Menu) => {
+    try {
+      await updateMenu(menu.id, { is_available: !menu.is_available });
+      loadMenus();
+    } catch (error) {
+      console.error('❌ 메뉴 상태 변경 실패:', error);
+      alert('메뉴 상태 변경에 실패했습니다.');
+    }
+  };
   
   const popularMenus = getPopularMenus(filteredOrdersByPeriod);
 
@@ -299,9 +622,12 @@ export default function Admin() {
     return status === '입금대기' || status === '입금확인';
   };
 
-  // 주문 번호를 짧게 만드는 함수
-  const getShortOrderId = (orderId: string) => {
-    return orderId.substring(0, 8) + '...';
+  // 주문 번호를 1번부터 시작하도록 만드는 함수 (배달날짜 기준)
+  const getOrderNumber = (order: Order, allOrders: Order[]) => {
+    const deliveryDate = getDeliveryDate(order);
+    const sameDayOrders = allOrders.filter(o => getDeliveryDate(o) === deliveryDate);
+    const orderIndex = sameDayOrders.findIndex(o => o.id === order.id);
+    return orderIndex + 1;
   };
 
   // 배달 시간 정보를 파싱하는 함수
@@ -314,9 +640,9 @@ export default function Admin() {
       if (timeMatch) {
         return timeMatch[1] + '배송';
       }
-      return '배송시간 정보 없음';
+      return null;
     } catch {
-      return '배송시간 정보 없음';
+      return null;
     }
   };
 
@@ -386,9 +712,102 @@ export default function Admin() {
 
 
   return (
+    <>
+      {/* 프린트용 CSS */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @media print {
+            body * {
+              visibility: hidden;
+            }
+            .print-content, .print-content * {
+              visibility: visible;
+            }
+            .print-content {
+              position: absolute;
+              left: 0;
+              top: 0;
+              width: 100%;
+              background: white;
+              padding: 20px;
+              font-size: 12px;
+              line-height: 1.4;
+            }
+            .print-header {
+              text-align: center;
+              margin-bottom: 20px;
+              border-bottom: 2px solid #333;
+              padding-bottom: 10px;
+            }
+            .print-order {
+              margin-bottom: 15px;
+              padding: 10px;
+              border: 1px solid #ddd;
+              page-break-inside: avoid;
+            }
+            .print-order-header {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 8px;
+              font-weight: bold;
+            }
+            .print-order-details {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 10px;
+              margin-bottom: 8px;
+            }
+            .print-order-items {
+              margin-bottom: 8px;
+            }
+            .print-order-item {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 2px;
+            }
+            .print-order-total {
+              text-align: right;
+              font-weight: bold;
+              border-top: 1px solid #ddd;
+              padding-top: 5px;
+            }
+            .no-print {
+              display: none !important;
+            }
+          }
+          
+          /* 모던 드롭다운 스타일 */
+          .modern-select {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+          }
+          
+          .modern-select option {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-weight: 500;
+            padding: 12px 16px;
+            background: white;
+            color: #374151;
+            border: none;
+            font-size: 14px;
+            line-height: 1.5;
+          }
+          
+          .modern-select option:hover {
+            background: #f9fafb;
+            color: #111827;
+          }
+          
+          .modern-select option:checked {
+            background: #fef3c7;
+            color: #92400e;
+            font-weight: 600;
+          }
+        `
+      }} />
+      
     <div className="min-h-screen bg-gray-50">
       {/* 헤더 */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-white shadow-sm border-b no-print">
         <div className="px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
@@ -415,8 +834,78 @@ export default function Admin() {
       </div>
 
       <div className="p-4">
+        {/* 탭 메뉴 */}
+        <div className="flex space-x-2 mb-6 no-print">
+          <button
+            onClick={() => setActiveTab('orders')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === 'orders'
+                ? 'bg-gray-800 text-white'
+                : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            <i className="ri-file-list-3-line mr-2"></i>
+            주문 내역
+          </button>
+          <button
+            onClick={() => setActiveTab('menus')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === 'menus'
+                ? 'bg-gray-800 text-white'
+                : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            <i className="ri-restaurant-line mr-2"></i>
+            메뉴 관리
+          </button>
+          <button
+            onClick={() => setActiveTab('statistics')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === 'statistics'
+                ? 'bg-gray-800 text-white'
+                : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            <i className="ri-bar-chart-line mr-2"></i>
+            통계
+          </button>
+          <button
+            onClick={() => setActiveTab('store')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === 'store'
+                ? 'bg-gray-800 text-white'
+                : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            <i className="ri-store-line mr-2"></i>
+            매장 관리
+          </button>
+        </div>
+
+
+        {activeTab === 'orders' && (
+          <>
+            {/* 주문 내역 탭 */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">주문 내역</h3>
+                  <p className="text-sm text-gray-600">모든 주문 정보를 상세하게 확인할 수 있습니다</p>
+                </div>
+                {finalFilteredOrders.length > 0 && (
+            <button
+                    onClick={handlePrint}
+                    className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm whitespace-nowrap cursor-pointer"
+                  >
+                    <i className="ri-printer-line"></i>
+                    프린트
+            </button>
+                )}
+              </div>
+        </div>
+
         {/* 검색바 */}
-        <div className="mb-4">
+        <div className="mb-4 no-print">
           <div className="relative">
             <input
               type="text"
@@ -429,124 +918,96 @@ export default function Admin() {
           </div>
         </div>
 
-        {/* 탭 메뉴 */}
-        <div className="flex mb-6 bg-gray-100 rounded-lg p-1">
-          <button
-            onClick={() => setActiveTab('delivery')}
-            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'delivery'
-                ? 'bg-white text-orange-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-800'
-            }`}
-          >
-            <i className="ri-truck-line mr-2"></i>
-            배달 현황
-          </button>
-          <button
-            onClick={() => setActiveTab('orders')}
-            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'orders'
-                ? 'bg-white text-orange-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-800'
-            }`}
-          >
-            <i className="ri-file-list-3-line mr-2"></i>
-            주문 내역
-          </button>
-          <button
-            onClick={() => setActiveTab('statistics')}
-            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'statistics'
-                ? 'bg-white text-orange-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-800'
-            }`}
-          >
-            <i className="ri-bar-chart-line mr-2"></i>
-            통계
-          </button>
+        {/* 필터 카드 */}
+        <div className="mb-6 no-print">
+          <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <i className="ri-filter-3-line text-orange-500"></i>
+              <span className="text-sm font-medium text-gray-700">필터</span>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* 기간 필터 */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <i className="ri-calendar-line text-gray-500 text-sm"></i>
+                  <span className="text-sm font-medium text-gray-700 whitespace-nowrap">기간:</span>
+                </div>
+                
+                <div className="flex-1">
+                  <div className="relative">
+                    <select
+                      value={selectedPeriod}
+                      onChange={(e) => handlePeriodSelect(e.target.value)}
+                      className="modern-select w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white appearance-none cursor-pointer transition-all duration-200 hover:bg-gray-100"
+                    >
+                      <option value="today">오늘</option>
+                      <option value="yesterday">어제</option>
+                      <option value="custom">날짜 선택</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <i className="ri-arrow-down-s-line text-gray-400 text-sm"></i>
+                    </div>
+                  </div>
         </div>
 
-        {activeTab === 'delivery' && (
-          <>
-            {/* 배달 현황 탭 */}
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">배달 현황</h3>
-              <p className="text-sm text-gray-600">배달에 필요한 핵심 정보만 표시됩니다</p>
-            </div>
-
-        {/* 기간 필터 버튼 */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          {[
-            { key: 'today', label: '오늘' },
-            { key: 'yesterday', label: '어제' }
-          ].map((period) => (
-            <button
-              key={period.key}
-              onClick={() => handlePeriodSelect(period.key)}
-              className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer ${
-                selectedPeriod === period.key
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              {period.label}
-            </button>
-          ))}
-          
-          {/* 날짜 선택 버튼 */}
-          <div className="relative date-picker-container">
-            <button
-              onClick={() => setShowDatePicker(!showDatePicker)}
-              className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer flex items-center ${
-                selectedPeriod === 'custom'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              <i className="ri-calendar-line mr-2"></i>
-              {selectedDate ? selectedDate : '날짜 선택'}
-            </button>
-            
-            {/* 달력 드롭다운 */}
-            {showDatePicker && (
-              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 p-3">
+                {selectedPeriod === 'custom' && (
+                  <div className="flex-1">
                     <input
                       type="date"
                       value={selectedDate}
                       onChange={(e) => handleDateSelect(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white transition-all duration-200 hover:bg-gray-100"
                     />
-                <div className="flex justify-end mt-2">
-                  <button
-                    onClick={() => setShowDatePicker(false)}
-                    className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
-                  >
-                    닫기
-                  </button>
+                  </div>
+                )}
+              </div>
+
+              {/* 상태 필터 */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <i className="ri-filter-line text-gray-500 text-sm"></i>
+                  <span className="text-sm font-medium text-gray-700 whitespace-nowrap">상태:</span>
+                </div>
+                
+                <div className="flex-1">
+                  <div className="relative">
+                    <select
+                      value={selectedStatus}
+                      onChange={(e) => setSelectedStatus(e.target.value)}
+                      className="modern-select w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white appearance-none cursor-pointer transition-all duration-200 hover:bg-gray-100"
+                    >
+                      <option value="all">전체 ({filteredOrdersByPeriod.length})</option>
+                      <option value="입금대기">입금대기 ({filteredOrdersByPeriod.filter(order => order.status === '입금대기').length})</option>
+                      <option value="입금확인">입금확인 ({filteredOrdersByPeriod.filter(order => order.status === '입금확인').length})</option>
+                      <option value="배달완료">배달완료 ({filteredOrdersByPeriod.filter(order => order.status === '배달완료').length})</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <i className="ri-arrow-down-s-line text-gray-400 text-sm"></i>
+                    </div>
+                  </div>
                 </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
 
-        {/* 상태 필터 버튼 */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          {['all', '입금대기', '입금확인', '배달완료'].map((status) => (
-            <button
-              key={status}
-              onClick={() => setSelectedStatus(status)}
-              className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer ${
-                selectedStatus === status
-                  ? 'bg-orange-500 text-white'
-                  : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              {status === 'all' ? '전체' : status}
-            </button>
-          ))}
-        </div>
+            {/* 현재 페이지 주문번호 범위 표시 */}
+            {paginatedOrders.length > 0 && (
+              <div className="mb-4 flex justify-center">
+                <div className="inline-flex items-center px-3 py-1.5 bg-gray-100 border border-gray-200 rounded-full">
+                  <span className="text-gray-700 text-sm">
+                    <i className="ri-file-list-line mr-1 text-orange-500"></i>
+                    {getOrderNumber(paginatedOrders[0], finalFilteredOrders)}~{getOrderNumber(paginatedOrders[paginatedOrders.length - 1], finalFilteredOrders)}번 주문
+                  </span>
+                  <span className="text-gray-500 text-xs ml-2">
+                    ({paginatedOrders.length}건)
+                  </span>
+                </div>
+              </div>
+            )}
 
-        {/* 주문 목록 */}
+            {/* 주문 상세 목록 */}
         <div className="space-y-4">
           {loadingOrders ? (
             <div className="bg-white rounded-lg p-8 shadow-sm">
@@ -555,7 +1016,7 @@ export default function Admin() {
                 <p className="text-gray-600">주문 데이터를 불러오는 중...</p>
               </div>
             </div>
-          ) : finalFilteredOrders.length === 0 ? (
+              ) : paginatedOrders.length === 0 ? (
             <div className="bg-white rounded-lg p-8 shadow-sm">
               <div className="text-center text-gray-500">
                 <i className="ri-shopping-cart-line text-4xl mb-4"></i>
@@ -563,243 +1024,7 @@ export default function Admin() {
               </div>
             </div>
           ) : (
-            finalFilteredOrders.map((order) => {
-              const { date, time } = {
-                date: new Date(order.created_at).toLocaleDateString('ko-KR'),
-                time: new Date(order.created_at).toLocaleTimeString('ko-KR', { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })
-              };
-              
-              return (
-                <div key={order.id} className="bg-white rounded-lg shadow-sm overflow-hidden">
-                  <div className="p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                            {order.status}
-                          </span>
-                          <span className="text-sm text-gray-500">
-                            {order.order_type === 'delivery' ? '배달' : '픽업'}
-                          </span>
-                        </div>
-                        
-                        {/* 핵심 정보만 표시 */}
-                        <div className="space-y-2">
-                          {order.delivery_address && (
-                            <div className="flex items-start text-sm">
-                              <i className="ri-map-pin-line mr-2 mt-0.5 text-gray-500"></i>
-                              <span className="text-gray-800 font-medium">{order.delivery_address}</span>
-                            </div>
-                          )}
-                          
-                          {order.delivery_time && (
-                            <div className="flex items-center text-sm">
-                              <i className="ri-time-line mr-2 text-gray-500"></i>
-                              <span className="text-gray-800">{parseDeliveryTime(order.delivery_time)}</span>
-                            </div>
-                          )}
-                          
-                          {order.pickup_time && (
-                            <div className="flex items-center text-sm">
-                              <i className="ri-time-line mr-2 text-gray-500"></i>
-                              <span className="text-gray-800">픽업: {order.pickup_time}</span>
-                            </div>
-                          )}
-                          
-                          {order.depositor_name && (
-                            <div className="flex items-center text-sm">
-                              <i className="ri-user-line mr-2 text-gray-500"></i>
-                              <span className="text-gray-800">입금자: {order.depositor_name}</span>
-                            </div>
-                          )}
-                          
-                          {order.special_requests && (
-                            <div className="flex items-start text-sm">
-                              <i className="ri-message-line mr-2 mt-0.5 text-gray-500"></i>
-                              <span className="text-gray-800">{order.special_requests}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="text-right ml-4">
-                        <div className="text-lg font-bold text-orange-500">
-                          {order.total.toLocaleString()}원
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {order.order_items?.length || 0}개 상품
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 관리 버튼 */}
-                    <div className="mt-4 pt-3 border-t">
-                      <div className="flex flex-wrap gap-2">
-                        {/* 입금대기 상태일 때 */}
-                        {order.status === '입금대기' && (
-                          <>
-                            <button
-                              onClick={() => handleStatusChange(order.id, '입금확인')}
-                              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
-                            >
-                              입금확인
-                            </button>
-                            <button
-                              onClick={() => handleStatusChange(order.id, '배달완료')}
-                              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
-                            >
-                              배달완료
-                            </button>
-                          </>
-                        )}
-                        
-                        {/* 입금확인 상태일 때 */}
-                        {order.status === '입금확인' && (
-                          <>
-                            <button
-                              onClick={() => handleStatusChange(order.id, '입금대기')}
-                              className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
-                            >
-                              입금대기로
-                            </button>
-                            <button
-                              onClick={() => handleStatusChange(order.id, '배달완료')}
-                              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
-                            >
-                              배달완료
-                            </button>
-                          </>
-                        )}
-                        
-                        {/* 배달완료 상태일 때 */}
-                        {order.status === '배달완료' && (
-                          <>
-                            <button
-                              onClick={() => handleStatusChange(order.id, '입금대기')}
-                              className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
-                            >
-                              입금대기로
-                            </button>
-                            <button
-                              onClick={() => handleStatusChange(order.id, '입금확인')}
-                              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
-                            >
-                              입금확인으로
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-          </>
-        )}
-
-        {activeTab === 'orders' && (
-          <>
-            {/* 주문 내역 탭 */}
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">주문 내역</h3>
-              <p className="text-sm text-gray-600">모든 주문 정보를 상세하게 확인할 수 있습니다</p>
-            </div>
-
-            {/* 기간 필터 버튼 */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              {[
-                { key: 'today', label: '오늘' },
-                { key: 'yesterday', label: '어제' }
-              ].map((period) => (
-                <button
-                  key={period.key}
-                  onClick={() => handlePeriodSelect(period.key)}
-                  className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer ${
-                    selectedPeriod === period.key
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  {period.label}
-                </button>
-              ))}
-              
-              {/* 날짜 선택 버튼 */}
-              <div className="relative date-picker-container">
-                <button
-                  onClick={() => setShowDatePicker(!showDatePicker)}
-                  className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer flex items-center ${
-                    selectedPeriod === 'custom'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <i className="ri-calendar-line mr-2"></i>
-                  {selectedDate ? selectedDate : '날짜 선택'}
-                </button>
-                
-                {/* 달력 드롭다운 */}
-                {showDatePicker && (
-                  <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 p-3">
-                    <input
-                      type="date"
-                      value={selectedDate}
-                      onChange={(e) => handleDateSelect(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <div className="flex justify-end mt-2">
-                      <button
-                        onClick={() => setShowDatePicker(false)}
-                        className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
-                      >
-                        닫기
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* 상태 필터 버튼 */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              {['all', '입금대기', '입금확인', '배달완료'].map((status) => (
-                <button
-                  key={status}
-                  onClick={() => setSelectedStatus(status)}
-                  className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer ${
-                    selectedStatus === status
-                      ? 'bg-orange-500 text-white'
-                      : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  {status === 'all' ? '전체' : status}
-                </button>
-              ))}
-            </div>
-
-            {/* 주문 상세 목록 */}
-            <div className="space-y-4">
-              {loadingOrders ? (
-                <div className="bg-white rounded-lg p-8 shadow-sm">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
-                    <p className="text-gray-600">주문 데이터를 불러오는 중...</p>
-                  </div>
-                </div>
-              ) : finalFilteredOrders.length === 0 ? (
-                <div className="bg-white rounded-lg p-8 shadow-sm">
-                  <div className="text-center text-gray-500">
-                    <i className="ri-shopping-cart-line text-4xl mb-4"></i>
-                    <p>선택한 조건에 해당하는 주문이 없습니다.</p>
-                  </div>
-                </div>
-              ) : (
-                finalFilteredOrders.map((order) => {
+                paginatedOrders.map((order) => {
               const { date, time } = {
                 date: new Date(order.created_at).toLocaleDateString('ko-KR'),
                 time: new Date(order.created_at).toLocaleTimeString('ko-KR', { 
@@ -813,16 +1038,21 @@ export default function Admin() {
                   <div className="p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <h3 className="font-semibold text-gray-800">주문번호: {getShortOrderId(order.id)}</h3>
+                        <h3 className="font-semibold text-gray-800">주문번호: {getOrderNumber(order, finalFilteredOrders)}</h3>
                         <div className="text-sm text-gray-500 mt-1">
                               <div>주문일시: {date} {time}</div>
-                          <div>고객: {order.users.name} ({order.users.phone})</div>
-                          <div>주문방식: {order.order_type === 'delivery' ? '배달' : '픽업'}</div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
                           {order.status}
+                        </span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          order.order_type === 'delivery' 
+                            ? 'bg-blue-100 text-blue-800' 
+                            : 'bg-green-100 text-green-800'
+                        }`}>
+                          {order.order_type === 'delivery' ? '배달' : '픽업'}
                         </span>
                         <i className="ri-bank-line text-gray-500"></i>
                       </div>
@@ -861,7 +1091,7 @@ export default function Admin() {
                       {order.delivery_time && (
                         <div className="flex items-center text-sm text-gray-600">
                           <i className="ri-time-line mr-2"></i>
-                          <span>배달시간: {order.delivery_time} ({parseDeliveryTime(order.delivery_time)})</span>
+                          <span>배달시간: {order.delivery_time}</span>
                         </div>
                       )}
                       {order.pickup_time && (
@@ -887,59 +1117,63 @@ export default function Admin() {
                     {/* 관리 버튼 */}
                     <div className="mt-4 pt-3 border-t">
                       <div className="flex flex-wrap gap-2">
-                            {/* 입금대기 상태일 때 */}
+                        {/* 입금대기 상태일 때 */}
                         {order.status === '입금대기' && (
-                              <>
+                          <>
                           <button
                             onClick={() => handleStatusChange(order.id, '입금확인')}
                             className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
                           >
                             입금확인
+                            </button>
+                            {order.order_type === 'delivery' && (
+                              <button
+                                onClick={() => handleStatusChange(order.id, '배달완료')}
+                                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                              >
+                                배달완료
                           </button>
-                                <button
-                                  onClick={() => handleStatusChange(order.id, '배달완료')}
-                                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
-                                >
-                                  배달완료
-                                </button>
-                              </>
-                            )}
-                            
-                            {/* 입금확인 상태일 때 */}
+                        )}
+                          </>
+                        )}
+                        
+                        {/* 입금확인 상태일 때 */}
                         {order.status === '입금확인' && (
-                              <>
-                                <button
-                                  onClick={() => handleStatusChange(order.id, '입금대기')}
-                                  className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
-                                >
-                                  입금대기로
-                                </button>
+                          <>
+                            <button
+                              onClick={() => handleStatusChange(order.id, '입금대기')}
+                              className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                            >
+                              입금대기로
+                            </button>
+                            {order.order_type === 'delivery' && (
                           <button
                             onClick={() => handleStatusChange(order.id, '배달완료')}
                             className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
                           >
                             배달완료
                           </button>
-                              </>
-                            )}
-                            
-                            {/* 배달완료 상태일 때 */}
-                            {order.status === '배달완료' && (
-                              <>
-                                <button
-                                  onClick={() => handleStatusChange(order.id, '입금대기')}
-                                  className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
-                                >
-                                  입금대기로
-                                </button>
-                                <button
-                                  onClick={() => handleStatusChange(order.id, '입금확인')}
-                                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
-                                >
-                                  입금확인으로
-                                </button>
-                              </>
-                            )}
+                        )}
+                          </>
+                        )}
+                        
+                        {/* 배달완료 상태일 때 (배달 주문만) */}
+                        {order.status === '배달완료' && order.order_type === 'delivery' && (
+                          <>
+                            <button
+                              onClick={() => handleStatusChange(order.id, '입금대기')}
+                              className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                            >
+                              입금대기로
+                            </button>
+                            <button
+                              onClick={() => handleStatusChange(order.id, '입금확인')}
+                              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                            >
+                              입금확인으로
+                            </button>
+                          </>
+                        )}
                             
                         {canCancel(order.status) && (
                           <button
@@ -957,12 +1191,178 @@ export default function Admin() {
             })
           )}
         </div>
+
+        {/* 페이지네이션 */}
+        {finalFilteredOrders.length > 0 && (
+          <div className="mt-6 flex justify-center no-print">
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                {/* 이전 페이지 버튼 */}
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className={`px-3 py-2 rounded-lg text-sm ${
+                    currentPage === 1
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <i className="ri-arrow-left-s-line"></i>
+                </button>
+
+                {/* 페이지 번호들 - 최대 5개까지만 표시 */}
+                {(() => {
+                  const maxVisiblePages = 5;
+                  let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+                  let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+                  
+                  // 끝 페이지가 조정되면 시작 페이지도 조정
+                  if (endPage - startPage + 1 < maxVisiblePages) {
+                    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                  }
+                  
+                  const pages = [];
+                  for (let i = startPage; i <= endPage; i++) {
+                    pages.push(i);
+                  }
+                  
+                  return pages.map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`px-3 py-2 rounded-lg text-sm ${
+                        currentPage === page
+                          ? 'bg-orange-500 text-white'
+                          : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ));
+                })()}
+
+                {/* 다음 페이지 버튼 */}
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className={`px-3 py-2 rounded-lg text-sm ${
+                    currentPage === totalPages
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <i className="ri-arrow-right-s-line"></i>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+
+        {/* 페이지 정보 */}
+        {finalFilteredOrders.length > 0 && (
+          <div className="mt-4 text-center text-sm text-gray-500 no-print">
+            {startIndex + 1}-{Math.min(endIndex, finalFilteredOrders.length)} / {finalFilteredOrders.length}개 주문
+            </div>
+        )}
+
+        {/* 프린트용 콘텐츠 */}
+        <div className="print-content" style={{ display: 'none', visibility: 'hidden' }}>
+          <div className="print-header">
+            <h1 style={{ fontSize: '18px', margin: '0 0 5px 0' }}>
+              {storeName || '매장'} 주문 내역
+            </h1>
+            <p style={{ margin: '0', fontSize: '14px' }}>
+              {selectedPeriod === 'today' ? '오늘' : 
+               selectedPeriod === 'yesterday' ? '어제' : 
+               selectedDate ? selectedDate : '전체'} 주문 목록
+            </p>
+            <p style={{ margin: '5px 0 0 0', fontSize: '12px' }}>
+              프린트 일시: {new Date().toLocaleString('ko-KR')}
+            </p>
+          </div>
+
+          {finalFilteredOrders.map((order) => {
+            const { date, time } = {
+              date: new Date(order.created_at).toLocaleDateString('ko-KR'),
+              time: new Date(order.created_at).toLocaleTimeString('ko-KR', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              })
+            };
+            
+            return (
+              <div key={order.id} className="print-order">
+                <div className="print-order-header">
+                  <span>주문번호: {getOrderNumber(order, finalFilteredOrders)}</span>
+                  <span>{order.status}</span>
+                </div>
+                
+                <div className="print-order-details">
+                  <div>
+                    <strong>주문일시:</strong> {date} {time}
+                  </div>
+                  <div>
+                    <strong>주문방식:</strong> {order.order_type === 'delivery' ? '배달' : '픽업'}
+                  </div>
+                  {order.delivery_address && (
+                    <div>
+                      <strong>배달주소:</strong> {order.delivery_address}
+          </div>
+        )}
+                  {order.delivery_time && (
+                    <div>
+                      <strong>배달시간:</strong> {order.delivery_time}
+                    </div>
+                  )}
+                  {order.pickup_time && (
+                    <div>
+                      <strong>픽업시간:</strong> {order.pickup_time}
+                    </div>
+                  )}
+                  {order.depositor_name && (
+                    <div>
+                      <strong>입금자명:</strong> {order.depositor_name}
+                    </div>
+                  )}
+                  {order.special_requests && (
+                    <div>
+                      <strong>요청사항:</strong> {order.special_requests}
+                    </div>
+                  )}
+                </div>
+
+                <div className="print-order-items">
+                  <strong>주문 상품:</strong>
+                  {order.order_items?.map((item, index) => (
+                    <div key={index} className="print-order-item">
+                      <span>{item.menus.name} x {item.quantity}</span>
+                      <span>{(item.price * item.quantity).toLocaleString()}원</span>
+                    </div>
+                  )) || <div>주문 상품 정보 없음</div>}
+                </div>
+
+                <div className="print-order-total">
+                  총 결제 금액: {order.total.toLocaleString()}원
+                </div>
+              </div>
+            );
+          })}
+        </div>
           </>
         )}
 
 
         {activeTab === 'statistics' && (
           <>
+            {/* 통계 탭 */}
+            <div className="mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">매장 통계</h3>
+                <p className="text-sm text-gray-600">매장의 주문 현황과 매출 통계를 확인할 수 있습니다</p>
+              </div>
+            </div>
+
             {/* 통계 카드 */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
               <div className="bg-white rounded-lg p-4 shadow-sm">
@@ -1095,7 +1495,303 @@ export default function Admin() {
             </div>
           </>
         )}
+
+        {activeTab === 'menus' && (
+          <>
+            {/* 메뉴 관리 탭 */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">메뉴 관리</h3>
+                  <p className="text-sm text-gray-600">매장의 메뉴를 추가, 수정, 삭제할 수 있습니다</p>
       </div>
+                <button
+                  onClick={() => {
+                    setEditingMenu(null);
+                    setMenuForm({ name: '', description: '', price: '', category: '', is_available: true });
+                    setShowMenuModal(true);
+                  }}
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm whitespace-nowrap cursor-pointer"
+                >
+                  <i className="ri-add-line"></i>
+                  메뉴 추가
+                </button>
     </div>
+            </div>
+
+            {/* 메뉴 목록 */}
+            {loadingMenus ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
+                <p className="text-gray-600">메뉴를 불러오는 중...</p>
+              </div>
+            ) : menus.length > 0 ? (
+              <div className="bg-white">
+                {menus.map((menu, index) => (
+                  <div key={menu.id} className={`px-4 py-4 hover:bg-gray-50 transition-colors duration-200 ${index !== menus.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                    <div className="flex gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start mb-1">
+                          <h3 className="font-semibold text-black text-base truncate">{menu.name}</h3>
+                          <div className="flex items-center gap-2">
+                            <span className="text-black font-semibold text-base">
+                              {menu.price.toLocaleString()}원
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-500 mb-2 line-clamp-2 leading-relaxed">{menu.description}</p>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs px-3 py-1.5 rounded-full font-medium flex items-center gap-1 ${
+                              menu.is_available 
+                                ? 'bg-green-100 text-green-700 border border-green-200' 
+                                : 'bg-red-100 text-red-700 border border-red-200'
+                            }`}>
+                              <i className={`ri-${menu.is_available ? 'check' : 'close'}-line text-xs`}></i>
+                              {menu.is_available ? '판매중' : '품절'}
+                            </span>
+                            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">{menu.category}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleToggleMenuAvailability(menu)}
+                              className={`w-8 h-8 rounded-full text-sm font-medium transition-all duration-200 flex items-center justify-center ${
+                                menu.is_available 
+                                  ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                                  : 'bg-red-100 text-red-700 hover:bg-red-200'
+                              }`}
+                            >
+                              <i className={`ri-${menu.is_available ? 'check' : 'close'}-line text-sm`}></i>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingMenu(menu);
+                                setMenuForm({
+                                  name: menu.name,
+                                  description: menu.description || '',
+                                  price: menu.price.toString(),
+                                  category: menu.category,
+                                  is_available: menu.is_available
+                                });
+                                setShowMenuModal(true);
+                              }}
+                              className="w-8 h-8 rounded-full text-sm font-medium transition-all duration-200 flex items-center justify-center bg-white text-black border border-gray-300 hover:bg-gray-100"
+                            >
+                              <i className="ri-edit-line text-sm"></i>
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (confirm('정말로 이 메뉴를 삭제하시겠습니까?')) {
+                                  handleDeleteMenu(menu.id);
+                                }
+                              }}
+                              className="w-8 h-8 rounded-full text-sm font-medium transition-all duration-200 flex items-center justify-center text-gray-500 hover:text-red-500 hover:bg-red-50"
+                            >
+                              <i className="ri-delete-bin-line text-sm"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <i className="ri-restaurant-line text-2xl text-gray-400"></i>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-600 mb-2">등록된 메뉴가 없습니다</h3>
+                <p className="text-gray-500 mb-4">위의 "메뉴 추가" 버튼을 눌러<br />새로운 메뉴를 추가해보세요!</p>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+      
+      {/* 메뉴 추가/수정 모달 */}
+      {showMenuModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">
+              {editingMenu ? '메뉴 수정' : '메뉴 추가'}
+            </h3>
+            <form onSubmit={handleMenuSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">메뉴명 *</label>
+                <input
+                  type="text"
+                  value={menuForm.name}
+                  onChange={(e) => setMenuForm({...menuForm, name: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  placeholder="메뉴명을 입력하세요"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">설명</label>
+                <textarea
+                  value={menuForm.description}
+                  onChange={(e) => setMenuForm({...menuForm, description: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
+                  rows={3}
+                  placeholder="메뉴 설명을 입력하세요"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">가격 *</label>
+                <input
+                  type="number"
+                  value={menuForm.price}
+                  onChange={(e) => setMenuForm({...menuForm, price: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  placeholder="가격을 입력하세요"
+                  min="0"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">카테고리 *</label>
+                <select
+                  value={menuForm.category}
+                  onChange={(e) => setMenuForm({...menuForm, category: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  required
+                >
+                  <option value="">카테고리를 선택하세요</option>
+                  {STANDARD_CATEGORIES.map(category => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="is_available"
+                  checked={menuForm.is_available}
+                  onChange={(e) => setMenuForm({...menuForm, is_available: e.target.checked})}
+                  className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                />
+                <label htmlFor="is_available" className="ml-2 text-sm text-gray-700">
+                  판매 가능
+                </label>
+              </div>
+              <div className="flex gap-2 pt-4">
+                <button
+                  type="submit"
+                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-3 px-4 rounded-lg font-medium"
+                >
+                  {editingMenu ? '수정하기' : '추가하기'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMenuModal(false);
+                    setEditingMenu(null);
+                    setMenuForm({ name: '', description: '', price: '', category: '', is_available: true });
+                  }}
+                  className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-3 px-4 rounded-lg font-medium"
+                >
+                  취소
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+        )}
+
+        {activeTab === 'store' && (
+          <>
+            {/* 매장 관리 탭 */}
+            <div className="mb-4">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">매장명</label>
+                      <input
+                        type="text"
+                        value={storeName || ''}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        disabled
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">카테고리</label>
+                      <input
+                        type="text"
+                        value="한식반찬"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        disabled
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">배달 지역</label>
+                      <input
+                        type="text"
+                        value="진주 삼천포, 사천"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        disabled
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">운영시간</label>
+                      <input
+                        type="text"
+                        value="09:00 - 21:00"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        disabled
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">주문마감시간</label>
+                      <input
+                        type="text"
+                        value="15:00"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        disabled
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">최소주문금액</label>
+                      <input
+                        type="number"
+                        value="0"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        disabled
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">계좌번호</label>
+                      <input
+                        type="text"
+                        value="농협 123-456-789012"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        disabled
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="pt-4 border-t border-gray-200">
+                    <p className="text-sm text-gray-500 mb-4">
+                      매장 정보 수정은 슈퍼 어드민에게 문의하세요.
+                    </p>
+                    <button
+                      onClick={() => navigate('/super-admin')}
+                      className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      <i className="ri-customer-service-line mr-2"></i>
+                      슈퍼 어드민 문의
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      
+      <Footer />
+    </div>
+    </>
   );
 }

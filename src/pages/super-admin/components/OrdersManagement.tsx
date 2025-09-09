@@ -234,17 +234,17 @@ export default function OrdersManagement({ showToast }: OrdersManagementProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
       {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-800">전체 주문 관리</h2>
-        <div className="text-sm text-gray-600">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+        <h2 className="text-lg lg:text-2xl font-bold text-gray-800">전체 주문 관리</h2>
+        <div className="text-xs lg:text-sm text-gray-600">
           총 {orders.length}건의 주문
         </div>
       </div>
 
       {/* 기간 필터 버튼 */}
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div className="flex flex-wrap gap-2 mb-3 lg:mb-4">
         {[
           { key: 'today', label: '오늘' },
           { key: 'yesterday', label: '어제' }
@@ -252,7 +252,7 @@ export default function OrdersManagement({ showToast }: OrdersManagementProps) {
           <button
             key={period.key}
             onClick={() => handlePeriodSelect(period.key)}
-            className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer ${
+            className={`px-3 lg:px-4 py-2 rounded-lg text-xs lg:text-sm whitespace-nowrap cursor-pointer ${
               selectedPeriod === period.key
                 ? 'bg-orange-500 text-white'
                 : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
@@ -266,7 +266,7 @@ export default function OrdersManagement({ showToast }: OrdersManagementProps) {
         <div className="relative date-picker-container">
           <button
             onClick={() => setShowDatePicker(!showDatePicker)}
-            className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer flex items-center ${
+            className={`px-3 lg:px-4 py-2 rounded-lg text-xs lg:text-sm whitespace-nowrap cursor-pointer flex items-center ${
               selectedPeriod === 'custom'
                 ? 'bg-orange-500 text-white'
                 : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
@@ -299,12 +299,12 @@ export default function OrdersManagement({ showToast }: OrdersManagementProps) {
       </div>
 
       {/* 상태 필터 버튼 */}
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div className="flex flex-wrap gap-2 mb-3 lg:mb-4">
         {['all', '입금대기', '입금확인', '배달완료'].map((status) => (
           <button
             key={status}
             onClick={() => setSelectedStatus(status)}
-            className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer ${
+            className={`px-3 lg:px-4 py-2 rounded-lg text-xs lg:text-sm whitespace-nowrap cursor-pointer ${
               selectedStatus === status
                 ? 'bg-blue-500 text-white'
                 : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
@@ -316,12 +316,12 @@ export default function OrdersManagement({ showToast }: OrdersManagementProps) {
       </div>
 
       {/* 주문 목록 */}
-      <div className="space-y-4">
+      <div className="space-y-3 lg:space-y-4">
         {filteredOrders.length === 0 ? (
-          <div className="bg-white rounded-lg p-8 shadow-sm">
+          <div className="bg-white rounded-lg p-6 lg:p-8 shadow-sm">
             <div className="text-center text-gray-500">
-              <i className="ri-shopping-cart-line text-4xl mb-4"></i>
-              <p>선택한 조건에 해당하는 주문이 없습니다.</p>
+              <i className="ri-shopping-cart-line text-3xl lg:text-4xl mb-3 lg:mb-4"></i>
+              <p className="text-sm lg:text-base">선택한 조건에 해당하는 주문이 없습니다.</p>
             </div>
           </div>
         ) : (
@@ -336,11 +336,11 @@ export default function OrdersManagement({ showToast }: OrdersManagementProps) {
             
             return (
               <div key={order.id} className="bg-white rounded-lg shadow-sm overflow-hidden">
-                <div className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-semibold text-gray-800">주문번호: {getShortOrderId(order.id)}</h3>
-                      <div className="text-sm text-gray-500 mt-1">
+                <div className="p-3 lg:p-4">
+                  <div className="flex items-start justify-between mb-2 lg:mb-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm lg:text-base font-semibold text-gray-800 truncate">주문번호: {getShortOrderId(order.id)}</h3>
+                      <div className="text-xs lg:text-sm text-gray-500 mt-1 space-y-1">
                         <div>{date} {time}</div>
                         <div>고객: {order.users.name} ({order.users.phone})</div>
                         <div>매장: {order.stores?.name || '알 수 없는 매장'}</div>
@@ -355,77 +355,77 @@ export default function OrdersManagement({ showToast }: OrdersManagementProps) {
                     </div>
                   </div>
 
-                  <div className="border-t pt-3">
-                    <div className="space-y-1 mb-3">
+                  <div className="border-t pt-2 lg:pt-3">
+                    <div className="space-y-1 mb-2 lg:mb-3">
                       {order.order_items?.map((item, index) => (
-                        <div key={index} className="flex justify-between text-sm">
-                          <span className="text-gray-600">
+                        <div key={index} className="flex justify-between text-xs lg:text-sm">
+                          <span className="text-gray-600 truncate flex-1 mr-2">
                             {item.menus.name} x {item.quantity}
                           </span>
-                          <span className="text-gray-800">
+                          <span className="text-gray-800 whitespace-nowrap">
                             {(item.price * item.quantity).toLocaleString()}원
                           </span>
                         </div>
-                      )) || <div className="text-gray-500 text-sm">주문 상품 정보 없음</div>}
+                      )) || <div className="text-gray-500 text-xs lg:text-sm">주문 상품 정보 없음</div>}
                     </div>
                     
                     <div className="flex justify-between items-center pt-2 border-t">
-                      <span className="font-semibold text-gray-800">총 결제 금액</span>
-                      <span className="font-bold text-lg text-orange-500">
+                      <span className="text-sm lg:text-base font-semibold text-gray-800">총 결제 금액</span>
+                      <span className="font-bold text-base lg:text-lg text-orange-500">
                         {order.total.toLocaleString()}원
                       </span>
                     </div>
                   </div>
 
                   {/* 주문 상세 정보 */}
-                  <div className="mt-3 pt-3 border-t space-y-2">
+                  <div className="mt-2 lg:mt-3 pt-2 lg:pt-3 border-t space-y-1 lg:space-y-2">
                     {order.delivery_address && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <i className="ri-map-pin-line mr-2"></i>
-                        <span>배달주소: {order.delivery_address}</span>
+                      <div className="flex items-start text-xs lg:text-sm text-gray-600">
+                        <i className="ri-map-pin-line mr-1 lg:mr-2 mt-0.5 flex-shrink-0"></i>
+                        <span className="break-words">배달주소: {order.delivery_address}</span>
                       </div>
                     )}
                     {order.delivery_time && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <i className="ri-time-line mr-2"></i>
-                        <span>배달시간: {order.delivery_time} ({parseDeliveryTime(order.delivery_time)})</span>
+                      <div className="flex items-start text-xs lg:text-sm text-gray-600">
+                        <i className="ri-time-line mr-1 lg:mr-2 mt-0.5 flex-shrink-0"></i>
+                        <span className="break-words">배달시간: {order.delivery_time} ({parseDeliveryTime(order.delivery_time)})</span>
                       </div>
                     )}
                     {order.pickup_time && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <i className="ri-time-line mr-2"></i>
-                        <span>픽업시간: {order.pickup_time}</span>
+                      <div className="flex items-start text-xs lg:text-sm text-gray-600">
+                        <i className="ri-time-line mr-1 lg:mr-2 mt-0.5 flex-shrink-0"></i>
+                        <span className="break-words">픽업시간: {order.pickup_time}</span>
                       </div>
                     )}
                     {order.depositor_name && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <i className="ri-user-line mr-2"></i>
+                      <div className="flex items-start text-xs lg:text-sm text-gray-600">
+                        <i className="ri-user-line mr-1 lg:mr-2 mt-0.5 flex-shrink-0"></i>
                         <span>입금자명: {order.depositor_name}</span>
                       </div>
                     )}
                     {order.special_requests && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <i className="ri-message-line mr-2"></i>
-                        <span>요청사항: {order.special_requests}</span>
+                      <div className="flex items-start text-xs lg:text-sm text-gray-600">
+                        <i className="ri-message-line mr-1 lg:mr-2 mt-0.5 flex-shrink-0"></i>
+                        <span className="break-words">요청사항: {order.special_requests}</span>
                       </div>
                     )}
                   </div>
 
                   {/* 관리 버튼 */}
-                  <div className="mt-4 pt-3 border-t">
+                  <div className="mt-3 lg:mt-4 pt-2 lg:pt-3 border-t">
                     <div className="flex flex-wrap gap-2">
                       {/* 입금대기 상태일 때 */}
                       {order.status === '입금대기' && (
                         <>
                           <button
                             onClick={() => handleStatusChange(order.id, '입금확인')}
-                            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-2 lg:px-4 py-1.5 lg:py-2 rounded-lg text-xs lg:text-sm whitespace-nowrap cursor-pointer"
                           >
                             입금확인
                           </button>
                           <button
                             onClick={() => handleStatusChange(order.id, '배달완료')}
-                            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                            className="bg-green-500 hover:bg-green-600 text-white px-2 lg:px-4 py-1.5 lg:py-2 rounded-lg text-xs lg:text-sm whitespace-nowrap cursor-pointer"
                           >
                             배달완료
                           </button>
@@ -437,13 +437,13 @@ export default function OrdersManagement({ showToast }: OrdersManagementProps) {
                         <>
                           <button
                             onClick={() => handleStatusChange(order.id, '입금대기')}
-                            className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                            className="bg-yellow-500 hover:bg-yellow-600 text-white px-2 lg:px-4 py-1.5 lg:py-2 rounded-lg text-xs lg:text-sm whitespace-nowrap cursor-pointer"
                           >
                             입금대기로
                           </button>
                           <button
                             onClick={() => handleStatusChange(order.id, '배달완료')}
-                            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                            className="bg-green-500 hover:bg-green-600 text-white px-2 lg:px-4 py-1.5 lg:py-2 rounded-lg text-xs lg:text-sm whitespace-nowrap cursor-pointer"
                           >
                             배달완료
                           </button>
@@ -455,13 +455,13 @@ export default function OrdersManagement({ showToast }: OrdersManagementProps) {
                         <>
                           <button
                             onClick={() => handleStatusChange(order.id, '입금대기')}
-                            className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                            className="bg-yellow-500 hover:bg-yellow-600 text-white px-2 lg:px-4 py-1.5 lg:py-2 rounded-lg text-xs lg:text-sm whitespace-nowrap cursor-pointer"
                           >
                             입금대기로
                           </button>
                           <button
                             onClick={() => handleStatusChange(order.id, '입금확인')}
-                            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-2 lg:px-4 py-1.5 lg:py-2 rounded-lg text-xs lg:text-sm whitespace-nowrap cursor-pointer"
                           >
                             입금확인으로
                           </button>

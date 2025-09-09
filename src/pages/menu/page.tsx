@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getStore, getMenus } from '../../lib/database';
+import Header from '../../components/Header';
+import Footer from '../../components/Footer';
 
 interface MenuItem {
   id: string;
@@ -21,7 +23,6 @@ export default function Menu() {
   const { storeId } = useParams();
   const [selectedCategory, setSelectedCategory] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [showToast, setShowToast] = useState('');
   const [store, setStore] = useState<any>(null);
   const [menu, setMenu] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -146,21 +147,15 @@ export default function Menu() {
           ? { ...item, quantity: item.quantity + 1 }
           : item
       ));
-      setShowToast(`${menuItem.name} 수량이 증가했습니다.`);
     } else {
       setCart([...cart, { ...menuItem, quantity: 1 }]);
-      setShowToast(`${menuItem.name}이(가) 장바구니에 추가되었습니다.`);
     }
-
-    setTimeout(() => setShowToast(''), 2000);
   };
 
   const removeFromCart = (menuItemId: string) => {
     const itemToRemove = cart.find(item => item.id === menuItemId);
     if (itemToRemove) {
       setCart(cart.filter(item => item.id !== menuItemId));
-      setShowToast(`${itemToRemove.name}이(가) 장바구니에서 제거되었습니다.`);
-      setTimeout(() => setShowToast(''), 2000);
     }
   };
 
@@ -178,13 +173,6 @@ export default function Menu() {
           : item
       ));
       
-      // 수량 변경 토스트 메시지
-      if (quantity > itemToUpdate.quantity) {
-        setShowToast(`${itemToUpdate.name} 수량이 증가했습니다.`);
-      } else {
-        setShowToast(`${itemToUpdate.name} 수량이 감소했습니다.`);
-      }
-      setTimeout(() => setShowToast(''), 2000);
     }
   };
 
@@ -196,31 +184,32 @@ export default function Menu() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      {/* 헤더 */}
-      <div className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between">
+      <Header />
+      
+      {/* 매장 정보 - menu 페이지 전용 */}
+      <div className="bg-white shadow-sm sticky top-0 z-10 border-b border-gray-100">
+        <div className="px-4 py-4">
+          {/* 헤더 */}
+          <div className="flex items-center justify-between mb-4">
             <button
               onClick={() => navigate('/stores')}
-              className="p-2 hover:bg-gray-100 rounded-lg cursor-pointer"
+              className="p-2 hover:bg-gray-100 rounded-lg cursor-pointer transition-colors"
             >
-              <i className="ri-arrow-left-line text-xl"></i>
+              <i className="ri-arrow-left-line text-xl text-gray-600"></i>
             </button>
-            <h1 className="text-lg font-semibold text-center flex-1">{store.name}</h1>
+            <h1 className="text-xl font-bold text-gray-800">{store.name}</h1>
             <div className="w-10"></div>
           </div>
           
-          <div className="text-center space-y-2">
-            <p className="text-sm text-gray-600">{store.category}</p>
-            <div className="flex items-center justify-center gap-4 text-xs text-gray-500">
-              <div className="flex items-center gap-1">
-                <i className="ri-map-pin-line"></i>
-                <span>{store.delivery_area}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <i className="ri-truck-line"></i>
-                <span>배달비 {store.delivery_fee.toLocaleString()}원</span>
-              </div>
+          {/* 매장 정보 */}
+          <div className="flex items-center justify-center gap-8 text-sm">
+            <div className="flex items-center gap-2 text-gray-600">
+              <i className="ri-map-pin-line text-orange-500"></i>
+              <span className="font-medium">{store.delivery_area}</span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-600">
+              <i className="ri-truck-line text-orange-500"></i>
+              <span className="font-medium">배달비 {store.delivery_fee.toLocaleString()}원</span>
             </div>
           </div>
         </div>
@@ -228,18 +217,19 @@ export default function Menu() {
 
       {/* 카테고리 탭 - 실제 존재하는 카테고리만 표시 */}
       {categories.length > 0 && (
-        <div className="bg-white px-4 py-3 border-b">
-          <div className="flex space-x-1 overflow-x-auto">
+        <div className="bg-white px-4 py-4 border-b shadow-sm">
+          <div className="flex space-x-2 overflow-x-auto pb-1">
             {categories.map(category => (
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 whitespace-nowrap ${
                   selectedCategory === category
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ? 'bg-gray-800 text-white'
+                    : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50'
                 }`}
               >
+                <i className={`ri-restaurant-line mr-1.5 ${selectedCategory === category ? 'text-white' : 'text-gray-600'}`}></i>
                 {category}
               </button>
             ))}
@@ -248,32 +238,40 @@ export default function Menu() {
       )}
 
       {/* 메뉴 목록 */}
-      <div className="px-4 py-4 space-y-4">
+      <div className="bg-white">
         {filteredMenu.length === 0 ? (
-          <div className="text-center py-8">
-            <i className="ri-restaurant-line text-4xl text-gray-300 mb-2"></i>
-            <p className="text-gray-500">이 카테고리에 메뉴가 없습니다.</p>
+          <div className="text-center py-12">
+            <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <i className="ri-restaurant-line text-3xl text-orange-400"></i>
+            </div>
+            <h3 className="text-lg font-medium text-gray-600 mb-2">메뉴가 없습니다</h3>
+            <p className="text-gray-500">이 카테고리에 등록된 메뉴가 없습니다.</p>
           </div>
         ) : (
-          filteredMenu.map(item => (
-            <div key={item.id} className="bg-white rounded-lg p-4 shadow-sm">
+          filteredMenu.map((item, index) => (
+            <div key={item.id} className={`px-4 py-4 hover:bg-gray-50 transition-colors duration-200 ${index !== filteredMenu.length - 1 ? 'border-b border-gray-100' : ''}`}>
               <div className="flex gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-1">
-                    <h3 className="font-medium text-gray-900 truncate">{item.name}</h3>
-                    <span className="text-orange-500 font-semibold ml-2">
-                      {item.price.toLocaleString()}원
-                    </span>
+                    <h3 className="font-semibold text-black text-base truncate">{item.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="text-black font-semibold text-base">
+                        {item.price.toLocaleString()}원
+                      </span>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-600 mb-2 line-clamp-2">{item.description}</p>
+                  <p className="text-sm text-gray-500 mb-2 line-clamp-2 leading-relaxed">{item.description}</p>
                   <div className="flex items-center justify-between">
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      item.isAvailable 
-                        ? 'bg-green-100 text-green-600' 
-                        : 'bg-red-100 text-red-600'
-                    }`}>
-                      {item.isAvailable ? '주문가능' : '품절'}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs px-3 py-1.5 rounded-full font-medium flex items-center gap-1 ${
+                        item.isAvailable 
+                          ? 'bg-green-100 text-green-700 border border-green-200' 
+                          : 'bg-red-100 text-red-700 border border-red-200'
+                      }`}>
+                        <i className={`ri-${item.isAvailable ? 'check' : 'close'}-line text-xs`}></i>
+                        {item.isAvailable ? '주문가능' : '품절'}
+                      </span>
+                    </div>
                     {/* 장바구니 수량 조절 UI */}
                     {(() => {
                       const cartItem = cart.find(cartItem => cartItem.id === item.id);
@@ -284,13 +282,13 @@ export default function Menu() {
                           <button
                             onClick={() => addToCart(item)}
                             disabled={!item.isAvailable}
-                            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                            className={`w-8 h-8 rounded-full text-sm font-medium transition-all duration-200 flex items-center justify-center ${
                               item.isAvailable
-                                ? 'bg-white hover:bg-orange-500 text-gray-700 hover:text-white border border-gray-300 hover:border-orange-500'
+                                ? 'bg-white text-black border border-gray-300 hover:bg-gray-100'
                                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                             }`}
                           >
-                            {item.isAvailable ? '담기' : '품절'}
+                            <i className={`ri-${item.isAvailable ? 'add' : 'close'}-line text-sm`}></i>
                           </button>
                         );
                       } else {
@@ -301,16 +299,16 @@ export default function Menu() {
                             <div className="flex items-center bg-white border border-gray-300 rounded-full">
                               <button
                                 onClick={() => updateQuantity(item.id, cartItem.quantity - 1)}
-                                className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-orange-500 hover:bg-orange-50 rounded-l-full transition-colors"
+                                className="w-8 h-8 flex items-center justify-center text-black hover:bg-gray-100 rounded-l-full transition-all duration-200"
                               >
                                 <i className="ri-subtract-line text-sm"></i>
                               </button>
-                              <span className="px-3 py-1 text-sm font-medium text-gray-700 min-w-[2rem] text-center">
+                              <span className="px-3 py-1 text-black font-bold text-sm min-w-[2rem] text-center">
                                 {cartItem.quantity}
                               </span>
                               <button
                                 onClick={() => updateQuantity(item.id, cartItem.quantity + 1)}
-                                className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-orange-500 hover:bg-orange-50 rounded-r-full transition-colors"
+                                className="w-8 h-8 flex items-center justify-center text-black hover:bg-gray-100 rounded-r-full transition-all duration-200"
                               >
                                 <i className="ri-add-line text-sm"></i>
                               </button>
@@ -320,7 +318,7 @@ export default function Menu() {
                             {cartItem.quantity === 1 && (
                               <button
                                 onClick={() => removeFromCart(item.id)}
-                                className="w-8 h-8 flex items-center justify-center text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors"
+                                className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-full transition-all duration-200"
                                 title="메뉴 삭제"
                               >
                                 <i className="ri-delete-bin-line text-sm"></i>
@@ -333,30 +331,31 @@ export default function Menu() {
                   </div>
                 </div>
               </div>
-            </div>
-          ))
+              </div>
+            ))
         )}
       </div>
 
       {/* 장바구니 버튼 */}
       {totalQuantity > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg">
           <button
             onClick={handleCartClick}
-            className="w-full bg-white hover:bg-orange-500 text-gray-700 hover:text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2 border border-gray-300 hover:border-orange-500 transition-colors"
+            className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-3 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
           >
-            <i className="ri-shopping-cart-line"></i>
-            장바구니 ({totalQuantity}) - {totalAmount.toLocaleString()}원
+            <div className="w-6 h-6 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+              <i className="ri-shopping-cart-line text-sm"></i>
+            </div>
+            <span>장바구니 ({totalQuantity})</span>
+            <span className="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-bold">
+              {totalAmount.toLocaleString()}원
+            </span>
           </button>
         </div>
       )}
 
-      {/* 토스트 메시지 */}
-      {showToast && (
-        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-lg text-sm z-50">
-          {showToast}
-        </div>
-      )}
+      
+      <Footer />
     </div>
   );
 }

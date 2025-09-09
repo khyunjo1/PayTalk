@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { getUserOrders } from '../../lib/orderApi';
+import Header from '../../components/Header';
+import Footer from '../../components/Footer';
 
 interface Order {
   id: string;
@@ -15,7 +17,6 @@ interface Order {
   special_requests?: string;
   depositor_name?: string;
   subtotal: number;
-  delivery_fee: number;
   total: number;
   status: '입금대기' | '입금확인' | '배달완료';
   created_at: string;
@@ -114,6 +115,7 @@ export default function Orders() {
   if (loadingOrders) {
     return (
       <div className="min-h-screen bg-gray-50">
+        <Header />
         <div className="bg-white shadow-sm border-b">
           <div className="px-4 py-4 flex items-center">
             <button
@@ -131,6 +133,7 @@ export default function Orders() {
             <p className="text-gray-600">주문 데이터를 불러오는 중...</p>
           </div>
         </div>
+        <Footer />
       </div>
     );
   }
@@ -138,6 +141,7 @@ export default function Orders() {
   if (orders.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50">
+        <Header />
         <div className="bg-white shadow-sm border-b">
           <div className="px-4 py-4 flex items-center">
             <button
@@ -163,12 +167,14 @@ export default function Orders() {
             </button>
           </div>
         </div>
+        <Footer />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Header />
       <div className="bg-white shadow-sm border-b">
         <div className="px-4 py-4 flex items-center">
           <button
@@ -291,6 +297,7 @@ export default function Orders() {
         {/* 하단 여백 */}
         <div className="h-6"></div>
       </div>
+      <Footer />
     </div>
   );
 }

@@ -187,7 +187,6 @@ export const getUserOwnedStores = async (userId: string): Promise<Store[]> => {
         name,
         category,
         delivery_area,
-        delivery_fee,
         phone,
         business_hours_start,
         business_hours_end,

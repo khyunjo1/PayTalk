@@ -37,11 +37,11 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
           owner: store.owner_name || '미지정',
           phone: store.phone || '',
           status: store.is_active ? 'active' : 'inactive',
-          deliveryFee: store.delivery_fee || 0,
           deliveryArea: store.delivery_area || '',
           businessHoursStart: store.business_hours_start || '09:00',
           businessHoursEnd: store.business_hours_end || '22:00',
           orderCutoffTime: store.order_cutoff_time || '15:00',
+          minimumOrderAmount: store.minimum_order_amount || 0,
           pickupTimeSlots: store.pickup_time_slots || [],
           deliveryTimeSlots: store.delivery_time_slots || [],
           bankAccount: store.bank_account || '',
@@ -67,11 +67,11 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
     category: '한식반찬',
     owner: '',
     phone: '',
-    deliveryFee: 2000,
     deliveryArea: '',
     businessHoursStart: '09:00',
     businessHoursEnd: '22:00',
     orderCutoffTime: '15:00',
+    minimumOrderAmount: 0,
     bankAccount: '',
     accountHolder: '',
     pickupTimeSlots: ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'],
@@ -115,10 +115,6 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
       showToast('예금주명을 입력해주세요');
       return;
     }
-    if (newStore.deliveryFee < 0) {
-      showToast('배달비는 0원 이상이어야 합니다');
-      return;
-    }
 
     try {
       const storeData = {
@@ -126,11 +122,11 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
         category: newStore.category,
         owner_name: newStore.owner,
         phone: newStore.phone,
-        delivery_fee: newStore.deliveryFee,
         delivery_area: newStore.deliveryArea,
         business_hours_start: newStore.businessHoursStart,
         business_hours_end: newStore.businessHoursEnd,
         order_cutoff_time: newStore.orderCutoffTime,
+        minimum_order_amount: newStore.minimumOrderAmount,
         bank_account: newStore.bankAccount,
         account_holder: newStore.accountHolder,
         is_active: true,
@@ -155,6 +151,7 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
         businessHoursStart: createdStore.business_hours_start || '09:00',
         businessHoursEnd: createdStore.business_hours_end || '22:00',
         orderCutoffTime: createdStore.order_cutoff_time || '15:00',
+        minimumOrderAmount: createdStore.minimum_order_amount || 0,
         pickupTimeSlots: createdStore.pickup_time_slots || [],
         deliveryTimeSlots: createdStore.delivery_time_slots || [],
         bankAccount: createdStore.bank_account || '',
@@ -168,11 +165,11 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
       category: '한식반찬',
       owner: '',
       phone: '',
-      deliveryFee: 2000,
       deliveryArea: '',
         businessHoursStart: '09:00',
         businessHoursEnd: '22:00',
         orderCutoffTime: '15:00',
+        minimumOrderAmount: 0,
         bankAccount: '',
         accountHolder: '',
         pickupTimeSlots: ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'],
@@ -197,6 +194,9 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
 
   const handleUpdateStore = async () => {
     if (!editingStore) return;
+
+    console.log('🔍 수정 전 editingStore:', editingStore);
+    console.log('💰 최소주문금액 상태값:', editingStore.minimumOrderAmount);
 
     // 폼 검증
     if (!editingStore.name.trim()) {
@@ -223,10 +223,6 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
       showToast('예금주명을 입력해주세요');
       return;
     }
-    if (editingStore.deliveryFee < 0) {
-      showToast('배달비는 0원 이상이어야 합니다');
-      return;
-    }
 
     try {
       const updateData = {
@@ -234,11 +230,11 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
         category: editingStore.category,
         owner_name: editingStore.owner,
         phone: editingStore.phone,
-        delivery_fee: editingStore.deliveryFee,
         delivery_area: editingStore.deliveryArea,
         business_hours_start: editingStore.businessHoursStart,
         business_hours_end: editingStore.businessHoursEnd,
         order_cutoff_time: editingStore.orderCutoffTime,
+        minimum_order_amount: editingStore.minimumOrderAmount,
         bank_account: editingStore.bankAccount,
         account_holder: editingStore.accountHolder,
         pickup_time_slots: editingStore.pickupTimeSlots,
@@ -246,6 +242,7 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
       };
 
       console.log('🔄 매장 수정 데이터:', updateData);
+      console.log('💰 최소주문금액 확인:', editingStore.minimumOrderAmount, '->', updateData.minimum_order_amount);
 
       await updateStore(editingStore.id, updateData);
       
@@ -317,46 +314,46 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
       {/* 헤더 */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">매장 관리</h2>
-          <p className="text-gray-600">등록된 매장과 운영 상태를 관리합니다</p>
+          <h2 className="text-lg lg:text-2xl font-bold text-gray-800">매장 관리</h2>
+          <p className="text-sm lg:text-base text-gray-600">등록된 매장과 운영 상태를 관리합니다</p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="bg-white hover:bg-orange-500 text-gray-700 hover:text-white px-4 py-2 rounded-lg border border-gray-300 hover:border-orange-500 transition-colors"
+          className="bg-white hover:bg-orange-500 text-gray-700 hover:text-white px-3 lg:px-4 py-2 rounded-lg border border-gray-300 hover:border-orange-500 transition-colors text-sm lg:text-base w-full sm:w-auto"
         >
           + 새 매장 추가
         </button>
       </div>
 
       {/* 필터 */}
-      <div className="flex items-center space-x-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
         <select
           value={selectedStatus}
           onChange={(e) => setSelectedStatus(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+          className="px-2 lg:px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm lg:text-base w-full sm:w-auto"
         >
           <option value="all">전체 매장</option>
           <option value="active">운영 중</option>
           <option value="inactive">운영 중단</option>
         </select>
-        <div className="text-sm text-gray-600">
+        <div className="text-xs lg:text-sm text-gray-600">
           총 {filteredStores.length}개 매장
         </div>
       </div>
 
       {/* 매장 목록 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
         {filteredStores.map((store) => (
-          <div key={store.id} className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+          <div key={store.id} className="bg-white rounded-lg shadow-md p-4 lg:p-6 border border-gray-200">
             
-            <div className="flex items-start justify-between mb-4">
+            <div className="flex items-start justify-between mb-3 lg:mb-4">
               <div>
-                <h3 className="text-lg font-semibold text-gray-800">{store.name}</h3>
-                <p className="text-sm text-gray-600">{store.category}</p>
+                <h3 className="text-base lg:text-lg font-semibold text-gray-800">{store.name}</h3>
+                <p className="text-xs lg:text-sm text-gray-600">{store.category}</p>
               </div>
               <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                       store.status === 'active' 
@@ -377,10 +374,6 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
                 <span>{store.phone}</span>
               </div>
               <div className="flex items-center">
-                <span className="w-16 font-medium">배달비:</span>
-                <span>{store.deliveryFee.toLocaleString()}원</span>
-              </div>
-              <div className="flex items-center">
                 <span className="w-16 font-medium">배달지역:</span>
                 <span>{store.deliveryArea}</span>
               </div>
@@ -391,6 +384,10 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
               <div className="flex items-center">
                 <span className="w-16 font-medium">주문마감:</span>
                 <span>{store.orderCutoffTime || '15:00'}</span>
+              </div>
+              <div className="flex items-center">
+                <span className="w-16 font-medium">최소주문:</span>
+                <span>{store.minimumOrderAmount?.toLocaleString() || '0'}원</span>
               </div>
             </div>
 
@@ -436,18 +433,18 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
 
       {/* 새 매장 추가 모달 */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-            <h3 className="text-lg font-semibold mb-4">새 매장 추가</h3>
-            <div className="space-y-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 lg:p-4">
+          <div className="bg-white rounded-lg w-full max-w-md max-h-[95vh] overflow-y-auto">
+            <div className="p-4 lg:p-6">
+            <h3 className="text-base lg:text-lg font-semibold mb-3 lg:mb-4">새 매장 추가</h3>
+            <div className="space-y-3 lg:space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">매장명</label>
+                <label className="block text-xs lg:text-sm font-medium text-gray-700 mb-1">매장명</label>
                 <input
                   type="text"
                   value={newStore.name}
                   onChange={(e) => setNewStore({...newStore, name: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-2 lg:px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm lg:text-base"
                   placeholder="매장명을 입력하세요"
                 />
               </div>
@@ -479,15 +476,6 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
                   onChange={(e) => setNewStore({...newStore, phone: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   placeholder="전화번호를 입력하세요"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">배달비</label>
-                <input
-                  type="number"
-                  value={newStore.deliveryFee}
-                  onChange={(e) => setNewStore({...newStore, deliveryFee: parseInt(e.target.value)})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
               <div>
@@ -529,6 +517,22 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
                 <p className="text-xs text-gray-500 mt-1">이 시간 이후 주문은 다음날 배달됩니다</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">최소주문금액 (원)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={newStore.minimumOrderAmount === 0 ? '' : newStore.minimumOrderAmount}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const numValue = value === '' ? 0 : parseInt(value);
+                    setNewStore({...newStore, minimumOrderAmount: numValue});
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  placeholder="0"
+                />
+                <p className="text-xs text-gray-500 mt-1">최소 주문 금액을 설정하세요 (0원이면 제한 없음)</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">계좌번호</label>
@@ -698,15 +702,6 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">배달비</label>
-                <input
-                  type="number"
-                  value={editingStore.deliveryFee}
-                  onChange={(e) => setEditingStore({...editingStore, deliveryFee: parseInt(e.target.value)})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
-              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">배달지역</label>
                 <input
                   type="text"
@@ -744,6 +739,22 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
                 <p className="text-xs text-gray-500 mt-1">이 시간 이후 주문은 다음날 배달됩니다</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">최소주문금액 (원)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editingStore.minimumOrderAmount === 0 ? '' : editingStore.minimumOrderAmount}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const numValue = value === '' ? 0 : parseInt(value);
+                    setEditingStore(prev => prev ? {...prev, minimumOrderAmount: numValue} : null);
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  placeholder="0"
+                />
+                <p className="text-xs text-gray-500 mt-1">최소 주문 금액을 설정하세요 (0원이면 제한 없음)</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">계좌번호</label>

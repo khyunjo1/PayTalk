@@ -78,6 +78,8 @@ export const createCacheKey = (...parts: (string | number)[]): string => {
 // 자주 사용되는 캐시 키들
 export const CACHE_KEYS = {
   STORES: 'stores',
+  ALL_STORES: 'all_stores',
+  USER_STORES: 'user_stores',
   MENUS: (storeId: string) => `menus:${storeId}`,
   ORDERS: (storeId: string) => `orders:${storeId}`,
   USER_PROFILE: (userId: string) => `user_profile:${userId}`,

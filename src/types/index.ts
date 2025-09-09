@@ -33,11 +33,11 @@ export interface StoreDB {
   category: string;
   owner_name?: string;
   delivery_area: string;
-  delivery_fee: number;
   phone: string;
   business_hours_start?: string;
   business_hours_end?: string;
   order_cutoff_time?: string;
+  minimum_order_amount?: number;
   pickup_time_slots?: string[];
   delivery_time_slots?: DeliveryTimeSlot[];
   bank_account: string;
@@ -55,11 +55,11 @@ export interface Store {
   owner: string;
   phone: string;
   status: StoreStatus;
-  deliveryFee: number;
   deliveryArea: string;
   businessHoursStart: string;
   businessHoursEnd: string;
   orderCutoffTime: string;
+  minimumOrderAmount: number;
   pickupTimeSlots: string[];
   deliveryTimeSlots: DeliveryTimeSlot[];
   bankAccount: string;
@@ -115,11 +115,11 @@ export interface CreateStoreData {
   category: string;
   owner_name?: string;
   delivery_area: string;
-  delivery_fee: number;
   phone: string;
   business_hours_start?: string;
   business_hours_end?: string;
   order_cutoff_time?: string;
+  minimum_order_amount?: number;
   pickup_time_slots?: string[];
   delivery_time_slots?: DeliveryTimeSlot[];
   bank_account: string;
@@ -138,6 +138,7 @@ export interface UpdateStoreData {
   business_hours_start?: string;
   business_hours_end?: string;
   order_cutoff_time?: string;
+  minimum_order_amount?: number;
   pickup_time_slots?: string[];
   delivery_time_slots?: DeliveryTimeSlot[];
   bank_account?: string;

@@ -9,6 +9,7 @@ import UserManagement from './components/UserManagement';
 import InquiryManagement from './components/InquiryManagement';
 import Statistics from './components/Statistics';
 import OrdersManagement from './components/OrdersManagement';
+import Footer from '../../components/Footer';
 
 const MENU_ITEMS = [
   { id: 'dashboard', label: '대시보드', icon: 'ri-dashboard-line' },
@@ -112,11 +113,49 @@ export default function SuperAdmin() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
+      {/* 모바일 헤더 */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 bg-white shadow-sm border-b z-50 h-16">
+        <div className="px-4 py-3 flex items-center justify-between h-full">
+          <div className="flex items-center gap-2">
+            <img 
+              src="https://static.readdy.ai/image/912b0945f01d9fdb4ff4544659653c90/2d4890bd82abce85d430bd82d04df8d6.png" 
+              alt="페이톡 로고" 
+              className="w-6 h-6"
+            />
+            <h1 className="text-lg font-bold text-orange-500" style={{ fontFamily: "Pacifico, serif" }}>
+              슈퍼어드민
+            </h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-2 hover:bg-gray-100 rounded-lg cursor-pointer"
+            >
+              <i className="ri-menu-line text-xl"></i>
+            </button>
+            <button
+              onClick={handleLogout}
+              className="p-2 hover:bg-gray-100 rounded-lg cursor-pointer text-gray-600"
+            >
+              <i className="ri-logout-box-r-line text-xl"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 모바일 사이드바 오버레이 */}
+      {sidebarOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={() => setSidebarOpen(false)}
+        ></div>
+      )}
+
       {/* 사이드바 */}
-      <div className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-white shadow-lg transition-all duration-300 fixed lg:relative h-full z-40`}>
+      <div className={`${sidebarOpen ? 'w-64' : 'w-0'} lg:w-64 bg-white shadow-lg transition-all duration-300 fixed lg:relative h-full z-50 lg:z-40 overflow-hidden`}>
         <div className="p-4">
           <div className="flex items-center justify-between">
-            <h1 className={`font-bold text-xl text-orange-500 ${!sidebarOpen && 'hidden'}`} style={{ fontFamily: "Pacifico, serif" }}>
+            <h1 className={`font-bold text-xl text-orange-500 ${!sidebarOpen && 'lg:block hidden'}`} style={{ fontFamily: "Pacifico, serif" }}>
               Super Admin
             </h1>
             <button
@@ -132,53 +171,64 @@ export default function SuperAdmin() {
           {MENU_ITEMS.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveMenu(item.id)}
+              onClick={() => {
+                setActiveMenu(item.id);
+                // 모바일에서는 메뉴 선택 후 사이드바 닫기
+                if (window.innerWidth < 1024) {
+                  setSidebarOpen(false);
+                }
+              }}
               className={`w-full flex items-center px-4 py-3 text-left hover:bg-orange-50 cursor-pointer ${
                 activeMenu === item.id ? 'bg-orange-100 border-r-4 border-orange-500 text-orange-600' : 'text-gray-600'
               }`}
             >
               <i className={`${item.icon} text-xl mr-3`}></i>
-              <span className={`${!sidebarOpen && 'hidden'}`}>{item.label}</span>
+              <span className={`${!sidebarOpen && 'lg:block hidden'}`}>{item.label}</span>
             </button>
           ))}
         </nav>
       </div>
 
       {/* 메인 컨텐츠 */}
-      <div className={`flex-1 ${sidebarOpen ? 'lg:ml-0' : 'ml-16'} transition-all duration-300`}>
-        {/* 상단 헤더 */}
-        <div className="bg-white shadow-sm border-b h-16 flex items-center justify-between px-6">
-          <h2 className="text-xl font-semibold text-gray-800">
-            {MENU_ITEMS.find(item => item.id === activeMenu)?.label}
-          </h2>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
-                <i className="ri-user-line text-white"></i>
+      <div className="flex-1 flex flex-col">
+        {/* 데스크톱 상단 헤더 */}
+        <div className="hidden lg:block bg-white shadow-sm border-b h-16">
+          <div className="flex items-center justify-between px-6 h-full">
+            <h2 className="text-xl font-semibold text-gray-800">
+              {MENU_ITEMS.find(item => item.id === activeMenu)?.label}
+            </h2>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
+                  <i className="ri-user-line text-white"></i>
+                </div>
+                <span className="text-sm font-medium text-gray-700">관리자</span>
               </div>
-              <span className="text-sm font-medium text-gray-700">관리자</span>
+              <button
+                onClick={handleLogout}
+                className="text-gray-600 hover:text-red-600 cursor-pointer"
+              >
+                <i className="ri-logout-box-r-line text-xl"></i>
+              </button>
             </div>
-            <button
-              onClick={handleLogout}
-              className="text-gray-600 hover:text-red-600 cursor-pointer"
-            >
-              <i className="ri-logout-box-r-line text-xl"></i>
-            </button>
           </div>
         </div>
 
         {/* 컨텐츠 영역 */}
-        <div className="p-6">
+        <div className="flex-1 p-4 lg:p-6 pt-20 lg:pt-6">
           {renderContent()}
         </div>
+        
+        {/* 푸터 */}
+        <Footer />
       </div>
 
       {/* 토스트 메시지 */}
       {showToast && (
-        <div className="fixed top-20 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
+        <div className="fixed top-20 lg:top-20 right-2 lg:right-4 left-2 lg:left-auto bg-green-500 text-white px-4 lg:px-6 py-3 rounded-lg shadow-lg z-50">
           <div className="flex items-center">
             <i className="ri-check-line mr-2"></i>
-            {showToast}
+            <span className="text-sm lg:text-base">{showToast}</span>
           </div>
         </div>
       )}

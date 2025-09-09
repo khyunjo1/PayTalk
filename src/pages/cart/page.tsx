@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { createOrder } from '../../lib/orderApi';
+import Header from '../../components/Header';
+import Footer from '../../components/Footer';
 
 interface CartItem {
   id: string;
@@ -55,7 +57,6 @@ export default function Cart() {
   const [deliveryTime, setDeliveryTime] = useState('');
   const [pickupTime, setPickupTime] = useState('');
   const [specialRequests, setSpecialRequests] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'bank' | 'card'>('bank');
   const [depositorName, setDepositorName] = useState('');
 
   useEffect(() => {
@@ -84,9 +85,10 @@ export default function Cart() {
         }
       }
       
-      if (store.pickup_time_slots && store.pickup_time_slots.length > 0) {
-        setPickupTime(store.pickup_time_slots[0]);
-      }
+      // 픽업 시간 기본값 설정 (매장 영업시간 시작 + 1시간)
+      const startHour = parseInt(store.business_hours_start?.split(':')[0] || '9');
+      const defaultHour = (startHour + 1).toString().padStart(2, '0');
+      setPickupTime(`${defaultHour}:00`);
     } else {
       navigate('/stores');
     }
@@ -125,8 +127,7 @@ export default function Cart() {
   }
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const deliveryFee = orderType === 'delivery' ? storeInfo.delivery_fee : 0;
-  const total = subtotal + deliveryFee;
+  const total = subtotal;
 
   const updateQuantity = (itemId: string, newQuantity: number) => {
     if (newQuantity === 0) {
@@ -171,7 +172,7 @@ export default function Cart() {
       }
     }
 
-    if (paymentMethod === 'bank' && !depositorName.trim()) {
+    if (!depositorName.trim()) {
       alert('입금자명을 입력해주세요.');
       return;
     }
@@ -202,7 +203,6 @@ export default function Cart() {
         special_requests: specialRequests || null,
         depositor_name: depositorName,
         subtotal: subtotal,
-        delivery_fee: deliveryFee,
         total: total,
         items: cart.map(item => ({
           menu_id: item.id,
@@ -232,7 +232,9 @@ export default function Cart() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      {/* 헤더 */}
+      <Header />
+      
+      {/* 페이지 제목 - cart 페이지 전용 */}
       <div className="bg-white shadow-sm border-b">
         <div className="px-4 py-4 flex items-center">
           <button
@@ -247,31 +249,38 @@ export default function Cart() {
 
       <div className="p-4 space-y-6">
         {/* 주문 방식 선택 */}
-        <div className="bg-white rounded-lg p-4">
-          <h2 className="font-semibold text-gray-800 mb-3">주문 방식</h2>
-          <div className="grid grid-cols-2 gap-3">
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <i className="ri-shopping-bag-line text-orange-500"></i>
+            주문 방식
+          </h2>
+          <div className="grid grid-cols-2 gap-4">
             <button
               onClick={() => setOrderType('delivery')}
-              className={`p-3 rounded-lg border-2 text-center cursor-pointer ${
+              className={`p-4 rounded-xl border-2 text-center cursor-pointer transition-all duration-200 ${
                 orderType === 'delivery'
-                  ? 'border-orange-500 bg-orange-50 text-orange-600'
-                  : 'border-gray-200 text-gray-600'
+                  ? 'border-orange-500 bg-orange-50 text-orange-600 shadow-md'
+                  : 'border-gray-200 text-gray-600 hover:border-orange-300 hover:bg-orange-25'
               }`}
             >
-              <i className="ri-truck-line text-xl mb-1 block"></i>
-              <div className="text-sm font-medium">배달 주문</div>
+              <div className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center bg-orange-100">
+                <i className="ri-truck-line text-2xl text-orange-500"></i>
+              </div>
+              <div className="text-sm font-semibold mb-1">배달 주문</div>
               <div className="text-xs text-gray-500">배달비 {storeInfo.delivery_fee.toLocaleString()}원</div>
             </button>
             <button
               onClick={() => setOrderType('pickup')}
-              className={`p-3 rounded-lg border-2 text-center cursor-pointer ${
+              className={`p-4 rounded-xl border-2 text-center cursor-pointer transition-all duration-200 ${
                 orderType === 'pickup'
-                  ? 'border-orange-500 bg-orange-50 text-orange-600'
-                  : 'border-gray-200 text-gray-600'
+                  ? 'border-orange-500 bg-orange-50 text-orange-600 shadow-md'
+                  : 'border-gray-200 text-gray-600 hover:border-orange-300 hover:bg-orange-25'
               }`}
             >
-              <i className="ri-store-3-line text-xl mb-1 block"></i>
-              <div className="text-sm font-medium">매장 픽업</div>
+              <div className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center bg-orange-100">
+                <i className="ri-store-3-line text-2xl text-orange-500"></i>
+              </div>
+              <div className="text-sm font-semibold mb-1">매장 픽업</div>
               <div className="text-xs text-gray-500">배달비 없음</div>
             </button>
           </div>
@@ -279,8 +288,11 @@ export default function Cart() {
 
         {/* 배달 정보 */}
         {orderType === 'delivery' && (
-          <div className="bg-white rounded-lg p-4">
-            <h2 className="font-semibold text-gray-800 mb-3">배달 정보</h2>
+          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+            <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <i className="ri-truck-line text-orange-500"></i>
+              배달 정보
+            </h2>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
               <div className="flex items-center text-blue-800">
                 <i className="ri-information-line mr-2"></i>
@@ -306,30 +318,38 @@ export default function Cart() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-3">
                   배달 시간대 선택 <span className="text-red-500">*</span>
                 </label>
-                <div className="space-y-2">
-                  {console.log('렌더링 시 매장 정보:', storeInfo)}
-                  {console.log('배달 시간대 슬롯:', (storeInfo as any)?.delivery_time_slots)}
+                <div className="grid grid-cols-1 gap-3">
                   {(storeInfo as any)?.delivery_time_slots?.filter((slot: any) => slot.enabled).map((slot: any) => (
-                    <label key={slot.name} className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                      <input
-                        type="radio"
-                        name="deliveryTimeSlot"
-                        value={`${slot.name} (${slot.start}-${slot.end})`}
-                        checked={deliveryTime === `${slot.name} (${slot.start}-${slot.end})`}
-                        onChange={(e) => setDeliveryTime(e.target.value)}
-                        className="mr-3"
-                      />
-                      <div>
-                        <div className="font-medium">{slot.name}</div>
-                        <div className="text-sm text-gray-600">{slot.start} - {slot.end}</div>
+                    <button
+                      key={slot.name}
+                      onClick={() => setDeliveryTime(`${slot.name} (${slot.start}-${slot.end})`)}
+                      className={`p-4 rounded-xl border-2 text-left transition-all duration-200 ${
+                        deliveryTime === `${slot.name} (${slot.start}-${slot.end})`
+                          ? 'border-orange-500 bg-orange-50 text-orange-600 shadow-md'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-orange-300 hover:bg-orange-25'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center">
+                          {deliveryTime === `${slot.name} (${slot.start}-${slot.end})` && (
+                            <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium flex items-center gap-2">
+                            <i className="ri-truck-line"></i>
+                            {slot.name}
+                          </div>
+                          <div className="text-sm text-gray-500 mt-1">{slot.start} - {slot.end}</div>
+                        </div>
                       </div>
-                    </label>
+                    </button>
                   ))}
                 </div>
-                <div className="text-xs text-gray-500 mt-1">
+                <div className="text-xs text-gray-500 mt-2">
                   원하는 배달 시간대를 선택하세요
                 </div>
               </div>
@@ -351,8 +371,11 @@ export default function Cart() {
 
         {/* 픽업 정보 */}
         {orderType === 'pickup' && (
-          <div className="bg-white rounded-lg p-4">
-            <h2 className="font-semibold text-gray-800 mb-3">픽업 정보</h2>
+          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+            <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <i className="ri-store-3-line text-orange-500"></i>
+              픽업 정보
+            </h2>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
               <div className="flex items-center text-blue-800">
                 <i className="ri-information-line mr-2"></i>
@@ -373,110 +396,138 @@ export default function Cart() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  픽업 희망 시간
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  픽업 희망 시간 <span className="text-red-500">*</span>
                 </label>
-                <select
-                  value={pickupTime}
-                  onChange={(e) => setPickupTime(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg text-sm pr-8"
-                >
-                  <option value="">시간을 선택하세요</option>
-                  {(storeInfo as any)?.pickup_time_slots?.map((time: string) => (
-                    <option key={time} value={time}>
-                      {time}
-                    </option>
-                  ))}
-                </select>
-                <div className="text-xs text-gray-500 mt-1">
-                  매장 영업시간 내에서 픽업 시간을 선택하세요
+                <div className="bg-gray-50 border border-gray-300 rounded-lg p-4">
+                  <div className="text-sm text-gray-600 mb-3 text-center">
+                    <i className="ri-time-line mr-1"></i>
+                    스크롤하여 시간을 선택하세요
+                  </div>
+                  <div className="flex gap-4 items-center">
+                    {/* 시간 선택 */}
+                    <div className="flex-1">
+                      <div className="text-xs text-gray-500 mb-2 text-center">시간</div>
+                      <div className="h-32 overflow-y-auto border border-gray-200 rounded-lg bg-white shadow-inner">
+                        <div className="py-2">
+                          {(() => {
+                            const startHour = parseInt((storeInfo as any)?.business_hours_start?.split(':')[0] || '9');
+                            const endHour = parseInt((storeInfo as any)?.business_hours_end?.split(':')[0] || '21');
+                            return Array.from({ length: endHour - startHour + 1 }, (_, i) => {
+                              const hour = (startHour + i).toString().padStart(2, '0');
+                              return (
+                                <div
+                                  key={hour}
+                                  onClick={() => {
+                                    const currentMinute = pickupTime.split(':')[1] || '00';
+                                    setPickupTime(`${hour}:${currentMinute}`);
+                                  }}
+                                  className={`px-3 py-3 text-center cursor-pointer transition-colors border-b border-gray-100 ${
+                                    pickupTime.startsWith(hour)
+                                      ? 'bg-orange-500 text-white'
+                                      : 'hover:bg-orange-50'
+                                  }`}
+                                >
+                                  {hour}시
+                                </div>
+                              );
+                            });
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* 분 선택 */}
+                    <div className="flex-1">
+                      <div className="text-xs text-gray-500 mb-2 text-center">분</div>
+                      <div className="h-32 overflow-y-auto border border-gray-200 rounded-lg bg-white shadow-inner">
+                        <div className="py-2">
+                          {['00', '10', '20', '30', '40', '50'].map((minute) => (
+                            <div
+                              key={minute}
+                              onClick={() => {
+                                const currentHour = pickupTime.split(':')[0] || '00';
+                                setPickupTime(`${currentHour}:${minute}`);
+                              }}
+                              className={`px-3 py-3 text-center cursor-pointer transition-colors border-b border-gray-100 ${
+                                pickupTime.endsWith(minute)
+                                  ? 'bg-orange-500 text-white'
+                                  : 'hover:bg-orange-50'
+                              }`}
+                            >
+                              {minute}분
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                </div>
+              </div>
+                  <div className="text-xs text-gray-500 mt-3 text-center">
+                    선택된 시간: <span className="font-medium text-orange-600">{pickupTime}</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* 결제 방법 */}
-        <div className="bg-white rounded-lg p-4">
-          <h2 className="font-semibold text-gray-800 mb-3">결제 방법</h2>
-          <div className="space-y-3">
-            <label className="flex items-center">
-              <input
-                type="radio"
-                name="payment"
-                value="bank"
-                checked={paymentMethod === 'bank'}
-                onChange={(e) => setPaymentMethod(e.target.value as 'bank' | 'card')}
-                className="mr-3"
-              />
-              <div className="flex items-center">
-                <i className="ri-bank-line mr-2"></i>
-                <span>무통장 입금</span>
-              </div>
+        {/* 입금자 정보 */}
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <i className="ri-bank-line text-orange-500"></i>
+            입금자 정보
+          </h2>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              입금자명 <span className="text-red-500">*</span>
             </label>
-            {paymentMethod === 'bank' && (
-              <div className="ml-6 space-y-2">
-                <div className="text-sm text-gray-600">
-                  계좌번호: 국민은행 123456-78-901234 (반찬나라)
-                </div>
                 <input
                   type="text"
                   value={depositorName}
                   onChange={(e) => setDepositorName(e.target.value)}
                   placeholder="입금자명을 입력해주세요"
-                  className="w-full p-3 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
-            )}
-            
-            <label className="flex items-center">
-              <input
-                type="radio"
-                name="payment"
-                value="card"
-                checked={paymentMethod === 'card'}
-                onChange={(e) => setPaymentMethod(e.target.value as 'bank' | 'card')}
-                className="mr-3"
-              />
-              <div className="flex items-center">
-                <i className="ri-bank-card-line mr-2"></i>
-                <span>카드 결제 (카카오톡)</span>
-              </div>
-            </label>
+              className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+            />
           </div>
         </div>
 
         {/* 주문 상품 */}
-        <div className="bg-white rounded-lg p-4">
-          <h2 className="font-semibold text-gray-800 mb-3">주문 상품</h2>
-          <div className="space-y-3">
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <i className="ri-shopping-cart-line text-orange-500"></i>
+            주문 상품
+          </h2>
+          <div className="max-h-64 overflow-y-auto space-y-3 pr-2">
             {cart.map((item) => (
-              <div key={item.id} className="flex items-center justify-between">
+              <div key={item.id} className="flex items-center justify-between py-2">
                 <div className="flex-1">
-                  <div className="font-medium">{item.name}</div>
+                  <div className="font-medium text-gray-800">{item.name}</div>
                   <div className="text-sm text-gray-600">{item.price.toLocaleString()}원</div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center bg-white border border-gray-200 rounded-full">
                     <button
                       onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                      className="w-8 h-8 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded-full cursor-pointer"
+                      className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-orange-500 hover:bg-orange-50 rounded-l-full transition-colors"
                     >
                       <i className="ri-subtract-line text-sm"></i>
                     </button>
-                    <span className="font-semibold w-8 text-center">{item.quantity}</span>
+                    <span className="px-3 py-1 text-sm font-medium text-gray-700 min-w-[2rem] text-center">
+                      {item.quantity}
+                    </span>
                     <button
                       onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                      className="w-8 h-8 flex items-center justify-center bg-orange-500 hover:bg-orange-600 text-white rounded-full cursor-pointer"
+                      className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-orange-500 hover:bg-orange-50 rounded-r-full transition-colors"
                     >
                       <i className="ri-add-line text-sm"></i>
                     </button>
                   </div>
                   <button
                     onClick={() => removeItem(item.id)}
-                    className="text-red-500 hover:text-red-600 cursor-pointer p-1"
+                    className="w-8 h-8 flex items-center justify-center text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors"
+                    title="메뉴 삭제"
                   >
-                    <i className="ri-delete-bin-line"></i>
+                    <i className="ri-delete-bin-line text-sm"></i>
                   </button>
                 </div>
               </div>
@@ -485,21 +536,20 @@ export default function Cart() {
         </div>
 
         {/* 결제 금액 */}
-        <div className="bg-white rounded-lg p-4">
-          <h2 className="font-semibold text-gray-800 mb-3">결제 금액</h2>
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span>상품 금액</span>
-              <span>{subtotal.toLocaleString()}원</span>
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <i className="ri-money-dollar-circle-line text-orange-500"></i>
+            결제 금액
+          </h2>
+          <div className="space-y-3">
+            <div className="flex justify-between items-center py-2">
+              <span className="text-gray-600">상품 금액</span>
+              <span className="font-medium">{subtotal.toLocaleString()}원</span>
             </div>
-            <div className="flex justify-between">
-              <span>배달비</span>
-              <span>{deliveryFee.toLocaleString()}원</span>
-            </div>
-            <div className="border-t pt-2">
-              <div className="flex justify-between font-semibold text-lg">
-                <span>총 결제 금액</span>
-                <span className="text-orange-500">{total.toLocaleString()}원</span>
+            <div className="border-t border-gray-200 pt-3">
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-lg text-gray-800">총 결제 금액</span>
+                <span className="font-bold text-2xl text-orange-500">{total.toLocaleString()}원</span>
               </div>
             </div>
           </div>
@@ -507,14 +557,19 @@ export default function Cart() {
       </div>
 
       {/* 주문하기 버튼 */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg">
         <button
           onClick={handleOrder}
-          className="w-full bg-orange-500 hover:bg-orange-600 text-white py-4 px-4 rounded-lg font-semibold whitespace-nowrap cursor-pointer"
+          className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-4 px-4 rounded-xl font-bold text-lg whitespace-nowrap cursor-pointer transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
         >
-          {total.toLocaleString()}원 주문하기
+          <div className="flex items-center justify-center gap-2">
+            <i className="ri-shopping-bag-line text-xl"></i>
+            <span>{total.toLocaleString()}원 주문하기</span>
+          </div>
         </button>
       </div>
+      
+      <Footer />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { getUserOwnedStores } from '../../lib/database';
+import Footer from '../../components/Footer';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -122,86 +123,49 @@ export default function AdminDashboard() {
       </div>
 
       {/* 메인 컨텐츠 */}
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* 환영 메시지 */}
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">
-            안녕하세요, {userProfile.name}님! 👋
-          </h2>
-          <p className="text-gray-600">
-            {userStores.length > 0 
-              ? `${userStores[0].name} 매장을 관리하고 계시는군요!`
-              : '매장 관리와 주문을 시작해보세요.'
-            }
-          </p>
-        </div>
-
-        {/* 매장 정보 카드 */}
+      <div className="max-w-4xl mx-auto px-4 py-6">
+        {/* 매장 정보 */}
         {userStores.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-            <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 bg-orange-100 rounded-xl flex items-center justify-center">
-                <i className="ri-store-2-line text-2xl text-orange-500"></i>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+            <div className="flex items-center justify-center mb-3">
+              <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                <i className="ri-store-line text-xl text-orange-500"></i>
               </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-800">{userStores[0].name}</h3>
-                <p className="text-gray-600">{userStores[0].category} • {userStores[0].delivery_area}</p>
-                <p className="text-sm text-gray-500">
-                  영업시간: {userStores[0].business_hours_start} - {userStores[0].business_hours_end}
-                </p>
-              </div>
-              <div className="text-right">
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                  <i className="ri-check-line mr-1"></i>
-                  운영중
-                </span>
+            </div>
+            <div className="text-center">
+              <h2 className="text-base font-bold text-gray-800 mb-3">
+                {userStores[0]?.name || '매장 정보 없음'}
+              </h2>
+              <div className="bg-orange-50 rounded-lg p-2 inline-block">
+                <div className="flex items-center gap-2">
+                  <i className="ri-shopping-cart-line text-orange-500"></i>
+                  <span className="text-sm text-gray-700">오늘 주문:</span>
+                  <span className="font-bold text-orange-500">0건</span>
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* 메인 액션 버튼들 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* 내 반찬가게 관리 */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <i className="ri-settings-3-line text-2xl text-blue-500"></i>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">내 반찬가게 관리</h3>
-              <p className="text-gray-600 text-sm mb-4">
-                내 매장의 주문, 메뉴, 정보를 관리해보세요
-              </p>
-              <button
-                onClick={handleViewMyStore}
-                className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-lg font-medium transition-colors"
-              >
-                매장 관리
-              </button>
-            </div>
-          </div>
-
-          {/* 주문하기 */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-orange-100 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <i className="ri-shopping-cart-line text-2xl text-orange-500"></i>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">주문하기</h3>
-              <p className="text-gray-600 text-sm mb-4">
-                다른 매장에서 음식을 주문해보세요
-              </p>
-              <button
-                onClick={handleOrderFood}
-                className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 px-4 rounded-lg font-medium transition-colors"
-              >
-                매장 목록 보기
-              </button>
-            </div>
-          </div>
+        {/* 액션 버튼들 */}
+        <div className="flex gap-4 justify-center">
+          <button
+            onClick={handleViewMyStore}
+            className="bg-blue-500 hover:bg-blue-600 text-white py-3 px-6 rounded-lg font-medium transition-colors"
+          >
+            매장 관리하기
+          </button>
+          <button
+            onClick={handleOrderFood}
+            className="bg-orange-500 hover:bg-orange-600 text-white py-3 px-6 rounded-lg font-medium transition-colors"
+          >
+            매장 목록 보기
+          </button>
         </div>
 
       </div>
+      
+      <Footer />
     </div>
   );
 }
