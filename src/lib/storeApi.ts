@@ -181,6 +181,7 @@ export const getUserStores = async (userId: string): Promise<StoreDB[]> => {
         business_hours_start,
         business_hours_end,
         order_cutoff_time,
+        minimum_order_amount,
         pickup_time_slots,
         delivery_time_slots,
         bank_account,

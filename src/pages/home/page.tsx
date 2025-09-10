@@ -1,25 +1,28 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signInWithKakao } from '../../lib/auth';
-import { useAuth } from '../../hooks/useAuth';
+import { useNewAuth } from '../../hooks/useNewAuth';
 
 export default function Home() {
   const navigate = useNavigate();
   const [showLoginMessage, setShowLoginMessage] = useState(false);
-  const { user, userProfile, loading } = useAuth();
+  const { user, loading } = useNewAuth();
 
   useEffect(() => {
     // 로그인된 사용자는 권한에 따라 다른 페이지로 리다이렉트
-    if (!loading && user && userProfile) {
-      if (userProfile.role === 'admin') {
+    if (!loading && user) {
+      if (user.role === 'admin') {
         // 관리자(사장님)는 전용 대시보드로
         navigate('/admin-dashboard');
+      } else if (user.role === 'super_admin') {
+        // 슈퍼 어드민은 슈퍼 어드민 페이지로
+        navigate('/super-admin');
       } else {
         // 일반 고객은 매장 페이지로
         navigate('/stores');
       }
     }
-  }, [user, userProfile, loading, navigate]);
+  }, [user, loading, navigate]);
 
 
   const handleKakaoLogin = async () => {

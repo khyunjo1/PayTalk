@@ -36,14 +36,15 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
           owner: store.owner_name || '미지정',
           phone: store.phone || '',
           status: store.is_active ? 'active' : 'inactive',
-          deliveryFee: store.delivery_fee || 0,
           deliveryArea: store.delivery_area || '',
           businessHoursStart: store.business_hours_start || '09:00',
           businessHoursEnd: store.business_hours_end || '22:00',
           pickupTimeSlots: store.pickup_time_slots || [],
           deliveryTimeSlots: store.delivery_time_slots || [],
           bankAccount: store.bank_account || '',
-          accountHolder: store.account_holder || ''
+          accountHolder: store.account_holder || '',
+          orderCutoffTime: store.order_cutoff_time || '15:00',
+          minimumOrderAmount: store.minimum_order_amount || 0
         }));
         
         setStores(formattedStores);
@@ -379,8 +380,12 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
                 <label className="block text-sm font-medium text-gray-700 mb-1">가격</label>
                 <input
                   type="number"
-                  value={newMenu.price}
-                  onChange={(e) => setNewMenu({...newMenu, price: parseInt(e.target.value)})}
+                  value={newMenu.price || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const numValue = value === '' ? 0 : parseInt(value) || 0;
+                    setNewMenu({...newMenu, price: numValue});
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   placeholder="가격을 입력하세요"
                 />
@@ -392,14 +397,14 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
                   onChange={(e) => setNewMenu({...newMenu, category: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 >
+                  <option value="메인요리">메인요리</option>
+                  <option value="국물류">국물류</option>
+                  <option value="김치류">김치류</option>
+                  <option value="젓갈류">젓갈류</option>
+                  <option value="나물류">나물류</option>
+                  <option value="조림류">조림류</option>
+                  <option value="특별반찬">특별반찬</option>
                   <option value="인기메뉴">인기메뉴</option>
-                  <option value="계절메뉴">계절메뉴</option>
-                  <option value="고기 반찬">고기 반찬</option>
-                  <option value="튀김/전류">튀김/전류</option>
-                  <option value="국">국</option>
-                  <option value="분식">분식</option>
-                  <option value="밑반찬">밑반찬</option>
-                  <option value="아이들 반찬">아이들 반찬</option>
                 </select>
               </div>
               <div>
@@ -461,8 +466,12 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
                 <label className="block text-sm font-medium text-gray-700 mb-1">가격</label>
                 <input
                   type="number"
-                  value={editingMenu.price}
-                  onChange={(e) => setEditingMenu({...editingMenu, price: parseInt(e.target.value)})}
+                  value={editingMenu.price || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const numValue = value === '' ? 0 : parseInt(value) || 0;
+                    setEditingMenu({...editingMenu, price: numValue});
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
@@ -473,14 +482,14 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
                   onChange={(e) => setEditingMenu({...editingMenu, category: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 >
+                  <option value="메인요리">메인요리</option>
+                  <option value="국물류">국물류</option>
+                  <option value="김치류">김치류</option>
+                  <option value="젓갈류">젓갈류</option>
+                  <option value="나물류">나물류</option>
+                  <option value="조림류">조림류</option>
+                  <option value="특별반찬">특별반찬</option>
                   <option value="인기메뉴">인기메뉴</option>
-                  <option value="계절메뉴">계절메뉴</option>
-                  <option value="고기 반찬">고기 반찬</option>
-                  <option value="튀김/전류">튀김/전류</option>
-                  <option value="국">국</option>
-                  <option value="분식">분식</option>
-                  <option value="밑반찬">밑반찬</option>
-                  <option value="아이들 반찬">아이들 반찬</option>
                 </select>
               </div>
               <div>

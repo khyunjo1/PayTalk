@@ -37,12 +37,12 @@ export default function AuthCallback() {
               console.log('🏪 관리자 - admin-dashboard로 이동');
               navigate('/admin-dashboard');
             } else {
-              console.log('👥 일반 사용자 - stores로 이동');
-              navigate('/stores');
+              console.log('👥 일반 사용자 - admin-dashboard로 이동');
+              navigate('/admin-dashboard');
             }
           } catch (profileError) {
-            console.log('⚠️ 프로필 확인 실패, 기본적으로 stores로 이동');
-            navigate('/stores');
+            console.log('⚠️ 프로필 확인 실패, 기본적으로 admin-dashboard로 이동');
+            navigate('/admin-dashboard');
           }
         } else {
           console.log('❌ 세션이 없음, 홈페이지로 이동');

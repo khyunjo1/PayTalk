@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
+import { useNewAuth } from '../../hooks/useNewAuth';
 import { getUserStores } from '../../lib/database';
 import { getStores } from '../../lib/storeApi';
 import { getStoreOrders, updateOrderStatus } from '../../lib/orderApi';
@@ -10,7 +10,7 @@ import Footer from '../../components/Footer';
 
 interface Order {
   id: string;
-  user_id: string;
+  user_id?: string;
   store_id: string;
   order_type: 'delivery' | 'pickup';
   delivery_address?: string;
@@ -18,16 +18,14 @@ interface Order {
   pickup_time?: string;
   special_requests?: string;
   depositor_name?: string;
+  customer_name?: string;
+  customer_phone?: string;
+  customer_address?: string;
   subtotal: number;
   total: number;
   status: '입금대기' | '입금확인' | '배달완료';
   created_at: string;
   updated_at: string;
-  users: {
-    id: string;
-    name: string;
-    phone: string;
-  };
   order_items?: Array<{
     id: string;
     menu_id: string;
@@ -57,7 +55,7 @@ interface Menu {
 export default function Admin() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, userProfile, loading } = useAuth();
+  const { user, loading } = useNewAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -68,7 +66,6 @@ export default function Admin() {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage] = useState<number>(15);
-  const [printMode, setPrintMode] = useState<boolean>(false);
   
   // 표준 카테고리 정의
   const STANDARD_CATEGORIES = [
@@ -87,6 +84,7 @@ export default function Admin() {
   const [loadingMenus, setLoadingMenus] = useState(false);
   const [showMenuModal, setShowMenuModal] = useState(false);
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
+  const [selectedMenuCategory, setSelectedMenuCategory] = useState<string>('all');
   const [menuForm, setMenuForm] = useState({
     name: '',
     description: '',
@@ -94,13 +92,21 @@ export default function Admin() {
     category: '',
     is_available: true
   });
+  const [copiedLink, setCopiedLink] = useState<boolean>(false);
   
   // URL에서 매장 정보 가져오기
-  const storeId = searchParams.get('storeId');
+  const { storeId } = useParams<{ storeId: string }>();
   const storeName = searchParams.get('storeName');
   
+  // storeId가 없으면 admin-dashboard로 리다이렉트
+  useEffect(() => {
+    if (!storeId) {
+      console.log('⚠️ storeId가 없어서 admin-dashboard로 리다이렉트');
+      navigate('/admin-dashboard');
+    }
+  }, [storeId, navigate]);
+  
   // 사용자의 매장 정보
-  const [userStores, setUserStores] = useState<any[]>([]);
   const [currentStore, setCurrentStore] = useState<any>(null);
 
   // 달력 외부 클릭 시 닫기
@@ -125,7 +131,7 @@ export default function Admin() {
 
   // 메뉴 데이터 로드
   const loadMenus = async () => {
-    if (!user?.id || !userProfile) return;
+    if (!user?.id) return;
     
     try {
       setLoadingMenus(true);
@@ -134,7 +140,7 @@ export default function Admin() {
       let targetStoreId = storeId;
       
       if (!targetStoreId) {
-        if (userProfile.role === 'admin') {
+        if (user.role === 'admin') {
           // admin 사용자의 경우 user_stores 테이블을 통해 소유한 매장을 가져오기
           const { data: userStores } = await supabase
             .from('user_stores')
@@ -157,13 +163,13 @@ export default function Admin() {
             .eq('role', 'owner');
           
           if (userStores && userStores.length > 0) {
-            targetStoreId = userStores[0].stores.id;
+            targetStoreId = userStores[0].stores?.[0]?.id;
           } else {
             console.log('관리하는 매장이 없습니다.');
             setMenus([]);
             return;
           }
-        } else if (userProfile.role === 'super_admin') {
+        } else if (user.role === 'super_admin') {
           // 슈퍼 어드민의 경우 모든 매장에서 첫 번째 매장 사용
           const allStores = await getStores();
           if (allStores.length > 0) {
@@ -177,9 +183,14 @@ export default function Admin() {
       }
       
       console.log('🎯 메뉴 로드 대상 매장 ID:', targetStoreId);
-      const menusData = await getMenus(targetStoreId);
-      console.log('📋 로드된 메뉴 데이터:', menusData);
-      setMenus(menusData);
+      if (targetStoreId) {
+        const menusData = await getMenus(targetStoreId);
+        console.log('📋 로드된 메뉴 데이터:', menusData);
+        setMenus(menusData);
+      } else {
+        console.log('⚠️ 매장 ID가 없어서 메뉴를 로드할 수 없습니다.');
+        setMenus([]);
+      }
     } catch (error) {
       console.error('❌ 메뉴 데이터 로드 실패:', error);
     } finally {
@@ -189,10 +200,83 @@ export default function Admin() {
 
   // 메뉴 탭이 활성화될 때 메뉴 데이터 로드
   useEffect(() => {
-    if (activeTab === 'menus' && user?.id && userProfile) {
+    if (activeTab === 'menus' && user?.id) {
       loadMenus();
     }
-  }, [activeTab, user?.id, userProfile]);
+  }, [activeTab, user?.id]);
+
+  // currentStore 변경 시 로그 출력
+  useEffect(() => {
+    if (currentStore) {
+      console.log('🏪 currentStore 업데이트:', currentStore);
+      console.log('💰 최소주문금액:', currentStore.minimum_order_amount);
+    }
+  }, [currentStore]);
+
+  // URL의 storeId로 매장 정보 가져오기 (매장 관리 탭용)
+  useEffect(() => {
+    const loadStoreInfo = async () => {
+      if (storeId) {
+        try {
+          console.log('🔍 매장 정보 로드 시도, storeId:', storeId);
+          const { data: storeData, error } = await supabase
+            .from('stores')
+            .select('*')
+            .eq('id', storeId)
+            .single();
+          
+          if (error) {
+            console.error('❌ 매장 정보 로드 실패:', error);
+            return;
+          }
+          
+          if (storeData) {
+            setCurrentStore(storeData);
+            console.log('✅ 매장 정보 로드됨:', storeData);
+          } else {
+            console.log('⚠️ 매장 데이터 없음');
+          }
+        } catch (error) {
+          console.error('❌ 매장 정보 로드 오류:', error);
+        }
+      } else {
+        console.log('⚠️ storeId 없음');
+      }
+    };
+    
+    loadStoreInfo();
+  }, [storeId]);
+
+  // 주문 링크 복사 함수
+  const copyOrderLink = async () => {
+    console.log('🔗 주문 링크 복사 시도');
+    console.log('🏪 URL storeId:', storeId);
+    console.log('🏪 URL storeName:', storeName);
+    
+    // storeId가 없으면 리다이렉트되므로 여기서는 체크하지 않음
+    if (!storeId) {
+      console.error('❌ URL에 storeId가 없습니다');
+      return;
+    }
+    
+    try {
+      const orderLink = `${window.location.origin}/menu/${storeId}`;
+      console.log('🔗 복사할 링크:', orderLink);
+      
+      await navigator.clipboard.writeText(orderLink);
+      setCopiedLink(true);
+      
+      // 2초 후 복사 상태 초기화
+      setTimeout(() => {
+        setCopiedLink(false);
+      }, 2000);
+      
+      console.log('✅ 링크 복사 성공');
+    } catch (error) {
+      console.error('❌ 링크 복사 실패:', error);
+      alert('링크 복사에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
 
   useEffect(() => {
     // 로딩 중이면 대기
@@ -200,21 +284,21 @@ export default function Admin() {
 
     // 로그인하지 않은 사용자는 로그인 페이지로
     if (!user) {
-      navigate('/login');
+      navigate('/admin-login');
       return;
     }
 
     // admin 또는 super_admin 권한이 없는 사용자는 매장 목록으로
-    if (userProfile && userProfile.role !== 'admin' && userProfile.role !== 'super_admin') {
+    if (user && user.role !== 'admin' && user.role !== 'super_admin') {
       navigate('/stores');
       return;
     }
-  }, [user, userProfile, loading, navigate]);
+  }, [user, loading, navigate]);
 
   // 실제 주문 데이터 로드
   useEffect(() => {
     const loadOrders = async () => {
-      if (!user || !userProfile || (userProfile.role !== 'admin' && userProfile.role !== 'super_admin')) return;
+      if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) return;
 
       try {
         setLoadingOrders(true);
@@ -222,14 +306,15 @@ export default function Admin() {
         let allOrders: Order[] = [];
         
         // 슈퍼 어드민이 특정 매장을 선택한 경우
-        if (userProfile.role === 'super_admin' && storeId) {
+        if (user.role === 'super_admin' && storeId) {
           // 특정 매장의 주문만 가져오기
           allOrders = await getStoreOrders(storeId);
           console.log(`매장 ${storeName}의 주문:`, allOrders);
         } else {
           // 일반 admin 사용자 또는 슈퍼 어드민이 전체 보기를 원하는 경우
+        console.log('🔍 getUserStores 호출, userId:', user.id);
         const userStores = await getUserStores(user.id);
-        console.log('사용자 매장 목록:', userStores);
+        console.log('🏪 사용자 매장 목록:', userStores);
 
         if (userStores.length === 0) {
           console.log('관리하는 매장이 없습니다.');
@@ -242,7 +327,16 @@ export default function Admin() {
           const storeOrders = await getStoreOrders(store.id);
           console.log(`매장 ${store.name}의 주문:`, storeOrders);
           allOrders.push(...storeOrders);
-          }
+        }
+        
+        // 전체 주문을 최신순으로 정렬
+        allOrders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        
+        // 첫 번째 매장을 현재 매장으로 설정
+        if (userStores.length > 0) {
+          console.log('🏪 현재 매장 설정:', userStores[0]);
+          setCurrentStore(userStores[0]);
+        }
         }
 
         // 주문 아이템 정보도 함께 가져오기
@@ -277,12 +371,12 @@ export default function Admin() {
     };
 
     loadOrders();
-  }, [user, userProfile, storeId, storeName]);
+  }, [user, storeId, storeName]);
 
   const handleStatusChange = async (orderId: string, newStatus: Order['status']) => {
     try {
       // updateOrderStatus API 사용 (알림톡 발송 포함)
-      const updatedOrder = await updateOrderStatus(orderId, newStatus);
+      await updateOrderStatus(orderId, newStatus);
 
       // 로컬 상태 업데이트
       setOrders(orders.map(order => 
@@ -303,8 +397,10 @@ export default function Admin() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('isLoggedIn');
-    navigate('/login');
+    // useNewAuth의 logout 함수 사용
+    const { logout } = useNewAuth();
+    logout();
+    navigate('/admin-login');
   };
 
   const handleDateSelect = (date: string) => {
@@ -403,9 +499,16 @@ export default function Admin() {
     return (
       order.depositor_name?.toLowerCase().includes(searchLower) ||
       order.delivery_address?.toLowerCase().includes(searchLower) ||
-      order.users.name.toLowerCase().includes(searchLower) ||
-      order.users.phone.includes(searchTerm)
+      order.customer_name?.toLowerCase().includes(searchLower) ||
+      order.customer_phone?.includes(searchTerm)
     );
+  }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+
+  // 메뉴 필터링
+  const filteredMenus = menus.filter(menu => {
+    if (selectedMenuCategory === 'all') return true;
+    return menu.category === selectedMenuCategory;
   });
 
   // 페이지네이션 계산
@@ -501,14 +604,14 @@ export default function Admin() {
   // 메뉴 관련 핸들러 함수들
   const handleMenuSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user?.id || !userProfile) return;
+    if (!user?.id) return;
 
     try {
       // storeId가 있으면 해당 매장을, 없으면 사용자의 첫 번째 매장을 사용
       let targetStoreId = storeId;
       
       if (!targetStoreId) {
-        if (userProfile.role === 'admin') {
+        if (user.role === 'admin') {
           // admin 사용자의 경우 user_stores 테이블을 통해 소유한 매장을 가져오기
           const { data: userStores } = await supabase
             .from('user_stores')
@@ -531,12 +634,12 @@ export default function Admin() {
             .eq('role', 'owner');
           
           if (userStores && userStores.length > 0) {
-            targetStoreId = userStores[0].stores.id;
+            targetStoreId = userStores[0].stores?.[0]?.id;
           } else {
             alert('관리하는 매장이 없습니다.');
             return;
           }
-        } else if (userProfile.role === 'super_admin') {
+        } else if (user.role === 'super_admin') {
           // 슈퍼 어드민의 경우 모든 매장에서 첫 번째 매장 사용
           const allStores = await getStores();
           if (allStores.length > 0) {
@@ -549,10 +652,10 @@ export default function Admin() {
       }
 
       const menuData = {
-        store_id: targetStoreId,
+        store_id: targetStoreId!,
         name: menuForm.name,
         description: menuForm.description,
-        price: parseFloat(menuForm.price),
+        price: parseFloat(menuForm.price) || 0,
         category: menuForm.category,
         is_available: menuForm.is_available
       };
@@ -573,17 +676,6 @@ export default function Admin() {
     }
   };
 
-  const handleEditMenu = (menu: Menu) => {
-    setEditingMenu(menu);
-    setMenuForm({
-      name: menu.name,
-      description: menu.description || '',
-      price: menu.price.toString(),
-      category: menu.category,
-      is_available: menu.is_available
-    });
-    setShowMenuModal(true);
-  };
 
   const handleDeleteMenu = async (menuId: string) => {
     if (!confirm('정말로 이 메뉴를 삭제하시겠습니까?')) return;
@@ -630,21 +722,6 @@ export default function Admin() {
     return orderIndex + 1;
   };
 
-  // 배달 시간 정보를 파싱하는 함수
-  const parseDeliveryTime = (deliveryTime?: string) => {
-    if (!deliveryTime) return null;
-    
-    try {
-      // "2024-01-20 점심배송 (11:00-13:00)" 형태에서 시간대 추출
-      const timeMatch = deliveryTime.match(/(점심|저녁)배송/);
-      if (timeMatch) {
-        return timeMatch[1] + '배송';
-      }
-      return null;
-    } catch {
-      return null;
-    }
-  };
 
   // 통계 계산 함수들
   const calculateStatistics = (orders: Order[]) => {
@@ -690,7 +767,7 @@ export default function Admin() {
   }
 
   // 권한 체크
-  if (!user || (userProfile && userProfile.role !== 'admin' && userProfile.role !== 'super_admin')) {
+  if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -805,7 +882,7 @@ export default function Admin() {
         `
       }} />
       
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* 헤더 */}
       <div className="bg-white shadow-sm border-b no-print">
         <div className="px-4 py-4">
@@ -818,67 +895,73 @@ export default function Admin() {
               >
                 <i className="ri-arrow-left-line text-xl text-gray-600"></i>
               </button>
-              <h1 className="text-xl font-bold text-gray-800" style={{ fontFamily: "Pacifico, serif" }}>
+              <h1 className="text-lg font-semibold text-gray-800">
                 {storeName ? `${storeName} 관리자` : '매장 관리자'}
               </h1>
             </div>
+            <div className="flex items-center gap-3">
             <button
               onClick={handleLogout}
-              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center whitespace-nowrap cursor-pointer"
+                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-md flex items-center whitespace-nowrap cursor-pointer text-sm"
             >
-              <i className="ri-logout-box-r-line mr-2"></i>
+                <i className="ri-logout-box-r-line mr-1.5 text-xs"></i>
               로그아웃
             </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="p-4">
+      <div className="p-4 flex-1">
         {/* 탭 메뉴 */}
-        <div className="flex space-x-2 mb-6 no-print">
+        <div className="flex space-x-2 sm:space-x-3 mb-6 no-print overflow-x-auto pb-1">
           <button
             onClick={() => setActiveTab('orders')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-3 sm:px-6 py-3 rounded-lg text-sm sm:text-base font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
               activeTab === 'orders'
                 ? 'bg-gray-800 text-white'
                 : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50'
             }`}
           >
-            <i className="ri-file-list-3-line mr-2"></i>
-            주문 내역
+            <i className="ri-file-list-3-line mr-2 sm:mr-2"></i>
+            <span className="hidden sm:inline">주문 내역</span>
+            <span className="sm:hidden">주문</span>
           </button>
           <button
             onClick={() => setActiveTab('menus')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-3 sm:px-6 py-3 rounded-lg text-sm sm:text-base font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
               activeTab === 'menus'
                 ? 'bg-gray-800 text-white'
                 : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50'
             }`}
           >
-            <i className="ri-restaurant-line mr-2"></i>
-            메뉴 관리
+            <i className="ri-restaurant-line mr-2 sm:mr-2"></i>
+            <span className="hidden sm:inline">메뉴 관리</span>
+            <span className="sm:hidden">메뉴</span>
           </button>
           <button
             onClick={() => setActiveTab('statistics')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-3 sm:px-6 py-3 rounded-lg text-sm sm:text-base font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
               activeTab === 'statistics'
                 ? 'bg-gray-800 text-white'
                 : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50'
             }`}
           >
-            <i className="ri-bar-chart-line mr-2"></i>
-            통계
+            <i className="ri-bar-chart-line mr-2 sm:mr-2"></i>
+            <span className="hidden sm:inline">통계</span>
+            <span className="sm:hidden">통계</span>
           </button>
           <button
             onClick={() => setActiveTab('store')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-3 sm:px-6 py-3 rounded-lg text-sm sm:text-base font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
               activeTab === 'store'
                 ? 'bg-gray-800 text-white'
                 : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50'
             }`}
           >
-            <i className="ri-store-line mr-2"></i>
-            매장 관리
+            <i className="ri-store-line mr-2 sm:mr-2"></i>
+            <span className="hidden sm:inline">매장 관리</span>
+            <span className="sm:hidden">매장</span>
           </button>
         </div>
 
@@ -939,7 +1022,7 @@ export default function Admin() {
                     <select
                       value={selectedPeriod}
                       onChange={(e) => handlePeriodSelect(e.target.value)}
-                      className="modern-select w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white appearance-none cursor-pointer transition-all duration-200 hover:bg-gray-100"
+                      className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 appearance-none cursor-pointer transition-all duration-200 hover:border-gray-400 "
                     >
                       <option value="today">오늘</option>
                       <option value="yesterday">어제</option>
@@ -975,7 +1058,7 @@ export default function Admin() {
                     <select
                       value={selectedStatus}
                       onChange={(e) => setSelectedStatus(e.target.value)}
-                      className="modern-select w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white appearance-none cursor-pointer transition-all duration-200 hover:bg-gray-100"
+                      className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 appearance-none cursor-pointer transition-all duration-200 hover:border-gray-400 "
                     >
                       <option value="all">전체 ({filteredOrdersByPeriod.length})</option>
                       <option value="입금대기">입금대기 ({filteredOrdersByPeriod.filter(order => order.status === '입금대기').length})</option>
@@ -1036,25 +1119,24 @@ export default function Admin() {
               return (
                 <div key={order.id} className="bg-white rounded-lg shadow-sm overflow-hidden">
                   <div className="p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
+                    <div className="mb-3">
+                      <div className="flex items-center justify-between mb-2">
                         <h3 className="font-semibold text-gray-800">주문번호: {getOrderNumber(order, finalFilteredOrders)}</h3>
-                        <div className="text-sm text-gray-500 mt-1">
-                              <div>주문일시: {date} {time}</div>
-                        </div>
-                      </div>
                       <div className="flex items-center gap-2">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                          <span className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap ${getStatusColor(order.status)}`}>
                           {order.status}
                         </span>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          order.order_type === 'delivery' 
-                            ? 'bg-blue-100 text-blue-800' 
-                            : 'bg-green-100 text-green-800'
-                        }`}>
-                          {order.order_type === 'delivery' ? '배달' : '픽업'}
-                        </span>
-                        <i className="ri-bank-line text-gray-500"></i>
+                          <span className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap ${
+                            order.order_type === 'delivery' 
+                              ? 'bg-blue-100 text-blue-800' 
+                              : 'bg-green-100 text-green-800'
+                          }`}>
+                            {order.order_type === 'delivery' ? '배달' : '픽업'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        <div>주문일시: {date} {time}</div>
                       </div>
                     </div>
 
@@ -1104,6 +1186,18 @@ export default function Admin() {
                         <div className="flex items-center text-sm text-gray-600">
                           <i className="ri-user-line mr-2"></i>
                           <span>입금자명: {order.depositor_name}</span>
+                        </div>
+                      )}
+                      {order.customer_name && (
+                        <div className="flex items-center text-sm text-gray-600">
+                          <i className="ri-user-line mr-2"></i>
+                          <span>고객명: {order.customer_name}</span>
+                        </div>
+                      )}
+                      {order.customer_phone && (
+                        <div className="flex items-center text-sm text-gray-600">
+                          <i className="ri-phone-line mr-2"></i>
+                          <span>연락처: {order.customer_phone}</span>
                         </div>
                       )}
                       {order.special_requests && (
@@ -1325,6 +1419,16 @@ export default function Admin() {
                       <strong>입금자명:</strong> {order.depositor_name}
                     </div>
                   )}
+                  {order.customer_name && (
+                    <div>
+                      <strong>고객명:</strong> {order.customer_name}
+                    </div>
+                  )}
+                  {order.customer_phone && (
+                    <div>
+                      <strong>연락처:</strong> {order.customer_phone}
+                    </div>
+                  )}
                   {order.special_requests && (
                     <div>
                       <strong>요청사항:</strong> {order.special_requests}
@@ -1519,16 +1623,53 @@ export default function Admin() {
     </div>
             </div>
 
+            {/* 카테고리 탭 - menu 페이지와 동일한 스타일 */}
+            {menus.length > 0 && (
+              <div className="bg-white px-4 py-4 border-b shadow-sm mb-0">
+                <div className="flex space-x-2 overflow-x-auto pb-1">
+                  <button
+                    onClick={() => setSelectedMenuCategory('all')}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 whitespace-nowrap ${
+                      selectedMenuCategory === 'all'
+                        ? 'bg-gray-800 text-white'
+                        : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <i className={`ri-restaurant-line mr-1.5 ${selectedMenuCategory === 'all' ? 'text-white' : 'text-gray-600'}`}></i>
+                    전체
+                  </button>
+                  {STANDARD_CATEGORIES.map(category => {
+                    const count = menus.filter(menu => menu.category === category).length;
+                    if (count === 0) return null; // 메뉴가 없는 카테고리는 표시하지 않음
+                    return (
+                      <button
+                        key={category}
+                        onClick={() => setSelectedMenuCategory(category)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 whitespace-nowrap ${
+                          selectedMenuCategory === category
+                            ? 'bg-gray-800 text-white'
+                            : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        <i className={`ri-restaurant-line mr-1.5 ${selectedMenuCategory === category ? 'text-white' : 'text-gray-600'}`}></i>
+                        {category}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* 메뉴 목록 */}
             {loadingMenus ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
                 <p className="text-gray-600">메뉴를 불러오는 중...</p>
               </div>
-            ) : menus.length > 0 ? (
+            ) : filteredMenus.length > 0 ? (
               <div className="bg-white">
-                {menus.map((menu, index) => (
-                  <div key={menu.id} className={`px-4 py-4 hover:bg-gray-50 transition-colors duration-200 ${index !== menus.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                {filteredMenus.map((menu, index) => (
+                  <div key={menu.id} className={`px-4 py-4 hover:bg-gray-50 transition-colors duration-200 ${index !== filteredMenus.length - 1 ? 'border-b border-gray-100' : ''}`}>
                     <div className="flex gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start mb-1">
@@ -1548,9 +1689,8 @@ export default function Admin() {
                                 : 'bg-red-100 text-red-700 border border-red-200'
                             }`}>
                               <i className={`ri-${menu.is_available ? 'check' : 'close'}-line text-xs`}></i>
-                              {menu.is_available ? '판매중' : '품절'}
+                              {menu.is_available ? '주문가능' : '품절'}
                             </span>
-                            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">{menu.category}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <button
@@ -1596,13 +1736,21 @@ export default function Admin() {
                   </div>
                 ))}
               </div>
+            ) : selectedMenuCategory === 'all' ? (
+              <div className="text-center py-12">
+                <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <i className="ri-restaurant-line text-3xl text-orange-400"></i>
+                </div>
+                <h3 className="text-lg font-medium text-gray-600 mb-2">메뉴가 없습니다</h3>
+                <p className="text-gray-500">위의 "메뉴 추가" 버튼을 눌러<br />새로운 메뉴를 추가해보세요!</p>
+              </div>
             ) : (
               <div className="text-center py-12">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <i className="ri-restaurant-line text-2xl text-gray-400"></i>
+                <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <i className="ri-restaurant-line text-3xl text-orange-400"></i>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-600 mb-2">등록된 메뉴가 없습니다</h3>
-                <p className="text-gray-500 mb-4">위의 "메뉴 추가" 버튼을 눌러<br />새로운 메뉴를 추가해보세요!</p>
+                <h3 className="text-lg font-medium text-gray-600 mb-2">메뉴가 없습니다</h3>
+                <p className="text-gray-500">이 카테고리에 등록된 메뉴가 없습니다.</p>
               </div>
             )}
           </>
@@ -1703,15 +1851,65 @@ export default function Admin() {
         {activeTab === 'store' && (
           <>
             {/* 매장 관리 탭 */}
-            <div className="mb-4">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="space-y-4">
+            <div className="mb-6 px-4">
+              <h2 className="text-lg font-semibold text-gray-800 mb-2">매장 정보 관리</h2>
+              <p className="text-gray-600 text-sm mb-4">매장의 기본 정보를 확인하고 수정할 수 있습니다.</p>
+            </div>
+
+            {/* 주문 링크 복사 섹션 */}
+            <div className="mb-6 px-4">
+              <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-6 border border-gray-200">
+                <div className="text-center mb-6">
+                  <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center mx-auto mb-3">
+                    <i className="ri-share-line text-white text-xl"></i>
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-800 mb-2">주문 링크 공유</h3>
+                  <p className="text-sm text-gray-600">고객들이 이 링크로 주문할 수 있습니다</p>
+                </div>
+                
+                <div className="bg-white rounded-xl p-4 mb-4 border border-gray-200 shadow-sm">
+                  <div className="font-mono text-sm text-gray-700 break-all">
+                    {storeId ? `${window.location.origin}/menu/${storeId}` : '로딩 중...'}
+                  </div>
+                </div>
+                
+                <button
+                  onClick={copyOrderLink}
+                  className={`w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
+                    copiedLink
+                      ? 'bg-green-500 hover:bg-green-600 text-white'
+                      : 'bg-orange-500 hover:bg-orange-600 text-white'
+                  }`}
+                >
+                  {copiedLink ? (
+                    <>
+                      <i className="ri-check-line text-lg"></i>
+                      <span>복사 완료!</span>
+                    </>
+                  ) : (
+                    <>
+                      <i className="ri-file-copy-line text-lg"></i>
+                      <span>링크 복사하기</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="space-y-6">
+                {/* 기본 정보 섹션 */}
+                <div>
+                  <h3 className="text-md font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <i className="ri-store-line text-orange-500"></i>
+                    기본 정보
+                  </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">매장명</label>
                       <input
                         type="text"
-                        value={storeName || ''}
+                        value={currentStore?.name || storeName || '로딩 중...'}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                         disabled
                       />
@@ -1720,7 +1918,7 @@ export default function Admin() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">카테고리</label>
                       <input
                         type="text"
-                        value="한식반찬"
+                        value={currentStore?.category || '로딩 중...'}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                         disabled
                       />
@@ -1729,16 +1927,28 @@ export default function Admin() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">배달 지역</label>
                       <input
                         type="text"
-                        value="진주 삼천포, 사천"
+                        value={currentStore?.delivery_area || '로딩 중...'}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                         disabled
                       />
                     </div>
+                  </div>
+                </div>
+
+                {/* 운영 정보 섹션 */}
+                <div>
+                  <h3 className="text-md font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <i className="ri-time-line text-orange-500"></i>
+                    운영 정보
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">운영시간</label>
                       <input
                         type="text"
-                        value="09:00 - 21:00"
+                        value={currentStore?.business_hours_start && currentStore?.business_hours_end 
+                          ? `${currentStore.business_hours_start} - ${currentStore.business_hours_end}`
+                          : '로딩 중...'}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                         disabled
                       />
@@ -1747,7 +1957,7 @@ export default function Admin() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">주문마감시간</label>
                       <input
                         type="text"
-                        value="15:00"
+                        value={currentStore?.order_cutoff_time || '로딩 중...'}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                         disabled
                       />
@@ -1756,33 +1966,63 @@ export default function Admin() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">최소주문금액</label>
                       <input
                         type="number"
-                        value="0"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                        disabled
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">계좌번호</label>
-                      <input
-                        type="text"
-                        value="농협 123-456-789012"
+                        value={currentStore?.minimum_order_amount ?? '로딩 중...'}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                         disabled
                       />
                     </div>
                   </div>
-                  
-                  <div className="pt-4 border-t border-gray-200">
-                    <p className="text-sm text-gray-500 mb-4">
-                      매장 정보 수정은 슈퍼 어드민에게 문의하세요.
-                    </p>
-                    <button
-                      onClick={() => navigate('/super-admin')}
-                      className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                    >
-                      <i className="ri-customer-service-line mr-2"></i>
-                      슈퍼 어드민 문의
-                    </button>
+                </div>
+
+                {/* 결제 정보 섹션 */}
+                <div>
+                  <h3 className="text-md font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <i className="ri-bank-line text-orange-500"></i>
+                    결제 정보
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">계좌번호</label>
+                      <input
+                        type="text"
+                        value={currentStore?.bank_account || '로딩 중...'}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        disabled
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">예금주</label>
+                      <input
+                        type="text"
+                        value={currentStore?.account_holder || '로딩 중...'}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        disabled
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                {/* 문의 섹션 */}
+                <div className="pt-4 border-t border-gray-200">
+                  <div className="bg-orange-50 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <i className="ri-information-line text-orange-500 text-lg mt-0.5"></i>
+                      <div className="flex-1">
+                        <p className="text-sm text-orange-800 font-medium mb-2">
+                          매장 정보 수정이 필요하신가요?
+                        </p>
+                        <p className="text-sm text-orange-700 mb-3">
+                          매장명, 운영시간, 배달지역 등의 정보 수정은 슈퍼 어드민에게 문의해주세요.
+                        </p>
+                        <button
+                          onClick={() => navigate('/super-admin')}
+                          className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-2"
+                        >
+                          <i className="ri-customer-service-line"></i>
+                          슈퍼 어드민 문의
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

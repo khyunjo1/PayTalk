@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getStore, getMenus } from '../../lib/database';
+import { useNewAuth } from '../../hooks/useNewAuth';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 
@@ -8,10 +9,10 @@ interface MenuItem {
   id: string;
   name: string;
   price: number;
-  description: string;
+  description?: string | null;
   category: string;
   isAvailable: boolean;
-  image: string;
+  image?: string;
 }
 
 interface CartItem extends MenuItem {
@@ -21,11 +22,14 @@ interface CartItem extends MenuItem {
 export default function Menu() {
   const navigate = useNavigate();
   const { storeId } = useParams();
+  const { user, loading: authLoading } = useNewAuth();
   const [selectedCategory, setSelectedCategory] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [store, setStore] = useState<any>(null);
   const [menu, setMenu] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   // 실제 메뉴 데이터에서 카테고리를 추출하여 존재하는 카테고리만 표시
   const existingCategories = Array.from(new Set(menu.map(item => item.category))).filter(Boolean);
@@ -36,7 +40,7 @@ export default function Menu() {
   useEffect(() => {
     const loadStoreData = async () => {
       if (!storeId) {
-        navigate('/stores');
+        navigate('/');
         return;
       }
 
@@ -177,6 +181,22 @@ export default function Menu() {
   };
 
   const handleCartClick = () => {
+    // 최소주문금액 체크
+    const minimumAmount = store?.minimum_order_amount || 0;
+    if (totalAmount < minimumAmount) {
+      // 최소주문금액 미달 시 토스트 메시지 표시
+      const remainingAmount = minimumAmount - totalAmount;
+      setToastMessage(`${remainingAmount.toLocaleString()}원 더 담아주세요. (최소주문금액: ${minimumAmount.toLocaleString()}원)`);
+      setShowToast(true);
+      
+      // 3초 후 토스트 숨기기
+      setTimeout(() => {
+        setShowToast(false);
+      }, 3000);
+      return;
+    }
+    
+    // 최소주문금액 충족 시 cart 페이지로 이동
     localStorage.setItem('cart', JSON.stringify(cart));
     localStorage.setItem('storeInfo', JSON.stringify(store));
     navigate('/cart');
@@ -192,13 +212,24 @@ export default function Menu() {
           {/* 헤더 */}
           <div className="flex items-center justify-between mb-4">
             <button
-              onClick={() => navigate('/stores')}
+              onClick={() => navigate('/')}
               className="p-2 hover:bg-gray-100 rounded-lg cursor-pointer transition-colors"
             >
               <i className="ri-arrow-left-line text-xl text-gray-600"></i>
             </button>
-            <h1 className="text-xl font-bold text-gray-800">{store.name}</h1>
-            <div className="w-10"></div>
+            <h1 className="text-xl font-bold text-gray-800 flex-1 text-center">{store.name}</h1>
+            <div className="w-10">
+              {/* 사장님만 매장관리 버튼 표시 */}
+              {!authLoading && user && user.role === 'admin' && (
+                <button
+                  onClick={() => navigate(`/admin/${storeId}`)}
+                  className="px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                >
+                  <i className="ri-settings-line"></i>
+                  매장관리
+                </button>
+              )}
+            </div>
           </div>
           
           {/* 매장 정보 */}
@@ -208,8 +239,8 @@ export default function Menu() {
               <span className="font-medium">{store.delivery_area}</span>
             </div>
             <div className="flex items-center gap-2 text-gray-600">
-              <i className="ri-truck-line text-orange-500"></i>
-              <span className="font-medium">배달비 {store.delivery_fee.toLocaleString()}원</span>
+              <i className="ri-money-dollar-circle-line text-orange-500"></i>
+              <span className="font-medium">최소주문 {store.minimum_order_amount?.toLocaleString() || '0'}원</span>
             </div>
           </div>
         </div>
@@ -336,24 +367,46 @@ export default function Menu() {
         )}
       </div>
 
-      {/* 장바구니 버튼 */}
+      {/* 메뉴와 푸터 사이 구분선 */}
+      <div className="h-px bg-gray-100"></div>
+
+      {/* 장바구니 버튼 - 맥도날드 스타일 */}
       {totalQuantity > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg">
-          <button
-            onClick={handleCartClick}
-            className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-3 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
-          >
-            <div className="w-6 h-6 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-              <i className="ri-shopping-cart-line text-sm"></i>
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
+          <div className="flex items-center justify-between p-4">
+            {/* 왼쪽: 가격 정보 */}
+            <div className="flex-1">
+              <div className="text-lg font-bold text-black">
+                {totalAmount.toLocaleString()}원
+              </div>
+              {totalAmount < (store?.minimum_order_amount || 0) && (
+                <div className="text-xs text-gray-600">
+                  {(store?.minimum_order_amount || 0) - totalAmount}원 더 담으면 주문 가능
+                </div>
+              )}
             </div>
-            <span>장바구니 ({totalQuantity})</span>
-            <span className="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-bold">
-              {totalAmount.toLocaleString()}원
-            </span>
-          </button>
+            
+            {/* 오른쪽: 장바구니 버튼 */}
+            <button
+              onClick={handleCartClick}
+              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-all duration-200 shadow-md hover:shadow-lg"
+            >
+              <i className="ri-shopping-cart-line text-sm"></i>
+              <span className="text-sm">{totalQuantity} 장바구니 보기</span>
+            </button>
+          </div>
         </div>
       )}
 
+      {/* 토스트 메시지 */}
+      {showToast && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50">
+          <div className="bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
+            <i className="ri-error-warning-line text-sm"></i>
+            <span className="text-sm font-medium">{toastMessage}</span>
+          </div>
+        </div>
+      )}
       
       <Footer />
     </div>

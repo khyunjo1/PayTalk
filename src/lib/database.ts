@@ -140,10 +140,11 @@ export const getUserStores = async (userId: string): Promise<Store[]> => {
         name,
         category,
         delivery_area,
-        delivery_fee,
         phone,
         business_hours_start,
         business_hours_end,
+        order_cutoff_time,
+        minimum_order_amount,
         pickup_time_slots,
         delivery_time_slots,
         bank_account,
@@ -151,6 +152,7 @@ export const getUserStores = async (userId: string): Promise<Store[]> => {
       )
     `)
     .eq('user_id', userId)
+    .eq('role', 'owner')
     .order('created_at', { ascending: false })
   
   if (error) {
@@ -190,6 +192,8 @@ export const getUserOwnedStores = async (userId: string): Promise<Store[]> => {
         phone,
         business_hours_start,
         business_hours_end,
+        order_cutoff_time,
+        minimum_order_amount,
         pickup_time_slots,
         delivery_time_slots,
         bank_account,
@@ -242,7 +246,6 @@ export const createOrder = async (orderData: {
       special_requests: orderData.specialRequests,
       depositor_name: orderData.depositorName,
       subtotal: orderData.subtotal,
-      delivery_fee: orderData.deliveryFee,
       total: orderData.total,
       status: '입금대기'
     })

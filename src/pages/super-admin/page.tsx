@@ -1,14 +1,14 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
+import { useNewAuth } from '../../hooks/useNewAuth';
 import Dashboard from './components/Dashboard';
 import StoreManagement from './components/StoreManagement';
 import MenuManagement from './components/MenuManagement';
-import UserManagement from './components/UserManagement';
 import InquiryManagement from './components/InquiryManagement';
 import Statistics from './components/Statistics';
 import OrdersManagement from './components/OrdersManagement';
+import UserManagement from './components/UserManagement';
 import Footer from '../../components/Footer';
 
 const MENU_ITEMS = [
@@ -16,36 +16,46 @@ const MENU_ITEMS = [
   { id: 'stores', label: '매장 관리', icon: 'ri-store-line' },
   { id: 'menus', label: '메뉴 관리', icon: 'ri-restaurant-line' },
   { id: 'orders', label: '주문 관리', icon: 'ri-shopping-cart-line' },
-  { id: 'users', label: '유저 관리', icon: 'ri-user-line' },
+  { id: 'users', label: '사장님 승인', icon: 'ri-user-line' },
   { id: 'inquiries', label: '문의 관리', icon: 'ri-question-line' },
   { id: 'statistics', label: '통계', icon: 'ri-bar-chart-line' }
 ];
 
 export default function SuperAdmin() {
   const navigate = useNavigate();
-  const { user, userProfile, loading } = useAuth();
+  const { user, loading } = useNewAuth();
   const [activeMenu, setActiveMenu] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showToast, setShowToast] = useState('');
 
   useEffect(() => {
+    console.log('🔍 SuperAdmin useEffect 실행:', { user, loading });
+    
     // 로딩 중이면 아무것도 하지 않음
-    if (loading) return;
-
-    // 사용자가 없으면 로그인 페이지로
-    if (!user || !userProfile) {
-      navigate('/login');
+    if (loading) {
+      console.log('⏳ 로딩 중...');
       return;
     }
+
+    // 사용자가 없으면 슈퍼 어드민 로그인 페이지로
+    if (!user) {
+      console.log('❌ 사용자 없음, /super-login으로 리다이렉트');
+      navigate('/super-login');
+      return;
+    }
+
+    console.log('👤 사용자 정보:', user);
 
     // 슈퍼 어드민 권한 확인
-    if (userProfile.role !== 'super_admin') {
-      console.log('슈퍼 어드민 권한이 없습니다. /stores로 리다이렉트합니다.');
+    if (user.role !== 'super_admin') {
+      console.log('❌ 슈퍼 어드민 권한 없음, /super-login으로 리다이렉트');
       alert('슈퍼 어드민만 접근할 수 있는 페이지입니다.');
-      navigate('/stores');
+      navigate('/super-login');
       return;
     }
-  }, [user, userProfile, loading, navigate]);
+
+    console.log('✅ 슈퍼 어드민 인증 성공');
+  }, [user, loading, navigate]);
 
   const showToastMessage = (message: string) => {
     setShowToast(message);
@@ -70,7 +80,7 @@ export default function SuperAdmin() {
   }
 
   // 권한 체크 (렌더링 전)
-  if (!user || !userProfile || userProfile.role !== 'super_admin') {
+  if (!user || user.role !== 'super_admin') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">

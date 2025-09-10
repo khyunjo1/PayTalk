@@ -133,7 +133,6 @@ export interface UpdateStoreData {
   category?: string;
   owner_name?: string;
   delivery_area?: string;
-  delivery_fee?: number;
   phone?: string;
   business_hours_start?: string;
   business_hours_end?: string;

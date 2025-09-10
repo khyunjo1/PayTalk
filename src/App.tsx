@@ -1,11 +1,13 @@
 import { BrowserRouter } from 'react-router-dom'
 import { AppRoutes } from './router'
-
+import { AuthProvider } from './hooks/useNewAuth'
 
 function App() {
   return (
     <BrowserRouter basename={__BASE_PATH__}>
-      <AppRoutes />
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
     </BrowserRouter>
   )
 }

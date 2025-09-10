@@ -49,38 +49,6 @@ export const createUserProfile = async (userData: {
   return data;
 };
 
-// 모든 사용자 목록 가져오기 (관리자용)
-export const getAllUsers = async () => {
-  const { data, error } = await supabase
-    .from('users')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('사용자 목록 가져오기 오류:', error);
-    throw error;
-  }
-
-  return data || [];
-};
-
-// 사용자 역할 변경 (고객 → 사장님)
-export const updateUserRole = async (userId: string, role: 'customer' | 'owner' | 'admin' | 'super_admin') => {
-  const { data, error } = await supabase
-    .from('users')
-    .update({ role })
-    .eq('id', userId)
-    .select()
-    .single();
-
-  if (error) {
-    console.error('사용자 역할 변경 오류:', error);
-    throw error;
-  }
-
-  return data;
-};
-
 // 사용자를 매장에 연결 (사장님 전환)
 export const addUserToStore = async (userId: string, storeId: string, role: 'owner' | 'manager' = 'owner') => {
   const { data, error } = await supabase
@@ -112,8 +80,8 @@ export const getUserStores = async (userId: string) => {
         name,
         category,
         delivery_area,
-        delivery_fee,
         phone,
+        minimum_order_amount,
         bank_account,
         account_holder
       )

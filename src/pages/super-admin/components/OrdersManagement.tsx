@@ -14,17 +14,14 @@ interface Order {
   pickup_time?: string;
   special_requests?: string;
   depositor_name?: string;
+  customer_name?: string;
+  customer_phone?: string;
   subtotal: number;
   delivery_fee: number;
   total: number;
   status: '입금대기' | '입금확인' | '배달완료';
   created_at: string;
   updated_at: string;
-  users: {
-    id: string;
-    name: string;
-    phone: string;
-  };
   stores?: {
     id: string;
     name: string;
@@ -342,7 +339,7 @@ export default function OrdersManagement({ showToast }: OrdersManagementProps) {
                       <h3 className="text-sm lg:text-base font-semibold text-gray-800 truncate">주문번호: {getShortOrderId(order.id)}</h3>
                       <div className="text-xs lg:text-sm text-gray-500 mt-1 space-y-1">
                         <div>{date} {time}</div>
-                        <div>고객: {order.users.name} ({order.users.phone})</div>
+                        <div>고객: {order.customer_name || '알 수 없는 고객'} ({order.customer_phone || '연락처 없음'})</div>
                         <div>매장: {order.stores?.name || '알 수 없는 매장'}</div>
                         <div>주문방식: {order.order_type === 'delivery' ? '배달' : '픽업'}</div>
                       </div>

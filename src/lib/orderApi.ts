@@ -20,7 +20,6 @@ export const createOrder = async (orderData: {
   special_requests?: string;
   depositor_name: string;
   subtotal: number;
-  delivery_fee: number;
   total: number;
   items: Array<{
     menu_id: string;
@@ -41,7 +40,6 @@ export const createOrder = async (orderData: {
       special_requests: orderData.special_requests,
       depositor_name: orderData.depositor_name,
       subtotal: orderData.subtotal,
-      delivery_fee: orderData.delivery_fee,
       total: orderData.total,
       status: '입금대기'
     })
@@ -140,64 +138,12 @@ export const createOrder = async (orderData: {
   return order;
 };
 
-// 사용자의 주문 목록 가져오기
-export const getUserOrders = async (userId: string) => {
-  const { data, error } = await supabase
-    .from('orders')
-    .select(`
-      *,
-      stores (
-        id,
-        name,
-        phone,
-        bank_account,
-        account_holder
-      )
-    `)
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('사용자 주문 목록 가져오기 오류:', error);
-    throw error;
-  }
-
-  // 주문 아이템 정보도 함께 가져오기
-  const ordersWithItems = await Promise.all(
-    (data || []).map(async (order) => {
-      const { data: orderItems } = await supabase
-        .from('order_items')
-        .select(`
-          *,
-          menus (
-            id,
-            name
-          )
-        `)
-        .eq('order_id', order.id);
-
-      return {
-        ...order,
-        order_items: orderItems || []
-      };
-    })
-  );
-
-  return ordersWithItems;
-};
 
 // 매장의 주문 목록 가져오기 (사장님용)
 export const getStoreOrders = async (storeId: string) => {
   const { data, error } = await supabase
     .from('orders')
-    .select(`
-      *,
-      users (
-        id,
-        name,
-        phone
-      )
-    `)
+    .select('*')
     .eq('store_id', storeId)
     .order('created_at', { ascending: false });
 
@@ -206,7 +152,31 @@ export const getStoreOrders = async (storeId: string) => {
     throw error;
   }
 
-  return data || [];
+  // 주문 아이템도 함께 가져오기
+  const ordersWithItems = await Promise.all(
+    (data || []).map(async (order) => {
+      const { data: items, error: itemsError } = await supabase
+        .from('order_items')
+        .select(`
+          *,
+          menus (
+            id,
+            name,
+            price
+          )
+        `)
+        .eq('order_id', order.id);
+
+      if (itemsError) {
+        console.error('주문 아이템 가져오기 오류:', itemsError);
+        return { ...order, order_items: [] };
+      }
+
+      return { ...order, order_items: items || [] };
+    })
+  );
+
+  return ordersWithItems;
 };
 
 // 주문 상태 업데이트
@@ -220,10 +190,6 @@ export const updateOrderStatus = async (orderId: string, status: '입금대기' 
     .eq('id', orderId)
     .select(`
       *,
-      users (
-        name,
-        phone
-      ),
       stores (
         name,
         phone

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../hooks/useAuth';
 import { getStores, createStore, updateStore, deleteStore } from '../../../lib/storeApi';
+import { addUserToStore } from '../../../lib/userApi';
 import type { Store } from '../../../types';
 
 interface StoreManagementProps {
@@ -9,6 +11,7 @@ interface StoreManagementProps {
 
 export default function StoreManagement({ showToast }: StoreManagementProps) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -138,6 +141,16 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
 
       const createdStore = await createStore(storeData);
       
+      // user_stores 테이블에 연결 정보 추가 (슈퍼 어드민이 매장을 생성하면 모든 admin 사용자에게 연결)
+      if (user?.id) {
+        try {
+          await addUserToStore(user.id, createdStore.id, 'owner');
+          console.log('✅ user_stores 연결 완료:', user.id, createdStore.id);
+        } catch (error) {
+          console.error('❌ user_stores 연결 실패:', error);
+        }
+      }
+      
       // 새 매장을 목록에 추가
       const formattedStore: Store = {
         id: createdStore.id,
@@ -146,7 +159,6 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
         owner: createdStore.owner_name || '미지정',
         phone: createdStore.phone || '',
         status: createdStore.is_active ? 'active' : 'inactive',
-        deliveryFee: createdStore.delivery_fee || 0,
         deliveryArea: createdStore.delivery_area || '',
         businessHoursStart: createdStore.business_hours_start || '09:00',
         businessHoursEnd: createdStore.business_hours_end || '22:00',
@@ -559,24 +571,50 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
               {/* 픽업시간 설정 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">픽업시간 설정</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'].map(time => (
-                    <label key={time} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={newStore.pickupTimeSlots.includes(time)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setNewStore({...newStore, pickupTimeSlots: [...newStore.pickupTimeSlots, time]});
-                          } else {
-                            setNewStore({...newStore, pickupTimeSlots: newStore.pickupTimeSlots.filter(t => t !== time)});
-                          }
-                        }}
-                        className="mr-2"
-                      />
-                      <span className="text-sm">{time}</span>
-                    </label>
-                  ))}
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-4">
+                    <label className="text-sm font-medium text-gray-700">시작 시간:</label>
+                    <select
+                      value={newStore.pickupTimeSlots[0] || '09:00'}
+                      onChange={(e) => {
+                        const startTime = e.target.value;
+                        const endTime = newStore.pickupTimeSlots[1] || '20:00';
+                        setNewStore({
+                          ...newStore, 
+                          pickupTimeSlots: [startTime, endTime]
+                        });
+                      }}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    >
+                      {['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'].map(time => (
+                        <option key={time} value={time}>{time}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="flex items-center space-x-4">
+                    <label className="text-sm font-medium text-gray-700">종료 시간:</label>
+                    <select
+                      value={newStore.pickupTimeSlots[1] || '20:00'}
+                      onChange={(e) => {
+                        const startTime = newStore.pickupTimeSlots[0] || '09:00';
+                        const endTime = e.target.value;
+                        setNewStore({
+                          ...newStore, 
+                          pickupTimeSlots: [startTime, endTime]
+                        });
+                      }}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    >
+                      {['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'].map(time => (
+                        <option key={time} value={time}>{time}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="text-sm text-gray-500">
+                    픽업 가능 시간: {newStore.pickupTimeSlots[0] || '09:00'} ~ {newStore.pickupTimeSlots[1] || '20:00'}
+                  </div>
                 </div>
               </div>
               
@@ -779,24 +817,50 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
               {/* 픽업시간 설정 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">픽업시간 설정</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'].map(time => (
-                    <label key={time} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={editingStore.pickupTimeSlots.includes(time)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setEditingStore({...editingStore, pickupTimeSlots: [...editingStore.pickupTimeSlots, time]});
-                          } else {
-                            setEditingStore({...editingStore, pickupTimeSlots: editingStore.pickupTimeSlots.filter(t => t !== time)});
-                          }
-                        }}
-                        className="mr-2"
-                      />
-                      <span className="text-sm">{time}</span>
-                    </label>
-                  ))}
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-4">
+                    <label className="text-sm font-medium text-gray-700">시작 시간:</label>
+                    <select
+                      value={editingStore.pickupTimeSlots[0] || '09:00'}
+                      onChange={(e) => {
+                        const startTime = e.target.value;
+                        const endTime = editingStore.pickupTimeSlots[1] || '20:00';
+                        setEditingStore({
+                          ...editingStore, 
+                          pickupTimeSlots: [startTime, endTime]
+                        });
+                      }}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    >
+                      {['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'].map(time => (
+                        <option key={time} value={time}>{time}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="flex items-center space-x-4">
+                    <label className="text-sm font-medium text-gray-700">종료 시간:</label>
+                    <select
+                      value={editingStore.pickupTimeSlots[1] || '20:00'}
+                      onChange={(e) => {
+                        const startTime = editingStore.pickupTimeSlots[0] || '09:00';
+                        const endTime = e.target.value;
+                        setEditingStore({
+                          ...editingStore, 
+                          pickupTimeSlots: [startTime, endTime]
+                        });
+                      }}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    >
+                      {['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'].map(time => (
+                        <option key={time} value={time}>{time}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="text-sm text-gray-500">
+                    픽업 가능 시간: {editingStore.pickupTimeSlots[0] || '09:00'} ~ {editingStore.pickupTimeSlots[1] || '20:00'}
+                  </div>
                 </div>
               </div>
 

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
 import { createOrder } from '../../lib/orderApi';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
@@ -15,7 +14,6 @@ interface CartItem {
 interface StoreInfo {
   id: string;
   name: string;
-  delivery_fee: number; // 데이터베이스 필드명과 일치
   phone: string;
   business_hours_start?: string;
   business_hours_end?: string;
@@ -49,7 +47,6 @@ const formatTime = (timeString: string): string => {
 
 export default function Cart() {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [storeInfo, setStoreInfo] = useState<StoreInfo | null>(null);
   const [orderType, setOrderType] = useState<'delivery' | 'pickup'>('delivery');
@@ -58,14 +55,11 @@ export default function Cart() {
   const [pickupTime, setPickupTime] = useState('');
   const [specialRequests, setSpecialRequests] = useState('');
   const [depositorName, setDepositorName] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 로그인하지 않은 사용자는 홈페이지로 리다이렉트
-    if (!loading && !user) {
-      navigate('/');
-      return;
-    }
-
     const savedCart = localStorage.getItem('cart');
     const savedStoreInfo = localStorage.getItem('storeInfo');
     
@@ -89,8 +83,11 @@ export default function Cart() {
       const startHour = parseInt(store.business_hours_start?.split(':')[0] || '9');
       const defaultHour = (startHour + 1).toString().padStart(2, '0');
       setPickupTime(`${defaultHour}:00`);
+      
+      setLoading(false);
     } else {
-      navigate('/stores');
+      setLoading(false);
+      navigate('/');
     }
   }, [navigate]);
 
@@ -150,8 +147,26 @@ export default function Cart() {
   };
 
   const handleOrder = async () => {
-    if (!user || !storeInfo) {
-      alert('로그인이 필요합니다.');
+    if (!storeInfo) {
+      alert('매장 정보를 찾을 수 없습니다.');
+      return;
+    }
+
+    // 고객 정보 유효성 검사
+    if (!customerName.trim()) {
+      alert('고객명을 입력해주세요.');
+      return;
+    }
+
+    if (!customerPhone.trim()) {
+      alert('전화번호를 입력해주세요.');
+      return;
+    }
+
+    // 전화번호 형식 검사 (010-0000-0000 또는 01000000000)
+    const phoneRegex = /^010-?\d{4}-?\d{4}$/;
+    if (!phoneRegex.test(customerPhone.replace(/\s/g, ''))) {
+      alert('전화번호를 올바르게 입력해주세요.\n\n예: 010-1234-5678 또는 01012345678\n\n알림톡 발송을 위해 정확한 전화번호가 필요합니다.');
       return;
     }
 
@@ -192,9 +207,17 @@ export default function Cart() {
         ? new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         : today.toISOString().split('T')[0];
 
-      // 주문 데이터 준비
+      // 주문 데이터 준비 (임시 사용자 ID 생성 - UUID 형식)
+      const generateUUID = () => {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          const r = Math.random() * 16 | 0;
+          const v = c === 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
+      };
+      
       const orderData = {
-        user_id: user.id,
+        user_id: generateUUID(),
         store_id: storeInfo.id,
         order_type: orderType,
         delivery_address: orderType === 'delivery' ? deliveryAddress : null,
@@ -202,6 +225,9 @@ export default function Cart() {
         pickup_time: orderType === 'pickup' ? `${deliveryDate} ${pickupTime}` : null,
         special_requests: specialRequests || null,
         depositor_name: depositorName,
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        customer_address: orderType === 'delivery' ? deliveryAddress : null,
         subtotal: subtotal,
         total: total,
         items: cart.map(item => ({
@@ -254,35 +280,74 @@ export default function Cart() {
             <i className="ri-shopping-bag-line text-orange-500"></i>
             주문 방식
           </h2>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="flex gap-2">
             <button
               onClick={() => setOrderType('delivery')}
-              className={`p-4 rounded-xl border-2 text-center cursor-pointer transition-all duration-200 ${
+              className={`flex-1 py-2 px-3 rounded-lg border text-center cursor-pointer transition-all duration-200 ${
                 orderType === 'delivery'
-                  ? 'border-orange-500 bg-orange-50 text-orange-600 shadow-md'
-                  : 'border-gray-200 text-gray-600 hover:border-orange-300 hover:bg-orange-25'
+                  ? 'border-orange-500 bg-orange-500 text-white'
+                  : 'border-gray-300 text-gray-600 hover:border-orange-300 hover:bg-orange-50'
               }`}
             >
-              <div className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center bg-orange-100">
-                <i className="ri-truck-line text-2xl text-orange-500"></i>
-              </div>
-              <div className="text-sm font-semibold mb-1">배달 주문</div>
-              <div className="text-xs text-gray-500">배달비 {storeInfo.delivery_fee.toLocaleString()}원</div>
+              <i className="ri-truck-line mr-1"></i>
+              <span className="text-sm font-medium">배달</span>
             </button>
             <button
               onClick={() => setOrderType('pickup')}
-              className={`p-4 rounded-xl border-2 text-center cursor-pointer transition-all duration-200 ${
+              className={`flex-1 py-2 px-3 rounded-lg border text-center cursor-pointer transition-all duration-200 ${
                 orderType === 'pickup'
-                  ? 'border-orange-500 bg-orange-50 text-orange-600 shadow-md'
-                  : 'border-gray-200 text-gray-600 hover:border-orange-300 hover:bg-orange-25'
+                  ? 'border-orange-500 bg-orange-500 text-white'
+                  : 'border-gray-300 text-gray-600 hover:border-orange-300 hover:bg-orange-50'
               }`}
             >
-              <div className="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center bg-orange-100">
-                <i className="ri-store-3-line text-2xl text-orange-500"></i>
-              </div>
-              <div className="text-sm font-semibold mb-1">매장 픽업</div>
-              <div className="text-xs text-gray-500">배달비 없음</div>
+              <i className="ri-store-3-line mr-1"></i>
+              <span className="text-sm font-medium">픽업</span>
             </button>
+          </div>
+        </div>
+
+        {/* 고객 정보 */}
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <i className="ri-user-line text-orange-500"></i>
+            고객 정보
+          </h2>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+            <div className="flex items-center text-blue-800">
+              <i className="ri-information-line mr-2"></i>
+              <div className="text-sm">
+                알림톡이 전송되므로 정확한 전화번호를 입력해주세요.
+              </div>
+            </div>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                고객명 <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                placeholder="이름을 입력해주세요"
+                className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                전화번호 <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="tel"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                placeholder="010-1234-5678 또는 01012345678"
+                className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+              <div className="text-xs text-gray-500 mt-1">
+                알림톡 발송용
+              </div>
+            </div>
           </div>
         </div>
 
@@ -297,7 +362,6 @@ export default function Cart() {
               <div className="flex items-center text-blue-800">
                 <i className="ri-information-line mr-2"></i>
                 <div className="text-sm">
-                  <div className="font-medium">주문 접수 안내</div>
                   <div>
                     {formatTime(storeInfo?.order_cutoff_time || '15:00')} 이후 주문은 다음날 배달됩니다.
                   </div>
@@ -380,7 +444,6 @@ export default function Cart() {
               <div className="flex items-center text-blue-800">
                 <i className="ri-information-line mr-2"></i>
                 <div className="text-sm">
-                  <div className="font-medium">주문 접수 안내</div>
                   <div>
                     {formatTime(storeInfo?.order_cutoff_time || '15:00')} 이후 주문은 다음날 픽업됩니다.
                   </div>
@@ -475,7 +538,7 @@ export default function Cart() {
         <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
           <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
             <i className="ri-bank-line text-orange-500"></i>
-            입금자 정보
+            입금자 정보 (무통장입금)
           </h2>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -491,13 +554,13 @@ export default function Cart() {
           </div>
         </div>
 
-        {/* 주문 상품 */}
+        {/* 주문 상품 및 결제 금액 */}
         <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
           <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
             <i className="ri-shopping-cart-line text-orange-500"></i>
             주문 상품
           </h2>
-          <div className="max-h-64 overflow-y-auto space-y-3 pr-2">
+          <div className="max-h-64 overflow-y-auto space-y-3 pr-2 mb-4">
             {cart.map((item) => (
               <div key={item.id} className="flex items-center justify-between py-2">
                 <div className="flex-1">
@@ -533,24 +596,12 @@ export default function Cart() {
               </div>
             ))}
           </div>
-        </div>
-
-        {/* 결제 금액 */}
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-          <h2 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <i className="ri-money-dollar-circle-line text-orange-500"></i>
-            결제 금액
-          </h2>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center py-2">
-              <span className="text-gray-600">상품 금액</span>
-              <span className="font-medium">{subtotal.toLocaleString()}원</span>
-            </div>
-            <div className="border-t border-gray-200 pt-3">
-              <div className="flex justify-between items-center">
-                <span className="font-bold text-lg text-gray-800">총 결제 금액</span>
-                <span className="font-bold text-2xl text-orange-500">{total.toLocaleString()}원</span>
-              </div>
+          
+          {/* 총 결제 금액 */}
+          <div className="border-t border-gray-200 pt-4">
+            <div className="flex justify-between items-center">
+              <span className="font-bold text-lg text-gray-800">총 결제 금액</span>
+              <span className="font-bold text-2xl text-orange-500">{total.toLocaleString()}원</span>
             </div>
           </div>
         </div>

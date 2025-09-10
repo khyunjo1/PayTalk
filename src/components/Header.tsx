@@ -1,9 +1,9 @@
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { useNewAuth } from '../hooks/useNewAuth';
 
 export default function Header() {
   const navigate = useNavigate();
-  const { userProfile } = useAuth();
+  const { user } = useNewAuth();
 
   return (
     <div className="bg-gradient-to-r from-orange-50 via-white to-orange-50 shadow-lg border-b border-orange-100">
@@ -20,14 +20,7 @@ export default function Header() {
             </h1>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate('/orders')}
-              className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-3 py-2 rounded-lg flex items-center whitespace-nowrap cursor-pointer text-xs font-medium transition-all duration-200 shadow-md hover:shadow-lg"
-            >
-              <i className="ri-file-list-3-line mr-2"></i>
-              주문내역
-            </button>
-            {userProfile?.role === 'owner' && (
+            {user?.role === 'owner' && (
               <>
                 <button
                   onClick={() => navigate('/owner/orders')}
@@ -45,7 +38,7 @@ export default function Header() {
                 </button>
               </>
             )}
-            {userProfile?.role === 'admin' && (
+            {user?.role === 'admin' && (
               <button
                 onClick={() => navigate('/admin')}
                 className="bg-white hover:bg-orange-500 text-gray-700 hover:text-white px-3 py-2 rounded-lg flex items-center whitespace-nowrap cursor-pointer text-xs font-medium border border-gray-300 hover:border-orange-500 transition-all duration-200 shadow-md hover:shadow-lg"
@@ -54,7 +47,7 @@ export default function Header() {
                 내 반찬가게 관리
               </button>
             )}
-            {userProfile?.role === 'super_admin' && (
+            {user?.role === 'super_admin' && (
               <button
                 onClick={() => navigate('/super-admin')}
                 className="bg-white hover:bg-orange-500 text-gray-700 hover:text-white px-3 py-2 rounded-lg flex items-center whitespace-nowrap cursor-pointer text-xs font-medium border border-gray-300 hover:border-orange-500 transition-all duration-200 shadow-md hover:shadow-lg"
