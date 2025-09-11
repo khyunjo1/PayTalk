@@ -198,8 +198,10 @@ export default function Menu() {
     }
     
     // 최소주문금액 충족 시 cart 페이지로 이동
+    console.log('장바구니로 이동:', cart);
     localStorage.setItem('cart', JSON.stringify(cart));
     localStorage.setItem('storeInfo', JSON.stringify(store));
+    console.log('navigate("/cart") 호출');
     navigate('/cart');
   };
 

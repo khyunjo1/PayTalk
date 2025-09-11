@@ -4,6 +4,36 @@ import { createOrder } from '../../lib/orderApi';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 
+// Cart 페이지는 인증 없이 접근 가능하도록 별도 Header 사용
+const CartHeader = () => {
+  const navigate = useNavigate();
+  
+  return (
+    <div className="bg-gradient-to-r from-orange-50 via-white to-orange-50 shadow-lg border-b border-orange-100">
+      <div className="px-4 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <img 
+              src="https://static.readdy.ai/image/912b0945f01d9fdb4ff4544659653c90/2d4890bd82abce85d430bd82d04df8d6.png" 
+              alt="페이톡 로고" 
+              className="w-6 h-6"
+            />
+            <h1 className="text-lg font-bold text-orange-500" style={{ fontFamily: "Pacifico, serif" }}>
+              페이톡
+            </h1>
+          </div>
+          <button
+            onClick={() => navigate('/homepage')}
+            className="text-orange-500 hover:text-orange-600 font-medium"
+          >
+            홈으로
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 interface CartItem {
   id: string;
   name: string;
@@ -258,7 +288,7 @@ export default function Cart() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      <Header />
+      <CartHeader />
       
       {/* 페이지 제목 - cart 페이지 전용 */}
       <div className="bg-white shadow-sm border-b">
