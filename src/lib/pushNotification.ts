@@ -47,14 +47,32 @@ export const registerServiceWorker = async (): Promise<ServiceWorkerRegistration
 
 // 푸시 구독 생성
 export const subscribeToPush = async (): Promise<PushSubscription | null> => {
-  const registration = await navigator.serviceWorker.ready;
-  
-  if (!registration.pushManager) {
-    console.log('이 브라우저는 푸시를 지원하지 않습니다.');
-    return null;
-  }
-
   try {
+    // Service Worker 지원 확인
+    if (!('serviceWorker' in navigator)) {
+      console.log('이 브라우저는 Service Worker를 지원하지 않습니다.');
+      return null;
+    }
+
+    // Service Worker 등록 확인
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    if (registrations.length === 0) {
+      console.log('Service Worker가 등록되지 않았습니다.');
+      return null;
+    }
+
+    // Service Worker 준비 대기
+    const registration = await navigator.serviceWorker.ready;
+    if (!registration) {
+      console.log('Service Worker가 준비되지 않았습니다.');
+      return null;
+    }
+    
+    if (!registration.pushManager) {
+      console.log('이 브라우저는 푸시를 지원하지 않습니다.');
+      return null;
+    }
+
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(process.env.VITE_VAPID_PUBLIC_KEY || '')

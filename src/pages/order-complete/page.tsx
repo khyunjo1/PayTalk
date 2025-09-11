@@ -113,6 +113,26 @@ export default function OrderComplete() {
 
   const handleLinkPushNotification = async () => {
     try {
+      // Service Worker 지원 확인
+      if (!('serviceWorker' in navigator)) {
+        alert('이 브라우저는 Service Worker를 지원하지 않습니다.');
+        return;
+      }
+
+      // Service Worker 등록 확인
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      if (registrations.length === 0) {
+        alert('Service Worker가 등록되지 않았습니다. 페이지를 새로고침해주세요.');
+        return;
+      }
+
+      // Service Worker 준비 대기
+      const registration = await navigator.serviceWorker.ready;
+      if (!registration) {
+        alert('Service Worker가 준비되지 않았습니다. 잠시 후 다시 시도해주세요.');
+        return;
+      }
+
       // 푸시 구독 생성
       const subscription = await subscribeToPush();
       if (!subscription) {
