@@ -142,18 +142,52 @@ export const loginSuperAdmin = async (password: string) => {
 // 모든 사용자 목록 조회 (승인 대기 + 승인된 사용자)
 export const getPendingUsers = async () => {
   try {
-    const { data, error } = await supabase
+    // 1. 먼저 사용자 목록을 가져옴
+    const { data: users, error: usersError } = await supabase
       .from('users')
       .select('*')
       .eq('role', 'admin')
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('사용자 조회 오류:', error);
-      throw error;
+    if (usersError) {
+      console.error('사용자 조회 오류:', usersError);
+      throw usersError;
     }
 
-    return data || [];
+    if (!users || users.length === 0) {
+      return [];
+    }
+
+    // 2. 각 사용자의 매장 정보를 별도로 조회
+    const usersWithStores = await Promise.all(
+      users.map(async (user) => {
+        try {
+          const { data: userStores } = await supabase
+            .from('user_stores')
+            .select(`
+              store_id,
+              stores (
+                name
+              )
+            `)
+            .eq('user_id', user.id)
+            .limit(1);
+
+          return {
+            ...user,
+            store_name: userStores?.[0]?.stores?.name || null
+          };
+        } catch (error) {
+          console.error(`사용자 ${user.id}의 매장 정보 조회 실패:`, error);
+          return {
+            ...user,
+            store_name: null
+          };
+        }
+      })
+    );
+
+    return usersWithStores;
   } catch (error) {
     console.error('사용자 조회 실패:', error);
     throw error;

@@ -9,6 +9,7 @@ interface PendingUser {
   status: 'pending' | 'approved' | 'rejected';
   role: 'admin' | 'super_admin';
   created_at: string;
+  store_name?: string | null;
 }
 
 interface UserManagementProps {
@@ -162,29 +163,47 @@ export default function UserManagement({ showToast }: UserManagementProps) {
                       <p className="text-xs text-gray-500">
                         신청일: {formatDate(user.created_at)}
                       </p>
+                      {user.status === 'approved' && user.store_name && (
+                        <p className="text-xs text-green-600 font-medium mt-1">
+                          <i className="ri-store-line mr-1"></i>
+                          {user.store_name}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-4">
-                  {/* 매장 선택 */}
-                  <div className="min-w-[200px]">
-                    <select
-                      value={selectedStore[user.id] || ''}
-                      onChange={(e) => setSelectedStore({
-                        ...selectedStore,
-                        [user.id]: e.target.value
-                      })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
-                    >
-                      <option value="">매장을 선택하세요</option>
-                      {stores.map((store) => (
-                        <option key={store.id} value={store.id}>
-                          {store.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {/* 매장 선택 (승인 대기 중인 사용자만) */}
+                  {user.status === 'pending' && (
+                    <div className="min-w-[200px]">
+                      <select
+                        value={selectedStore[user.id] || ''}
+                        onChange={(e) => setSelectedStore({
+                          ...selectedStore,
+                          [user.id]: e.target.value
+                        })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                      >
+                        <option value="">매장을 선택하세요</option>
+                        {stores.map((store) => (
+                          <option key={store.id} value={store.id}>
+                            {store.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  
+                  {/* 승인된 사용자의 매장명 표시 */}
+                  {user.status === 'approved' && user.store_name && (
+                    <div className="min-w-[200px]">
+                      <div className="px-3 py-2 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800 font-medium">
+                        <i className="ri-store-line mr-2"></i>
+                        {user.store_name}
+                      </div>
+                    </div>
+                  )}
                   
                   {/* 액션 버튼들 */}
                   <div className="flex space-x-2">

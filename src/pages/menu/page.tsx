@@ -243,13 +243,28 @@ export default function Menu() {
               <span className="font-medium">최소주문 {store.minimum_order_amount?.toLocaleString() || '0'}원</span>
             </div>
           </div>
+          
+          {/* 오늘의 반찬 날짜 표시 - 작은 배지 형태 */}
+          <div className="flex justify-center mt-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-orange-50 border border-orange-200 rounded-full">
+              <i className="ri-calendar-check-line text-orange-500 text-sm"></i>
+              <span className="text-xs font-medium text-orange-700">
+                {new Date().toLocaleDateString('ko-KR', { 
+                  month: 'long', 
+                  day: 'numeric',
+                  weekday: 'short'
+                })} 오늘의 반찬
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* 카테고리 탭 - 실제 존재하는 카테고리만 표시 */}
       {categories.length > 0 && (
-        <div className="bg-white px-4 py-4 border-b shadow-sm">
-          <div className="flex space-x-2 overflow-x-auto pb-1">
+        <div className="px-4 py-4">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+            <div className="flex space-x-2 overflow-x-auto pb-1">
             {categories.map(category => (
               <button
                 key={category}
@@ -264,23 +279,25 @@ export default function Menu() {
                 {category}
               </button>
             ))}
+            </div>
           </div>
         </div>
       )}
 
       {/* 메뉴 목록 */}
-      <div className="bg-white">
-        {filteredMenu.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <i className="ri-restaurant-line text-3xl text-orange-400"></i>
+      <div className="px-4 pb-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          {filteredMenu.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i className="ri-restaurant-line text-3xl text-orange-400"></i>
+              </div>
+              <h3 className="text-lg font-medium text-gray-600 mb-2">메뉴가 없습니다</h3>
+              <p className="text-gray-500">이 카테고리에 등록된 메뉴가 없습니다.</p>
             </div>
-            <h3 className="text-lg font-medium text-gray-600 mb-2">메뉴가 없습니다</h3>
-            <p className="text-gray-500">이 카테고리에 등록된 메뉴가 없습니다.</p>
-          </div>
-        ) : (
-          filteredMenu.map((item, index) => (
-            <div key={item.id} className={`px-4 py-4 hover:bg-gray-50 transition-colors duration-200 ${index !== filteredMenu.length - 1 ? 'border-b border-gray-100' : ''}`}>
+          ) : (
+            filteredMenu.map((item, index) => (
+              <div key={item.id} className={`px-4 py-4 hover:bg-gray-50 transition-colors duration-200 ${index !== filteredMenu.length - 1 ? 'border-b border-gray-100' : ''}`}>
               <div className="flex gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-1">
@@ -364,7 +381,8 @@ export default function Menu() {
               </div>
               </div>
             ))
-        )}
+          )}
+        </div>
       </div>
 
       {/* 메뉴와 푸터 사이 구분선 */}

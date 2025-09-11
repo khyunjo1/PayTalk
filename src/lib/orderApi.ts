@@ -209,6 +209,11 @@ export const updateOrderStatus = async (orderId: string, status: '입금대기' 
     throw error;
   }
 
+  // 주문 상태 변경 이벤트 발생 (다른 페이지에서 감지)
+  window.dispatchEvent(new CustomEvent('orderStatusChanged', {
+    detail: { orderId, status, updatedOrder: data }
+  }));
+
   // 주문 상태 변경 시 알림톡 발송 (입금확인, 배달완료만)
   if (status === '입금확인' || status === '배달완료') {
     try {

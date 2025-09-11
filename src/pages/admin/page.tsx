@@ -62,11 +62,12 @@ export default function Admin() {
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
   const [showPeriodDropdown, setShowPeriodDropdown] = useState<boolean>(false);
-  const [showStatusDropdown, setShowStatusDropdown] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'orders' | 'statistics' | 'menus' | 'store'>('orders');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage] = useState<number>(15);
+  const [showStatusConfirm, setShowStatusConfirm] = useState<boolean>(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState<{orderId: string, newStatus: Order['status']} | null>(null);
   
   // 표준 카테고리 정의
   const STANDARD_CATEGORIES = [
@@ -140,25 +141,32 @@ export default function Admin() {
     };
   }, [showPeriodDropdown]);
 
-  // 상태 드롭다운 외부 클릭 시 닫기
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Element;
-      if (showStatusDropdown && !target.closest('.status-dropdown-container')) {
-        setShowStatusDropdown(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showStatusDropdown]);
 
   // 필터나 검색어 변경 시 페이지 리셋
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedStatus, selectedPeriod, selectedDate, searchTerm]);
+
+  // 주문 상태 변경 이벤트 감지 (다른 페이지에서 상태 변경 시 자동 새로고침)
+  useEffect(() => {
+    const handleOrderStatusChanged = (event: CustomEvent) => {
+      const { orderId, status, updatedOrder } = event.detail;
+      console.log(`다른 페이지에서 주문 ${orderId} 상태가 ${status}로 변경됨. 데이터 새로고침 중...`);
+      
+      // 로컬 상태 업데이트
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId ? { ...order, status } : order
+        )
+      );
+    };
+
+    window.addEventListener('orderStatusChanged', handleOrderStatusChanged as EventListener);
+    
+    return () => {
+      window.removeEventListener('orderStatusChanged', handleOrderStatusChanged as EventListener);
+    };
+  }, []);
 
   // 메뉴 데이터 로드
   const loadMenus = async () => {
@@ -405,8 +413,17 @@ export default function Admin() {
     loadOrders();
   }, [user, storeId, storeName]);
 
-  const handleStatusChange = async (orderId: string, newStatus: Order['status']) => {
+  const handleStatusChange = (orderId: string, newStatus: Order['status']) => {
+    setPendingStatusChange({ orderId, newStatus });
+    setShowStatusConfirm(true);
+  };
+
+  const confirmStatusChange = async () => {
+    if (!pendingStatusChange) return;
+
     try {
+      const { orderId, newStatus } = pendingStatusChange;
+      
       // updateOrderStatus API 사용 (알림톡 발송 포함)
       await updateOrderStatus(orderId, newStatus);
 
@@ -419,7 +436,15 @@ export default function Admin() {
     } catch (error) {
       console.error('주문 상태 변경 오류:', error);
       alert('주문 상태 변경에 실패했습니다.');
+    } finally {
+      setShowStatusConfirm(false);
+      setPendingStatusChange(null);
     }
+  };
+
+  const cancelStatusChange = () => {
+    setShowStatusConfirm(false);
+    setPendingStatusChange(null);
   };
 
   const handleCancelOrder = (orderId: string) => {
@@ -833,6 +858,12 @@ export default function Admin() {
     };
     
     const period = periodMap[selectedPeriod] || '전체';
+    
+    // baseTitle이 빈 문자열이면 기간만 반환
+    if (baseTitle === '') {
+      return period;
+    }
+    
     return `${period} ${baseTitle}`;
   };
 
@@ -1266,84 +1297,39 @@ export default function Admin() {
                   <span className="text-sm font-medium text-gray-700 whitespace-nowrap">상태:</span>
                 </div>
                 
-                <div className="flex-1">
-                  <div className="relative status-dropdown-container">
+                <div className="flex gap-2 flex-wrap">
+                  {[
+                    { key: 'all', label: '전체', count: filteredOrdersByPeriod.length },
+                    { key: '입금대기', label: '입금대기', count: filteredOrdersByPeriod.filter(order => order.status === '입금대기').length },
+                    { key: '입금확인', label: '입금확인', count: filteredOrdersByPeriod.filter(order => order.status === '입금확인').length },
+                    { key: '배달완료', label: '배달완료', count: filteredOrdersByPeriod.filter(order => order.status === '배달완료').length }
+                  ].map((status) => (
                     <button
-                      onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-                      className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 cursor-pointer transition-all duration-200 hover:border-gray-400 flex items-center justify-between"
+                      key={status.key}
+                      onClick={() => setSelectedStatus(status.key)}
+                      className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
+                        selectedStatus === status.key
+                          ? 'bg-gray-800 text-white'
+                          : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                      }`}
                     >
-                      <span>
-                        {selectedStatus === 'all' ? `전체 (${filteredOrdersByPeriod.length})` :
-                         selectedStatus === '입금대기' ? `입금대기 (${filteredOrdersByPeriod.filter(order => order.status === '입금대기').length})` :
-                         selectedStatus === '입금확인' ? `입금확인 (${filteredOrdersByPeriod.filter(order => order.status === '입금확인').length})` :
-                         selectedStatus === '배달완료' ? `배달완료 (${filteredOrdersByPeriod.filter(order => order.status === '배달완료').length})` :
-                         `전체 (${filteredOrdersByPeriod.length})`}
-                      </span>
-                      <i className={`ri-arrow-down-s-line text-gray-400 text-sm transition-transform duration-200 ${showStatusDropdown ? 'rotate-180' : ''}`}></i>
+                      <span className="hidden sm:inline">{status.label} ({status.count})</span>
+                      <span className="sm:hidden">{status.label}</span>
                     </button>
-                    
-                    {showStatusDropdown && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-xl shadow-lg z-20 overflow-hidden">
-                        <button
-                          onClick={() => {
-                            setSelectedStatus('all');
-                            setShowStatusDropdown(false);
-                          }}
-                          className={`w-full px-4 py-3 text-left text-sm font-medium transition-colors duration-200 hover:bg-gray-50 ${
-                            selectedStatus === 'all' ? 'bg-orange-50 text-orange-600' : 'text-gray-700'
-                          }`}
-                        >
-                          전체 ({filteredOrdersByPeriod.length})
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedStatus('입금대기');
-                            setShowStatusDropdown(false);
-                          }}
-                          className={`w-full px-4 py-3 text-left text-sm font-medium transition-colors duration-200 hover:bg-gray-50 ${
-                            selectedStatus === '입금대기' ? 'bg-orange-50 text-orange-600' : 'text-gray-700'
-                          }`}
-                        >
-                          입금대기 ({filteredOrdersByPeriod.filter(order => order.status === '입금대기').length})
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedStatus('입금확인');
-                            setShowStatusDropdown(false);
-                          }}
-                          className={`w-full px-4 py-3 text-left text-sm font-medium transition-colors duration-200 hover:bg-gray-50 ${
-                            selectedStatus === '입금확인' ? 'bg-orange-50 text-orange-600' : 'text-gray-700'
-                          }`}
-                        >
-                          입금확인 ({filteredOrdersByPeriod.filter(order => order.status === '입금확인').length})
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedStatus('배달완료');
-                            setShowStatusDropdown(false);
-                          }}
-                          className={`w-full px-4 py-3 text-left text-sm font-medium transition-colors duration-200 hover:bg-gray-50 ${
-                            selectedStatus === '배달완료' ? 'bg-orange-50 text-orange-600' : 'text-gray-700'
-                          }`}
-                        >
-                          배달완료 ({filteredOrdersByPeriod.filter(order => order.status === '배달완료').length})
-                        </button>
-                    </div>
-                    )}
-                  </div>
+                  ))}
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-            {/* 오늘 주문 수 표시 */}
-            {paginatedOrders.length > 0 && (
+            {/* 오늘 주문 수 표시 - 검색어가 없을 때만 표시 */}
+            {paginatedOrders.length > 0 && !searchTerm && (
               <div className="mb-4 flex justify-center">
                 <div className="inline-flex items-center px-3 py-1.5 bg-gray-100 border border-gray-200 rounded-full">
                   <span className="text-gray-700 text-sm">
                     <i className="ri-calendar-line mr-1 text-orange-500"></i>
-                    오늘 {finalFilteredOrders.length}건의 주문
+                    {getPeriodTitle('')} {finalFilteredOrders.length}개의 주문이 들어왔습니다
                   </span>
                 </div>
               </div>
@@ -1473,20 +1459,12 @@ export default function Admin() {
                         {/* 입금대기 상태일 때 */}
                         {order.status === '입금대기' && (
                           <>
-                          <button
-                            onClick={() => handleStatusChange(order.id, '입금확인')}
-                            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
-                          >
-                            입금확인
+                            <button
+                              onClick={() => handleStatusChange(order.id, '입금확인')}
+                              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                            >
+                              입금확인
                             </button>
-                            {order.order_type === 'delivery' && (
-                              <button
-                                onClick={() => handleStatusChange(order.id, '배달완료')}
-                                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
-                              >
-                                배달완료
-                          </button>
-                        )}
                           </>
                         )}
                         
@@ -2412,6 +2390,37 @@ export default function Admin() {
               </div>
             </div>
           </>
+        )}
+      
+      {/* 상태 변경 확인 모달 */}
+      {showStatusConfirm && pendingStatusChange && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 mx-4 max-w-sm w-full">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i className="ri-question-line text-2xl text-orange-500"></i>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">상태 변경 확인</h3>
+              <p className="text-gray-600 mb-6">
+                주문 상태를 <span className="font-semibold text-orange-600">{pendingStatusChange.newStatus}</span>로 변경하시겠습니까?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={cancelStatusChange}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={confirmStatusChange}
+                  className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                >
+                  확인
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
         )}
       
       <Footer />

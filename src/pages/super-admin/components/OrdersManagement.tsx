@@ -51,8 +51,9 @@ export default function OrdersManagement({ showToast }: OrdersManagementProps) {
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
   const [showPeriodDropdown, setShowPeriodDropdown] = useState<boolean>(false);
-  const [showStatusDropdown, setShowStatusDropdown] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [showStatusConfirm, setShowStatusConfirm] = useState<boolean>(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState<{orderId: string, newStatus: Order['status']} | null>(null);
 
   // 모든 매장의 주문 데이터 로드
   useEffect(() => {
@@ -143,20 +144,6 @@ export default function OrdersManagement({ showToast }: OrdersManagementProps) {
     };
   }, [showPeriodDropdown]);
 
-  // 상태 드롭다운 외부 클릭 시 닫기
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Element;
-      if (showStatusDropdown && !target.closest('.status-dropdown-container')) {
-        setShowStatusDropdown(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showStatusDropdown]);
 
   const handleDateSelect = (date: string) => {
     setSelectedDate(date);
@@ -202,8 +189,17 @@ export default function OrdersManagement({ showToast }: OrdersManagementProps) {
     }
   };
 
-  const handleStatusChange = async (orderId: string, newStatus: Order['status']) => {
+  const handleStatusChange = (orderId: string, newStatus: Order['status']) => {
+    setPendingStatusChange({ orderId, newStatus });
+    setShowStatusConfirm(true);
+  };
+
+  const confirmStatusChange = async () => {
+    if (!pendingStatusChange) return;
+
     try {
+      const { orderId, newStatus } = pendingStatusChange;
+      
       // updateOrderStatus API 사용 (알림톡 발송 포함)
       const updatedOrder = await updateOrderStatus(orderId, newStatus);
       
@@ -217,8 +213,47 @@ export default function OrdersManagement({ showToast }: OrdersManagementProps) {
     } catch (error) {
       console.error('주문 상태 변경 오류:', error);
       showToast('주문 상태 변경에 실패했습니다');
+    } finally {
+      setShowStatusConfirm(false);
+      setPendingStatusChange(null);
     }
   };
+
+  const cancelStatusChange = () => {
+    setShowStatusConfirm(false);
+    setPendingStatusChange(null);
+  };
+
+  const canCancel = (status: Order['status']) => {
+    return status === '입금대기' || status === '입금확인';
+  };
+
+  const handleCancelOrder = (orderId: string) => {
+    if (confirm('정말로 주문을 취소하시겠습니까?')) {
+      setOrders(orders.filter(order => order.id !== orderId));
+    }
+  };
+
+  // 주문 상태 변경 이벤트 감지 (다른 페이지에서 상태 변경 시 자동 새로고침)
+  useEffect(() => {
+    const handleOrderStatusChanged = (event: CustomEvent) => {
+      const { orderId, status, updatedOrder } = event.detail;
+      console.log(`다른 페이지에서 주문 ${orderId} 상태가 ${status}로 변경됨. 데이터 새로고침 중...`);
+      
+      // 로컬 상태 업데이트
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId ? { ...order, status } : order
+        )
+      );
+    };
+
+    window.addEventListener('orderStatusChanged', handleOrderStatusChanged as EventListener);
+    
+    return () => {
+      window.removeEventListener('orderStatusChanged', handleOrderStatusChanged as EventListener);
+    };
+  }, []);
 
   const filteredOrdersByPeriod = filterOrdersByPeriod(orders, selectedPeriod, selectedDate);
   const filteredOrdersByStatus = selectedStatus === 'all'
@@ -392,82 +427,37 @@ export default function OrdersManagement({ showToast }: OrdersManagementProps) {
                 onChange={(e) => handleDateSelect(e.target.value)}
                     className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white transition-all duration-200 hover:bg-gray-100"
                   />
-                </div>
-              )}
             </div>
+          )}
+        </div>
 
             {/* 상태 필터 */}
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 min-w-0">
                 <i className="ri-filter-line text-gray-500 text-sm"></i>
                 <span className="text-sm font-medium text-gray-700 whitespace-nowrap">상태:</span>
-              </div>
-              
-              <div className="flex-1">
-                <div className="relative status-dropdown-container">
-                  <button
-                    onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 cursor-pointer transition-all duration-200 hover:border-gray-400 flex items-center justify-between"
-                  >
-                    <span>
-                      {selectedStatus === 'all' ? `전체 (${filteredOrdersByPeriod.length})` :
-                       selectedStatus === '입금대기' ? `입금대기 (${filteredOrdersByPeriod.filter(order => order.status === '입금대기').length})` :
-                       selectedStatus === '입금확인' ? `입금확인 (${filteredOrdersByPeriod.filter(order => order.status === '입금확인').length})` :
-                       selectedStatus === '배달완료' ? `배달완료 (${filteredOrdersByPeriod.filter(order => order.status === '배달완료').length})` :
-                       `전체 (${filteredOrdersByPeriod.length})`}
-                    </span>
-                    <i className={`ri-arrow-down-s-line text-gray-400 text-sm transition-transform duration-200 ${showStatusDropdown ? 'rotate-180' : ''}`}></i>
-                  </button>
-                  
-                  {showStatusDropdown && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-xl shadow-lg z-20 overflow-hidden">
-                      <button
-                        onClick={() => {
-                          setSelectedStatus('all');
-                          setShowStatusDropdown(false);
-                        }}
-                        className={`w-full px-4 py-3 text-left text-sm font-medium transition-colors duration-200 hover:bg-gray-50 ${
-                          selectedStatus === 'all' ? 'bg-orange-50 text-orange-600' : 'text-gray-700'
-                        }`}
-                      >
-                        전체 ({filteredOrdersByPeriod.length})
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedStatus('입금대기');
-                          setShowStatusDropdown(false);
-                        }}
-                        className={`w-full px-4 py-3 text-left text-sm font-medium transition-colors duration-200 hover:bg-gray-50 ${
-                          selectedStatus === '입금대기' ? 'bg-orange-50 text-orange-600' : 'text-gray-700'
-                        }`}
-                      >
-                        입금대기 ({filteredOrdersByPeriod.filter(order => order.status === '입금대기').length})
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedStatus('입금확인');
-                          setShowStatusDropdown(false);
-                        }}
-                        className={`w-full px-4 py-3 text-left text-sm font-medium transition-colors duration-200 hover:bg-gray-50 ${
-                          selectedStatus === '입금확인' ? 'bg-orange-50 text-orange-600' : 'text-gray-700'
-                        }`}
-                      >
-                        입금확인 ({filteredOrdersByPeriod.filter(order => order.status === '입금확인').length})
-                      </button>
-                <button
-                        onClick={() => {
-                          setSelectedStatus('배달완료');
-                          setShowStatusDropdown(false);
-                        }}
-                        className={`w-full px-4 py-3 text-left text-sm font-medium transition-colors duration-200 hover:bg-gray-50 ${
-                          selectedStatus === '배달완료' ? 'bg-orange-50 text-orange-600' : 'text-gray-700'
-                        }`}
-                      >
-                        배달완료 ({filteredOrdersByPeriod.filter(order => order.status === '배달완료').length})
-                </button>
-                    </div>
-                  )}
-                </div>
+      </div>
+
+              <div className="flex gap-2 flex-wrap">
+                {[
+                  { key: 'all', label: '전체', count: filteredOrdersByPeriod.length },
+                  { key: '입금대기', label: '입금대기', count: filteredOrdersByPeriod.filter(order => order.status === '입금대기').length },
+                  { key: '입금확인', label: '입금확인', count: filteredOrdersByPeriod.filter(order => order.status === '입금확인').length },
+                  { key: '배달완료', label: '배달완료', count: filteredOrdersByPeriod.filter(order => order.status === '배달완료').length }
+                ].map((status) => (
+          <button
+                    key={status.key}
+                    onClick={() => setSelectedStatus(status.key)}
+                    className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 ${
+                      selectedStatus === status.key
+                        ? 'bg-gray-800 text-white'
+                : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+                    <span className="hidden sm:inline">{status.label} ({status.count})</span>
+                    <span className="sm:hidden">{status.label}</span>
+          </button>
+        ))}
               </div>
             </div>
           </div>
@@ -598,12 +588,6 @@ export default function OrdersManagement({ showToast }: OrdersManagementProps) {
                           >
                             입금확인
                           </button>
-                          <button
-                            onClick={() => handleStatusChange(order.id, '배달완료')}
-                            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
-                          >
-                            배달완료
-                          </button>
                         </>
                       )}
                       
@@ -616,12 +600,14 @@ export default function OrdersManagement({ showToast }: OrdersManagementProps) {
                           >
                             입금대기로
                           </button>
-                          <button
-                            onClick={() => handleStatusChange(order.id, '배달완료')}
-                            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
-                          >
-                            배달완료
-                          </button>
+                          {order.order_type === 'delivery' && (
+                            <button
+                              onClick={() => handleStatusChange(order.id, '배달완료')}
+                              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                            >
+                              배달완료
+                            </button>
+                          )}
                         </>
                       )}
                       
@@ -642,6 +628,16 @@ export default function OrdersManagement({ showToast }: OrdersManagementProps) {
                           </button>
                         </>
                       )}
+                      
+                      {/* 주문취소 버튼 - 입금대기, 입금확인 상태에서만 표시 */}
+                      {canCancel(order.status) && (
+                        <button
+                          onClick={() => handleCancelOrder(order.id)}
+                          className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                        >
+                          주문취소
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -650,6 +646,37 @@ export default function OrdersManagement({ showToast }: OrdersManagementProps) {
           })
         )}
       </div>
+
+      {/* 상태 변경 확인 모달 */}
+      {showStatusConfirm && pendingStatusChange && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 mx-4 max-w-sm w-full">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i className="ri-question-line text-2xl text-orange-500"></i>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">상태 변경 확인</h3>
+              <p className="text-gray-600 mb-6">
+                주문 상태를 <span className="font-semibold text-orange-600">{pendingStatusChange.newStatus}</span>로 변경하시겠습니까?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={cancelStatusChange}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={confirmStatusChange}
+                  className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                >
+                  확인
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
