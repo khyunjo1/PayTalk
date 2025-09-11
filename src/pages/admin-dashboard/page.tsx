@@ -4,6 +4,7 @@ import { useNewAuth } from '../../hooks/useNewAuth';
 import { getUserOwnedStores } from '../../lib/database';
 import Footer from '../../components/Footer';
 import PWAInstallButton from '../../components/PWAInstallButton';
+import PushNotificationSettings from '../../components/PushNotificationSettings';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -219,6 +220,15 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+
+        {/* 푸시 알림 설정 */}
+        <div className="bg-white/70 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8">
+          <div className="text-center mb-6">
+            <h2 className="text-xl font-bold text-gray-800 mb-2">알림 설정</h2>
+            <p className="text-gray-500">새로운 주문이 들어오면 알림을 받으실 수 있습니다</p>
+          </div>
+          <PushNotificationSettings />
+        </div>
 
       </div>
       

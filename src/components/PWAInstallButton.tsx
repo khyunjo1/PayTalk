@@ -44,7 +44,19 @@ export default function PWAInstallButton({
   const handleInstall = async () => {
     if (!deferredPrompt) return;
 
-    // URL 파라미터 추가
+    // 1. 먼저 알림 권한 요청
+    if (Notification.permission === 'default') {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        alert('알림 권한이 거부되었습니다. 브라우저 설정에서 알림을 허용해주세요.');
+        return;
+      }
+    } else if (Notification.permission === 'denied') {
+      alert('알림 권한이 거부되었습니다. 브라우저 설정에서 알림을 허용해주세요.');
+      return;
+    }
+
+    // 2. URL 파라미터 추가
     const url = new URL(window.location.href);
     url.searchParams.set('redirect', redirectType);
     if (storeId) {
@@ -54,7 +66,7 @@ export default function PWAInstallButton({
     // URL 업데이트
     window.history.replaceState({}, '', url.toString());
 
-    // PWA 설치 프롬프트 표시
+    // 3. PWA 설치 프롬프트 표시
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     

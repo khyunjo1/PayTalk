@@ -136,7 +136,8 @@ export default function OrderComplete() {
       }
     } catch (error) {
       console.error('푸시 알림 연결 오류:', error);
-      alert('푸시 알림 설정 중 오류가 발생했습니다.');
+      console.error('오류 상세:', error);
+      alert(`푸시 알림 설정 중 오류가 발생했습니다: ${error.message || error}`);
     }
   };
 
