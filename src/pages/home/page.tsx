@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import { createInquiry } from '../../lib/inquiryApi';
 import { getHomeStats, type HomeStats } from '../../lib/statsApi';
 import PushNotificationSettings from '../../components/PushNotificationSettings';
 import PushNotificationTest from '../../components/PushNotificationTest';
+import { updateManifest } from '../../utils/manifestGenerator';
 
 export default function Home() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [showInquiryModal, setShowInquiryModal] = useState(false);
   const [inquiryData, setInquiryData] = useState({
     name: '',
@@ -23,7 +25,23 @@ export default function Home() {
 
   useEffect(() => {
     loadStats();
+    handleRedirect();
   }, []);
+
+  const handleRedirect = () => {
+    const redirect = searchParams.get('redirect');
+    const storeId = searchParams.get('storeId');
+    
+    if (redirect === 'admin') {
+      // 사장님용: admin-dashboard로 리다이렉트
+      updateManifest('admin');
+      navigate('/admin-dashboard');
+    } else if (redirect === 'menu' && storeId) {
+      // 소비자용: 특정 매장 메뉴로 리다이렉트
+      updateManifest('menu', storeId);
+      navigate(`/menu/${storeId}`);
+    }
+  };
 
   const loadStats = async () => {
     try {
