@@ -285,8 +285,8 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
   };
 
   const handleViewStoreAdmin = (store: Store) => {
-    // 매장 관리자 페이지로 이동 (storeId를 쿼리 파라미터로 전달)
-    navigate(`/admin?storeId=${store.id}&storeName=${encodeURIComponent(store.name)}`);
+    // 매장 관리자 페이지로 이동 (storeId를 URL 파라미터로 전달)
+    navigate(`/admin/${store.id}`);
     showToast(`${store.name} 관리자 페이지로 이동합니다`);
   };
 

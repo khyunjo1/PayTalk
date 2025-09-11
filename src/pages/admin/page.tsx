@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useNewAuth } from '../../hooks/useNewAuth';
 import { getUserStores } from '../../lib/database';
 import { getStores } from '../../lib/storeApi';
@@ -54,7 +54,6 @@ interface Menu {
 
 export default function Admin() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { user, loading } = useNewAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
@@ -98,7 +97,7 @@ export default function Admin() {
   
   // URL에서 매장 정보 가져오기
   const { storeId } = useParams<{ storeId: string }>();
-  const storeName = searchParams.get('storeName');
+  const [storeName, setStoreName] = useState<string>('');
   
   // storeId가 없으면 admin-dashboard로 리다이렉트
   useEffect(() => {
@@ -264,6 +263,7 @@ export default function Admin() {
           
           if (storeData) {
             setCurrentStore(storeData);
+            setStoreName(storeData.name); // 매장 이름 설정
             console.log('✅ 매장 정보 로드됨:', storeData);
           } else {
             console.log('⚠️ 매장 데이터 없음');
@@ -436,8 +436,14 @@ export default function Admin() {
   };
 
   const handleDateSelect = (date: string) => {
+    console.log('날짜 선택됨:', date);
+    if (date) {
     setSelectedDate(date);
     setSelectedPeriod('custom');
+    } else {
+      setSelectedDate('');
+      setSelectedPeriod('today'); // 날짜가 없으면 오늘로 돌아감
+    }
     setCurrentPage(1); // 페이지 리셋
     setShowDatePicker(false);
   };
@@ -490,10 +496,26 @@ export default function Admin() {
           const deliveryDate = getDeliveryDate(order);
           return deliveryDate === yesterdayDateString;
         });
-      case 'custom':
-        if (!customDate) return orders;
+      case 'week':
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay()); // 이번 주 월요일
+        const weekStartString = weekStart.toISOString().split('T')[0];
         return orders.filter(order => {
           const deliveryDate = getDeliveryDate(order);
+          return deliveryDate >= weekStartString && deliveryDate <= today.toISOString().split('T')[0];
+        });
+      case 'month':
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        const monthStartString = monthStart.toISOString().split('T')[0];
+        return orders.filter(order => {
+          const deliveryDate = getDeliveryDate(order);
+          return deliveryDate >= monthStartString && deliveryDate <= today.toISOString().split('T')[0];
+        });
+      case 'custom':
+        if (!customDate || customDate === '') return orders; // 날짜가 없으면 모든 주문 반환
+        return orders.filter(order => {
+          const deliveryDate = getDeliveryDate(order);
+          console.log('날짜 비교:', { deliveryDate, customDate, match: deliveryDate === customDate });
           return deliveryDate === customDate;
         });
       default:
@@ -518,7 +540,74 @@ export default function Admin() {
       .slice(0, 4);
   };
 
+  // 픽업 시간대별 주문 분석 함수
+  const getPickupTimeAnalysis = (orders: Order[]) => {
+    const pickupOrders = orders.filter(order => order.order_type === 'pickup');
+    
+    // 픽업 시간대별로 그룹화
+    const timeSlots: { [key: string]: number } = {};
+    
+    pickupOrders.forEach(order => {
+      if (order.pickup_time) {
+        const timeSlot = order.pickup_time;
+        timeSlots[timeSlot] = (timeSlots[timeSlot] || 0) + 1;
+      }
+    });
+    
+    return Object.entries(timeSlots)
+      .map(([time, orders]) => ({ time, orders }))
+      .sort((a, b) => b.orders - a.orders);
+  };
+
+  // 배달 시간대별 주문 분석 함수
+  const getDeliveryTimeAnalysis = (orders: Order[]) => {
+    const deliveryOrders = orders.filter(order => order.order_type === 'delivery');
+    
+    // 배달 시간대별로 그룹화
+    const timeSlots: { [key: string]: number } = {};
+    
+    deliveryOrders.forEach(order => {
+      if (order.delivery_time) {
+        const timeSlot = order.delivery_time;
+        timeSlots[timeSlot] = (timeSlots[timeSlot] || 0) + 1;
+      }
+    });
+    
+    return Object.entries(timeSlots)
+      .map(([time, orders]) => ({ time, orders }))
+      .sort((a, b) => b.orders - a.orders);
+  };
+
+
+  // 요일별 성과 분석 함수
+  const getWeeklyAnalysis = (orders: Order[]) => {
+    const days = ['일', '월', '화', '수', '목', '금', '토'];
+    
+    return days.map((dayName, dayIndex) => {
+      const dayOrders = orders.filter(order => {
+        const orderDay = new Date(order.created_at).getDay();
+        return orderDay === dayIndex;
+      });
+      
+      const revenue = dayOrders.reduce((sum, order) => sum + order.total, 0);
+      
+      return {
+        name: dayName,
+        orders: dayOrders.length,
+        revenue: revenue
+      };
+    });
+  };
+
   const filteredOrdersByPeriod = filterOrdersByPeriod(orders, selectedPeriod, selectedDate);
+  
+  // 디버깅용 로그
+  console.log('현재 필터 상태:', {
+    selectedPeriod,
+    selectedDate,
+    totalOrders: orders.length,
+    filteredOrders: filteredOrdersByPeriod.length
+  });
   const filteredOrdersByStatus = selectedStatus === 'all'
     ? filteredOrdersByPeriod
     : filteredOrdersByPeriod.filter(order => order.status === selectedStatus);
@@ -732,6 +821,20 @@ export default function Admin() {
   };
   
   const popularMenus = getPopularMenus(filteredOrdersByPeriod);
+  
+  // 기간별 제목 생성 함수
+  const getPeriodTitle = (baseTitle: string) => {
+    const periodMap: { [key: string]: string } = {
+      'today': '오늘',
+      'yesterday': '어제',
+      'week': '이번주',
+      'month': '이번달',
+      'custom': selectedDate ? selectedDate : '선택한 날짜'
+    };
+    
+    const period = periodMap[selectedPeriod] || '전체';
+    return `${period} ${baseTitle}`;
+  };
 
   const getStatusColor = (status: Order['status']) => {
     switch (status) {
@@ -756,27 +859,62 @@ export default function Admin() {
 
 
   // 통계 계산 함수들
-  const calculateStatistics = (orders: Order[]) => {
+  const calculateStatistics = (orders: Order[], period: string) => {
     const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
     const totalOrders = orders.length;
     const averageOrderValue = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
     
-    // 이전 기간과 비교 (간단한 예시 - 실제로는 더 정교한 계산 필요)
+    // 이전 기간과 비교하여 매출 증가율 계산
+    let previousPeriodRevenue = 0;
     const now = new Date();
-    const lastWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const lastWeekOrders = orders.filter(order => new Date(order.created_at) >= lastWeek);
-    const lastWeekRevenue = lastWeekOrders.reduce((sum, order) => sum + order.total, 0);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
-    const previousWeek = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-    const previousWeekOrders = orders.filter(order => {
-      const orderDate = new Date(order.created_at);
-      return orderDate >= previousWeek && orderDate < lastWeek;
-    });
-    const previousWeekRevenue = previousWeekOrders.reduce((sum, order) => sum + order.total, 0);
+    switch (period) {
+      case 'today':
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayOrders = orders.filter(order => {
+          const deliveryDate = getDeliveryDate(order);
+          return deliveryDate === yesterday.toISOString().split('T')[0];
+        });
+        previousPeriodRevenue = yesterdayOrders.reduce((sum, order) => sum + order.total, 0);
+        break;
+      case 'yesterday':
+        const dayBeforeYesterday = new Date(today);
+        dayBeforeYesterday.setDate(today.getDate() - 2);
+        const dayBeforeYesterdayOrders = orders.filter(order => {
+          const deliveryDate = getDeliveryDate(order);
+          return deliveryDate === dayBeforeYesterday.toISOString().split('T')[0];
+        });
+        previousPeriodRevenue = dayBeforeYesterdayOrders.reduce((sum, order) => sum + order.total, 0);
+        break;
+      case 'week':
+        const lastWeekStart = new Date(today);
+        lastWeekStart.setDate(today.getDate() - today.getDay() - 7);
+        const lastWeekEnd = new Date(today);
+        lastWeekEnd.setDate(today.getDate() - today.getDay() - 1);
+        const lastWeekOrders = orders.filter(order => {
+          const deliveryDate = getDeliveryDate(order);
+          return deliveryDate >= lastWeekStart.toISOString().split('T')[0] && 
+                 deliveryDate <= lastWeekEnd.toISOString().split('T')[0];
+        });
+        previousPeriodRevenue = lastWeekOrders.reduce((sum, order) => sum + order.total, 0);
+        break;
+      case 'month':
+        const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+        const lastMonthOrders = orders.filter(order => {
+          const deliveryDate = getDeliveryDate(order);
+          return deliveryDate >= lastMonth.toISOString().split('T')[0] && 
+                 deliveryDate <= lastMonthEnd.toISOString().split('T')[0];
+        });
+        previousPeriodRevenue = lastMonthOrders.reduce((sum, order) => sum + order.total, 0);
+        break;
+    }
     
-    const revenueGrowthRate = previousWeekRevenue > 0 
-      ? Math.round(((lastWeekRevenue - previousWeekRevenue) / previousWeekRevenue) * 100)
-      : 0;
+    const revenueGrowthRate = previousPeriodRevenue > 0 
+      ? Math.round(((totalRevenue - previousPeriodRevenue) / previousPeriodRevenue) * 100)
+      : totalRevenue > 0 ? 100 : 0;
 
     return {
       totalRevenue,
@@ -1112,9 +1250,10 @@ export default function Admin() {
                   <div className="flex-1">
                     <input
                       type="date"
-                      value={selectedDate}
+                      value={selectedDate || ''}
                       onChange={(e) => handleDateSelect(e.target.value)}
                       className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white transition-all duration-200 hover:bg-gray-100"
+                      placeholder="날짜를 선택하세요"
                     />
                   </div>
                 )}
@@ -1587,13 +1726,100 @@ export default function Admin() {
               </div>
             </div>
 
+            {/* 통계 필터 카드 */}
+            <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <i className="ri-calendar-check-line text-orange-500"></i>
+                <span className="text-sm font-medium text-gray-700">통계 기간</span>
+              </div>
+              
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { key: 'today', label: '오늘', icon: 'ri-calendar-today-line' },
+                  { key: 'yesterday', label: '어제', icon: '' },
+                  { key: 'week', label: '이번주', icon: 'ri-calendar-week-line' },
+                  { key: 'month', label: '이번달', icon: 'ri-calendar-month-line' }
+                ].map((period) => (
+                  <button
+                    key={period.key}
+                    onClick={() => handlePeriodSelect(period.key)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+                      selectedPeriod === period.key
+                        ? 'bg-orange-500 text-white shadow-md'
+                        : 'bg-gray-50 text-gray-600 hover:bg-orange-50 hover:text-orange-600 border border-gray-200'
+                    }`}
+                  >
+                    {period.icon && (
+                      <i className={`${period.icon} text-base ${selectedPeriod === period.key ? 'text-white' : 'text-gray-400'}`}></i>
+                    )}
+                    <span>{period.label}</span>
+                  </button>
+                ))}
+                
+                {/* 날짜 선택 버튼 */}
+                <div className="relative date-picker-container">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log('날짜 선택 버튼 클릭됨, 현재 selectedPeriod:', selectedPeriod);
+                      setShowDatePicker(!showDatePicker);
+                    }}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+                      selectedPeriod === 'custom'
+                        ? 'bg-orange-500 text-white shadow-md'
+                        : 'bg-gray-50 text-gray-600 hover:bg-orange-50 hover:text-orange-600 border border-gray-200'
+                    }`}
+                  >
+                    <i className={`ri-calendar-line text-base ${selectedPeriod === 'custom' ? 'text-white' : 'text-gray-400'}`}></i>
+                    <span>{selectedDate ? selectedDate : '날짜 선택'}</span>
+                  </button>
+                  
+                  {/* 달력 드롭다운 */}
+                  {showDatePicker && (
+                    <div 
+                      className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 p-3 min-w-[250px]"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <i className="ri-calendar-line text-orange-500 text-sm"></i>
+                        <span className="text-sm font-medium text-gray-700">날짜 선택</span>
+                      </div>
+                      <input
+                        type="date"
+                        value={selectedDate || ''}
+                        onChange={(e) => {
+                          console.log('날짜 선택됨:', e.target.value);
+                          handleDateSelect(e.target.value);
+                        }}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+                        max={new Date().toISOString().split('T')[0]}
+                        autoFocus
+                        placeholder="날짜를 선택하세요"
+                      />
+                      <div className="flex justify-end mt-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowDatePicker(false);
+                          }}
+                          className="px-3 py-1 text-xs text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors"
+                        >
+                          닫기
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* 통계 카드 */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
               <div className="bg-white rounded-lg p-4 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-medium text-gray-600">총 매출</p>
-                    <p className="text-lg font-bold text-green-600">{calculateStatistics(filteredOrdersByPeriod).totalRevenue.toLocaleString()}원</p>
+                    <p className="text-xs font-medium text-gray-600">{getPeriodTitle('총 매출')}</p>
+                    <p className="text-lg font-bold text-green-600">{calculateStatistics(filteredOrdersByPeriod, selectedPeriod).totalRevenue.toLocaleString()}원</p>
                   </div>
                   <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
                     <i className="ri-money-dollar-circle-line text-green-600"></i>
@@ -1604,8 +1830,8 @@ export default function Admin() {
               <div className="bg-white rounded-lg p-4 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-medium text-gray-600">총 주문수</p>
-                    <p className="text-lg font-bold text-blue-600">{calculateStatistics(filteredOrdersByPeriod).totalOrders.toLocaleString()}</p>
+                    <p className="text-xs font-medium text-gray-600">{getPeriodTitle('총 주문수')}</p>
+                    <p className="text-lg font-bold text-blue-600">{calculateStatistics(filteredOrdersByPeriod, selectedPeriod).totalOrders.toLocaleString()}</p>
                   </div>
                   <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
                     <i className="ri-shopping-cart-line text-blue-600"></i>
@@ -1616,8 +1842,8 @@ export default function Admin() {
               <div className="bg-white rounded-lg p-4 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-medium text-gray-600">평균 주문액</p>
-                    <p className="text-lg font-bold text-purple-600">{calculateStatistics(filteredOrdersByPeriod).averageOrderValue.toLocaleString()}원</p>
+                    <p className="text-xs font-medium text-gray-600">{getPeriodTitle('평균 주문액')}</p>
+                    <p className="text-lg font-bold text-purple-600">{calculateStatistics(filteredOrdersByPeriod, selectedPeriod).averageOrderValue.toLocaleString()}원</p>
                   </div>
                   <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
                     <i className="ri-bar-chart-line text-purple-600"></i>
@@ -1628,9 +1854,9 @@ export default function Admin() {
               <div className="bg-white rounded-lg p-4 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-medium text-gray-600">매출 증가율</p>
-                    <p className={`text-lg font-bold ${calculateStatistics(filteredOrdersByPeriod).revenueGrowthRate >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {calculateStatistics(filteredOrdersByPeriod).revenueGrowthRate >= 0 ? '+' : ''}{calculateStatistics(filteredOrdersByPeriod).revenueGrowthRate}%
+                    <p className="text-xs font-medium text-gray-600">{getPeriodTitle('매출 증가율')}</p>
+                    <p className={`text-lg font-bold ${calculateStatistics(filteredOrdersByPeriod, selectedPeriod).revenueGrowthRate >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {calculateStatistics(filteredOrdersByPeriod, selectedPeriod).revenueGrowthRate >= 0 ? '+' : ''}{calculateStatistics(filteredOrdersByPeriod, selectedPeriod).revenueGrowthRate}%
                     </p>
                   </div>
                   <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
@@ -1640,79 +1866,117 @@ export default function Admin() {
               </div>
             </div>
 
-            {/* 기간 필터 버튼 */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              {[
-                { key: 'today', label: '오늘' },
-                { key: 'yesterday', label: '어제' }
-              ].map((period) => (
-                <button
-                  key={period.key}
-                  onClick={() => handlePeriodSelect(period.key)}
-                  className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer ${
-                    selectedPeriod === period.key
-                      ? 'bg-orange-500 text-white'
-                      : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  {period.label}
-                </button>
-              ))}
-              
-              {/* 날짜 선택 버튼 */}
-              <div className="relative date-picker-container">
-                <button
-                  onClick={() => setShowDatePicker(!showDatePicker)}
-                  className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer flex items-center ${
-                    selectedPeriod === 'custom'
-                      ? 'bg-orange-500 text-white'
-                      : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <i className="ri-calendar-line mr-2"></i>
-                  {selectedDate ? selectedDate : '날짜 선택'}
-                </button>
-                
-                {/* 달력 드롭다운 */}
-                {showDatePicker && (
-                  <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 p-3">
-                    <input
-                      type="date"
-                      value={selectedDate}
-                      onChange={(e) => handleDateSelect(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                      max={new Date().toISOString().split('T')[0]}
-                    />
-                    <div className="flex justify-end mt-2">
-                      <button
-                        onClick={() => setShowDatePicker(false)}
-                        className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
-                      >
-                        닫기
-                      </button>
+            {/* 추가 통계 섹션 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              {/* 픽업 시간대별 주문 분석 */}
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <i className="ri-store-line text-orange-500"></i>
+                  {getPeriodTitle('픽업 시간대별 주문')}
+                </h3>
+                <div className="space-y-3">
+                  {getPickupTimeAnalysis(filteredOrdersByPeriod).map((slot, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">{slot.time}</span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-24 h-2 bg-gray-200 rounded-full">
+                          <div 
+                            className="h-2 bg-orange-500 rounded-full transition-all duration-300"
+                            style={{ width: `${getPickupTimeAnalysis(filteredOrdersByPeriod).length > 0 ? (slot.orders / Math.max(...getPickupTimeAnalysis(filteredOrdersByPeriod).map(s => s.orders))) * 100 : 0}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-sm font-medium text-gray-800 w-8 text-right">{slot.orders}건</span>
+                      </div>
                     </div>
+                  ))}
+                  {getPickupTimeAnalysis(filteredOrdersByPeriod).length === 0 && (
+                    <div className="text-center text-gray-500 py-4">
+                      <i className="ri-store-line text-2xl mb-2"></i>
+                      <p className="text-sm">픽업 주문이 없습니다</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 배달 시간대별 주문 분석 */}
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <i className="ri-truck-line text-orange-500"></i>
+                  {getPeriodTitle('배달 시간대별 주문')}
+                </h3>
+                <div className="space-y-3">
+                  {getDeliveryTimeAnalysis(filteredOrdersByPeriod).map((slot, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">{slot.time}</span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-24 h-2 bg-gray-200 rounded-full">
+                          <div 
+                            className="h-2 bg-orange-500 rounded-full transition-all duration-300"
+                            style={{ width: `${getDeliveryTimeAnalysis(filteredOrdersByPeriod).length > 0 ? (slot.orders / Math.max(...getDeliveryTimeAnalysis(filteredOrdersByPeriod).map(s => s.orders))) * 100 : 0}%` }}
+                          ></div>
+                    </div>
+                        <span className="text-sm font-medium text-gray-800 w-8 text-right">{slot.orders}건</span>
+                      </div>
+                    </div>
+                  ))}
+                  {getDeliveryTimeAnalysis(filteredOrdersByPeriod).length === 0 && (
+                    <div className="text-center text-gray-500 py-4">
+                      <i className="ri-truck-line text-2xl mb-2"></i>
+                      <p className="text-sm">배달 주문이 없습니다</p>
                   </div>
                 )}
+                </div>
+              </div>
+            </div>
+
+            {/* 요일별 성과 */}
+            <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <i className="ri-calendar-line text-orange-500"></i>
+                요일별 성과 (전체 기간)
+              </h3>
+              <div className="grid grid-cols-7 gap-2">
+                {getWeeklyAnalysis(orders).map((day, index) => (
+                  <div key={index} className="text-center">
+                    <div className="text-xs text-gray-500 mb-1">{day.name}</div>
+                    <div className="text-lg font-bold text-gray-800">{day.orders}</div>
+                    <div className="text-xs text-gray-500">{day.revenue.toLocaleString()}원</div>
+                    <div className="w-full h-1 bg-gray-200 rounded-full mt-2">
+                      <div 
+                        className="h-1 bg-orange-500 rounded-full transition-all duration-300"
+                        style={{ width: `${getWeeklyAnalysis(orders).length > 0 ? (day.orders / Math.max(...getWeeklyAnalysis(orders).map(d => d.orders))) * 100 : 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
             {/* 인기 메뉴 */}
             <div className="bg-white rounded-lg p-4 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">인기 메뉴</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">{getPeriodTitle('인기 메뉴')}</h3>
               <div className="space-y-3">
                 {popularMenus.length > 0 ? (
                   popularMenus.map((menu, index) => (
-                    <div key={index} className="flex items-center justify-between">
-                      <span className="text-gray-600">{menu.name}</span>
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center">
-                        <span className="text-sm font-semibold text-orange-600">{menu.count}개</span>
+                        <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center mr-3">
+                          <span className="text-orange-600 font-bold text-sm">#{index + 1}</span>
+                        </div>
+                        <span className="text-gray-800 font-medium">{menu.name}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="text-sm font-semibold text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
+                          {menu.count}개
+                        </span>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="text-center text-gray-500 py-4">
-                    <i className="ri-restaurant-line text-2xl mb-2"></i>
-                    <p>선택한 기간에 주문된 메뉴가 없습니다.</p>
+                  <div className="text-center text-gray-500 py-8">
+                    <i className="ri-restaurant-line text-4xl mb-3 text-gray-300"></i>
+                    <p className="text-lg">주문된 메뉴가 없습니다</p>
+                    <p className="text-sm">선택한 기간에 주문된 메뉴가 없습니다</p>
                   </div>
                 )}
               </div>

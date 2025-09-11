@@ -134,78 +134,86 @@ export default function OrderComplete() {
           </div>
         </div>
 
-        {/* 입금 정보 카드 */}
+        {/* 주문 상세 정보 카드 */}
         <div className="bg-white rounded-2xl p-6 shadow-lg">
-          <h2 className="text-lg font-bold text-gray-800 mb-4 text-center">입금 정보</h2>
-          
-          <div className="bg-gray-50 rounded-xl p-4 mb-4">
-            <div className="text-sm text-gray-600 mb-2">입금 계좌</div>
-            <div className="font-mono text-lg font-bold text-gray-800 mb-1">
-              {orderData.stores.bank_account}
+          {/* 입금 정보 섹션 */}
+          <div className="mb-6">
+            <h2 className="text-lg font-bold text-gray-800 mb-4">입금 정보</h2>
+            
+            <div className="bg-gray-50 rounded-xl p-4 mb-4">
+              <div className="text-sm text-gray-600 mb-2">입금 계좌</div>
+              <div className="font-mono text-lg font-bold text-gray-800 mb-1">
+                {orderData.stores.bank_account}
+              </div>
+              <div className="text-sm text-gray-600">
+                예금주: {orderData.stores.account_holder}
+              </div>
             </div>
-            <div className="text-sm text-gray-600">
-              예금주: {orderData.stores.account_holder}
+
+            <button
+              onClick={copyAccountNumber}
+              className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+            >
+              <i className="ri-file-copy-line mr-1"></i>
+              복사
+            </button>
+          </div>
+
+          {/* 구분선 */}
+          <div className="flex items-center my-6">
+            <div className="flex-1 h-px bg-gray-200"></div>
+          </div>
+
+          {/* 배달/픽업 정보 섹션 */}
+          <div className="mb-6">
+            <h2 className="text-lg font-bold text-gray-800 mb-4">
+              {orderData.order_type === 'delivery' ? '배달 정보' : '픽업 정보'}
+            </h2>
+            
+            <div className="space-y-3 mb-6">
+              {orderData.delivery_address && (
+                <div className="flex items-start gap-3">
+                  <i className="ri-map-pin-line text-orange-500 mt-1"></i>
+                  <div>
+                    <div className="text-sm text-gray-600">배달 주소</div>
+                    <div className="text-gray-800">{orderData.delivery_address}</div>
+                  </div>
+                </div>
+              )}
+              
+              {orderData.delivery_time && (
+                <div className="flex items-start gap-3">
+                  <i className="ri-time-line text-orange-500 mt-1"></i>
+                  <div>
+                    <div className="text-sm text-gray-600">배달 시간</div>
+                    <div className="text-gray-800">{orderData.delivery_time}</div>
+                  </div>
+                </div>
+              )}
+              
+              {orderData.pickup_time && (
+                <div className="flex items-start gap-3">
+                  <i className="ri-time-line text-orange-500 mt-1"></i>
+                  <div>
+                    <div className="text-sm text-gray-600">픽업 시간</div>
+                    <div className="text-gray-800">{orderData.pickup_time}</div>
+                  </div>
+                </div>
+              )}
+              
+              {orderData.special_requests && (
+                <div className="flex items-start gap-3">
+                  <i className="ri-message-line text-orange-500 mt-1"></i>
+                  <div>
+                    <div className="text-sm text-gray-600">요청사항</div>
+                    <div className="text-gray-800">{orderData.special_requests}</div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          <button
-            onClick={copyAccountNumber}
-            className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-          >
-            <i className="ri-file-copy-line mr-1"></i>
-            복사
-          </button>
-        </div>
-
-        {/* 배달/픽업 정보 카드 */}
-        <div className="bg-white rounded-2xl p-6 shadow-lg">
-          <h2 className="text-lg font-bold text-gray-800 mb-4">
-            {orderData.order_type === 'delivery' ? '배달 정보' : '픽업 정보'}
-          </h2>
-          
-          <div className="space-y-3 mb-6">
-            {orderData.delivery_address && (
-              <div className="flex items-start gap-3">
-                <i className="ri-map-pin-line text-orange-500 mt-1"></i>
-                <div>
-                  <div className="text-sm text-gray-600">배달 주소</div>
-                  <div className="text-gray-800">{orderData.delivery_address}</div>
-                </div>
-              </div>
-            )}
-            
-            {orderData.delivery_time && (
-              <div className="flex items-start gap-3">
-                <i className="ri-time-line text-orange-500 mt-1"></i>
-                <div>
-                  <div className="text-sm text-gray-600">배달 시간</div>
-                  <div className="text-gray-800">{orderData.delivery_time}</div>
-                </div>
-              </div>
-            )}
-            
-            {orderData.pickup_time && (
-              <div className="flex items-start gap-3">
-                <i className="ri-time-line text-orange-500 mt-1"></i>
-                <div>
-                  <div className="text-sm text-gray-600">픽업 시간</div>
-                  <div className="text-gray-800">{orderData.pickup_time}</div>
-                </div>
-              </div>
-            )}
-            
-            {orderData.special_requests && (
-              <div className="flex items-start gap-3">
-                <i className="ri-message-line text-orange-500 mt-1"></i>
-                <div>
-                  <div className="text-sm text-gray-600">요청사항</div>
-                  <div className="text-gray-800">{orderData.special_requests}</div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* 주문 내역 - 헤딩 없이 배달 정보 아래에 통합 */}
+          {/* 주문 내역 */}
           <div className="border-t border-gray-200 pt-4">
             <div className="space-y-3 mb-4">
               {orderData.order_items.map((item, index) => (
