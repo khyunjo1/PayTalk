@@ -4,6 +4,7 @@ import { getStore, getMenus } from '../../lib/database';
 import { useNewAuth } from '../../hooks/useNewAuth';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import PWAInstallButton from '../../components/PWAInstallButton';
 
 interface MenuItem {
   id: string;
@@ -251,6 +252,15 @@ export default function Menu() {
                 })} 오늘의 반찬
               </span>
             </div>
+          </div>
+          
+          {/* PWA 설치 버튼 */}
+          <div className="flex justify-center mt-4">
+            <PWAInstallButton 
+              redirectType="menu" 
+              storeId={storeId} 
+              className="text-sm"
+            />
           </div>
         </div>
       </div>

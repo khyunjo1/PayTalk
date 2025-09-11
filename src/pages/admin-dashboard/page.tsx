@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useNewAuth } from '../../hooks/useNewAuth';
 import { getUserOwnedStores } from '../../lib/database';
 import Footer from '../../components/Footer';
+import PWAInstallButton from '../../components/PWAInstallButton';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -137,6 +138,10 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="flex items-center space-x-6">
+              <PWAInstallButton 
+                redirectType="admin" 
+                className="text-sm"
+              />
               <div className="text-right">
                 <p className="text-sm font-semibold text-gray-800">{user.name}님</p>
                 <p className="text-xs text-orange-500 font-medium">사장님</p>

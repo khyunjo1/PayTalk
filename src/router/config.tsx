@@ -17,6 +17,10 @@ import OwnerMenu from "../pages/owner/menu/page";
 const routes: RouteObject[] = [
   {
     path: "/",
+    element: <AdminDashboard />,
+  },
+  {
+    path: "/homepage",
     element: <Home />,
   },
   {

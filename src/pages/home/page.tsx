@@ -33,9 +33,9 @@ export default function Home() {
     const storeId = searchParams.get('storeId');
     
     if (redirect === 'admin') {
-      // 사장님용: admin-dashboard로 리다이렉트
+      // 사장님용: 루트(admin-dashboard)로 리다이렉트
       updateManifest('admin');
-      navigate('/admin-dashboard');
+      navigate('/');
     } else if (redirect === 'menu' && storeId) {
       // 소비자용: 특정 매장 메뉴로 리다이렉트
       updateManifest('menu', storeId);
