@@ -21,6 +21,9 @@ export default function UserManagement({ showToast }: UserManagementProps) {
   const [stores, setStores] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStore, setSelectedStore] = useState<{ [key: string]: string }>({});
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+  const [userToDelete, setUserToDelete] = useState<{id: string, name: string} | null>(null);
 
   useEffect(() => {
     loadData();
@@ -81,6 +84,39 @@ export default function UserManagement({ showToast }: UserManagementProps) {
     }
   };
 
+  const handleDeleteUser = (userId: string, userName: string) => {
+    setUserToDelete({ id: userId, name: userName });
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return;
+
+    try {
+      await rejectUser(userToDelete.id);
+      showToast(`${userToDelete.name}님을 삭제했습니다.`);
+      loadData(); // 데이터 새로고침
+    } catch (error) {
+      console.error('삭제 실패:', error);
+      showToast('삭제에 실패했습니다.');
+    } finally {
+      setShowDeleteConfirm(false);
+      setUserToDelete(null);
+    }
+  };
+
+  const cancelDeleteUser = () => {
+    setShowDeleteConfirm(false);
+    setUserToDelete(null);
+  };
+
+  // 검색 필터링
+  const filteredUsers = pendingUsers.filter(user => 
+    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.phone.includes(searchTerm) ||
+    (user.store_name && user.store_name.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('ko-KR', {
       year: 'numeric',
@@ -103,7 +139,7 @@ export default function UserManagement({ showToast }: UserManagementProps) {
     <div className="space-y-6">
       {/* 헤더 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-xl font-bold text-gray-800">사장님 관리</h2>
             <p className="text-sm text-gray-600 mt-1">
@@ -123,22 +159,56 @@ export default function UserManagement({ showToast }: UserManagementProps) {
               </div>
               <div className="text-sm text-gray-500">승인 완료</div>
             </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-blue-500">
+                {pendingUsers.length}
+              </div>
+              <div className="text-sm text-gray-500">전체 사장님</div>
+            </div>
           </div>
+        </div>
+        
+        {/* 검색 기능 */}
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
+            <div className="relative">
+              <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+              <input
+                type="text"
+                placeholder="사장님 이름, 전화번호, 매장명으로 검색..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              />
+            </div>
+          </div>
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="px-3 py-2 text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              <i className="ri-close-line text-lg"></i>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* 승인 대기 목록 */}
-      {pendingUsers.length === 0 ? (
+      {/* 사장님 목록 */}
+      {filteredUsers.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <i className="ri-user-check-line text-2xl text-gray-400"></i>
           </div>
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">승인 대기 중인 사장님이 없습니다</h3>
-          <p className="text-gray-500">새로운 가입 신청이 있으면 여기에 표시됩니다.</p>
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">
+            {searchTerm ? '검색 결과가 없습니다' : '사장님이 없습니다'}
+          </h3>
+          <p className="text-gray-500">
+            {searchTerm ? '다른 검색어로 시도해보세요.' : '새로운 가입 신청이 있으면 여기에 표시됩니다.'}
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
-          {pendingUsers.map((user) => (
+          {filteredUsers.map((user) => (
             <div key={user.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
@@ -228,22 +298,73 @@ export default function UserManagement({ showToast }: UserManagementProps) {
                       </>
                     )}
                     {user.status === 'approved' && (
-                      <span className="px-4 py-2 bg-green-100 text-green-800 rounded-lg text-sm font-medium flex items-center space-x-2">
-                        <i className="ri-check-double-line"></i>
-                        <span>승인 완료</span>
-                      </span>
+                      <>
+                        <span className="px-4 py-2 bg-green-100 text-green-800 rounded-lg text-sm font-medium flex items-center space-x-2">
+                          <i className="ri-check-double-line"></i>
+                          <span>승인 완료</span>
+                        </span>
+                        <button
+                          onClick={() => handleDeleteUser(user.id, user.name)}
+                          className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center space-x-2"
+                        >
+                          <i className="ri-delete-bin-line"></i>
+                          <span>삭제</span>
+                        </button>
+                      </>
                     )}
                     {user.status === 'rejected' && (
-                      <span className="px-4 py-2 bg-red-100 text-red-800 rounded-lg text-sm font-medium flex items-center space-x-2">
-                        <i className="ri-close-circle-line"></i>
-                        <span>거부됨</span>
-                      </span>
+                      <>
+                        <span className="px-4 py-2 bg-red-100 text-red-800 rounded-lg text-sm font-medium flex items-center space-x-2">
+                          <i className="ri-close-circle-line"></i>
+                          <span>거부됨</span>
+                        </span>
+                        <button
+                          onClick={() => handleDeleteUser(user.id, user.name)}
+                          className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center space-x-2"
+                        >
+                          <i className="ri-delete-bin-line"></i>
+                          <span>삭제</span>
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* 삭제 확인 모달 */}
+      {showDeleteConfirm && userToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 mx-4 max-w-sm w-full">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i className="ri-delete-bin-line text-2xl text-red-500"></i>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">사장님 삭제</h3>
+              <p className="text-gray-600 mb-6">
+                <span className="font-semibold text-red-600">{userToDelete.name}</span>님을 정말로 삭제하시겠습니까?
+                <br />
+                <span className="text-sm text-gray-500">이 작업은 되돌릴 수 없습니다.</span>
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={cancelDeleteUser}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={confirmDeleteUser}
+                  className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                >
+                  삭제
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

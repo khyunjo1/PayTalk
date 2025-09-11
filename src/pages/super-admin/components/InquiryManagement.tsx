@@ -1,335 +1,257 @@
-
-import { useState } from 'react';
-
-interface Inquiry {
-  id: string;
-  name: string;
-  storeName: string;
-  storeAddress: string;
-  phone: string;
-  other?: string;
-  status: 'pending' | 'approved' | 'rejected';
-  createdAt: string;
-}
+import { useState, useEffect } from 'react';
+import { getInquiries, updateInquiryStatus, deleteInquiry, type Inquiry } from '../../../lib/inquiryApi';
 
 interface InquiryManagementProps {
   showToast: (message: string) => void;
 }
 
 export default function InquiryManagement({ showToast }: InquiryManagementProps) {
-  const [inquiries, setInquiries] = useState<Inquiry[]>([
-    {
-      id: '1',
-      name: '김사장',
-      storeName: '전통반찬집',
-      storeAddress: '서울시 강남구 테헤란로 123',
-      phone: '02-1234-5678',
-      other: '주말 영업 가능, 배달 가능 지역은 강남구 전체입니다.',
-      status: 'pending',
-      createdAt: '2024-01-15T10:30:00'
-    },
-    {
-      id: '2',
-      name: '이사장',
-      storeName: '홈메이드반찬',
-      storeAddress: '경기도 성남시 분당구 정자로 456',
-      phone: '031-987-6543',
-      other: '오전 9시부터 오후 8시까지 영업',
-      status: 'pending',
-      createdAt: '2024-01-14T14:20:00'
-    },
-    {
-      id: '3',
-      name: '박사장',
-      storeName: '건강반찬마켓',
-      storeAddress: '인천시 남동구 구월로 789',
-      phone: '032-555-7777',
-      status: 'approved',
-      createdAt: '2024-01-10T09:15:00'
-    }
-  ]);
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+  const [inquiryToDelete, setInquiryToDelete] = useState<{id: string, name: string} | null>(null);
 
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
+  useEffect(() => {
+    loadInquiries();
+  }, []);
 
-  const filteredInquiries = selectedStatus === 'all' 
-    ? inquiries 
-    : inquiries.filter(inquiry => inquiry.status === selectedStatus);
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'pending': return '대기중';
-      case 'approved': return '승인됨';
-      case 'rejected': return '거절됨';
-      default: return status;
+  const loadInquiries = async () => {
+    try {
+      setLoading(true);
+      const data = await getInquiries();
+      setInquiries(data);
+    } catch (error) {
+      console.error('문의 로드 실패:', error);
+      showToast('문의를 불러오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'approved': return 'bg-green-100 text-green-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+  const handleStatusChange = async (inquiryId: string, newStatus: '확인' | '미확인') => {
+    try {
+      await updateInquiryStatus(inquiryId, newStatus);
+      setInquiries(inquiries.map(inquiry => 
+        inquiry.id === inquiryId ? { ...inquiry, status: newStatus } : inquiry
+      ));
+      showToast(`문의 상태가 "${newStatus}"로 변경되었습니다.`);
+    } catch (error) {
+      console.error('상태 변경 실패:', error);
+      showToast('상태 변경에 실패했습니다.');
     }
   };
+
+  const handleDeleteInquiry = (inquiryId: string, name: string) => {
+    setInquiryToDelete({ id: inquiryId, name });
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteInquiry = async () => {
+    if (!inquiryToDelete) return;
+
+    try {
+      await deleteInquiry(inquiryToDelete.id);
+      setInquiries(inquiries.filter(inquiry => inquiry.id !== inquiryToDelete.id));
+      showToast(`${inquiryToDelete.name}님의 문의를 삭제했습니다.`);
+    } catch (error) {
+      console.error('삭제 실패:', error);
+      showToast('삭제에 실패했습니다.');
+    } finally {
+      setShowDeleteConfirm(false);
+      setInquiryToDelete(null);
+    }
+  };
+
+  const cancelDeleteInquiry = () => {
+    setShowDeleteConfirm(false);
+    setInquiryToDelete(null);
+  };
+
+  // 검색 필터링
+  const filteredInquiries = inquiries.filter(inquiry => 
+    inquiry.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    inquiry.phone.includes(searchTerm) ||
+    inquiry.store_name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return {
-      date: date.toLocaleDateString('ko-KR'),
-      time: date.toLocaleTimeString('ko-KR', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      })
-    };
+    return new Date(dateString).toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
-  const handleApprove = (inquiryId: string) => {
-    const inquiry = inquiries.find(i => i.id === inquiryId);
-    if (!inquiry) return;
-
-    if (confirm(`${inquiry.storeName} 매장 개설을 승인하시겠습니까?`)) {
-      setInquiries(inquiries.map(i => 
-        i.id === inquiryId 
-          ? { ...i, status: 'approved' }
-          : i
-      ));
-      showToast(`${inquiry.storeName} 매장 개설이 승인되었습니다`);
-    }
-  };
-
-  const handleReject = (inquiryId: string) => {
-    const inquiry = inquiries.find(i => i.id === inquiryId);
-    if (!inquiry) return;
-
-    if (confirm(`${inquiry.storeName} 매장 개설 문의를 거절하시겠습니까?`)) {
-      setInquiries(inquiries.map(i => 
-        i.id === inquiryId 
-          ? { ...i, status: 'rejected' }
-          : i
-      ));
-      showToast(`${inquiry.storeName} 매장 개설 문의가 거절되었습니다`);
-    }
-  };
-
-  const handleViewDetails = (inquiry: Inquiry) => {
-    setSelectedInquiry(inquiry);
-    setShowDetailModal(true);
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800">문의 관리</h2>
-          <p className="text-gray-600">매장 개설 문의를 관리합니다</p>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-xl font-bold text-gray-800">문의 관리</h2>
+            <p className="text-sm text-gray-600 mt-1">
+              매장 개설 문의를 확인하고 관리할 수 있습니다.
+            </p>
+          </div>
+          <div className="flex space-x-6">
+            <div className="text-right">
+              <div className="text-2xl font-bold text-orange-500">
+                {inquiries.filter(i => i.status === '미확인').length}
+              </div>
+              <div className="text-sm text-gray-500">미확인</div>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-green-500">
+                {inquiries.filter(i => i.status === '확인').length}
+              </div>
+              <div className="text-sm text-gray-500">확인</div>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-blue-500">
+                {inquiries.length}
+              </div>
+              <div className="text-sm text-gray-500">전체 문의</div>
+            </div>
+          </div>
+        </div>
+        
+        {/* 검색 기능 */}
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
+            <div className="relative">
+              <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+              <input
+                type="text"
+                placeholder="이름, 전화번호, 가게명으로 검색..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              />
+            </div>
+          </div>
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="px-3 py-2 text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              <i className="ri-close-line text-lg"></i>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* 필터 */}
-      <div className="bg-white rounded-lg p-4 shadow-sm">
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setSelectedStatus('all')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium cursor-pointer ${
-              selectedStatus === 'all'
-                ? 'bg-orange-500 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            전체
-          </button>
-          <button
-            onClick={() => setSelectedStatus('pending')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium cursor-pointer ${
-              selectedStatus === 'pending'
-                ? 'bg-orange-500 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            대기중
-          </button>
-          <button
-            onClick={() => setSelectedStatus('approved')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium cursor-pointer ${
-              selectedStatus === 'approved'
-                ? 'bg-orange-500 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            승인됨
-          </button>
-          <button
-            onClick={() => setSelectedStatus('rejected')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium cursor-pointer ${
-              selectedStatus === 'rejected'
-                ? 'bg-orange-500 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            거절됨
-          </button>
+      {/* 문의 목록 */}
+      {filteredInquiries.length === 0 ? (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i className="ri-question-line text-2xl text-gray-400"></i>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">
+            {searchTerm ? '검색 결과가 없습니다' : '문의가 없습니다'}
+          </h3>
+          <p className="text-gray-500">
+            {searchTerm ? '다른 검색어로 시도해보세요.' : '새로운 문의가 있으면 여기에 표시됩니다.'}
+          </p>
         </div>
-      </div>
-
-      {/* 문의 테이블 */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">신청자</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">매장명</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">주소</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">연락처</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">신청일</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상태</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">액션</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredInquiries.map((inquiry) => {
-                const { date, time } = formatDate(inquiry.createdAt);
-                return (
-                  <tr key={inquiry.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">{inquiry.name}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">{inquiry.storeName}</div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
-                      {inquiry.storeAddress}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {inquiry.phone}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div>{date}</div>
-                      <div className="text-xs text-gray-500">{time}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(inquiry.status)}`}>
-                        {getStatusLabel(inquiry.status)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+      ) : (
+        <div className="space-y-4">
+          {filteredInquiries.map((inquiry) => (
+            <div key={inquiry.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                      <i className="ri-user-line text-orange-500 text-xl"></i>
+                    </div>
+                    <div>
                       <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => handleViewDetails(inquiry)}
-                          className="text-blue-600 hover:text-blue-900 cursor-pointer"
-                          title="상세보기"
-                        >
-                          <i className="ri-eye-line"></i>
-                        </button>
-                        {inquiry.status === 'pending' && (
-                          <>
-                            <button
-                              onClick={() => handleApprove(inquiry.id)}
-                              className="text-green-600 hover:text-green-900 cursor-pointer"
-                              title="승인"
-                            >
-                              <i className="ri-check-line"></i>
-                            </button>
-                            <button
-                              onClick={() => handleReject(inquiry.id)}
-                              className="text-red-600 hover:text-red-900 cursor-pointer"
-                              title="거절"
-                            >
-                              <i className="ri-close-line"></i>
-                            </button>
-                          </>
-                        )}
+                        <h3 className="text-lg font-semibold text-gray-800">{inquiry.name}</h3>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          inquiry.status === '확인' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-orange-100 text-orange-800'
+                        }`}>
+                          {inquiry.status}
+                        </span>
                       </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* 상세보기 모달 */}
-      {showDetailModal && selectedInquiry && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md max-h-screen overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">매장 개설 문의 상세</h3>
-              <button
-                onClick={() => setShowDetailModal(false)}
-                className="text-gray-400 hover:text-gray-600 cursor-pointer"
-              >
-                <i className="ri-close-line text-xl"></i>
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">신청자</label>
-                <p className="text-gray-900">{selectedInquiry.name}</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">매장명</label>
-                <p className="text-gray-900">{selectedInquiry.storeName}</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">매장 주소</label>
-                <p className="text-gray-900">{selectedInquiry.storeAddress}</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">연락처</label>
-                <p className="text-gray-900">{selectedInquiry.phone}</p>
-              </div>
-
-              {selectedInquiry.other && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">기타사항</label>
-                  <p className="text-gray-900 bg-gray-50 p-3 rounded-lg">{selectedInquiry.other}</p>
+                      <p className="text-sm text-gray-600">{inquiry.phone}</p>
+                      <p className="text-sm text-gray-600 font-medium">{inquiry.store_name}</p>
+                      <p className="text-xs text-gray-500">
+                        문의일: {formatDate(inquiry.created_at)}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">상태</label>
-                <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(selectedInquiry.status)}`}>
-                  {getStatusLabel(selectedInquiry.status)}
-                </span>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">신청일시</label>
-                <p className="text-gray-900">{formatDate(selectedInquiry.createdAt).date} {formatDate(selectedInquiry.createdAt).time}</p>
+                
+                <div className="flex items-center space-x-2">
+                  {/* 상태 변경 버튼 */}
+                  <button
+                    onClick={() => handleStatusChange(inquiry.id, inquiry.status === '확인' ? '미확인' : '확인')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2 ${
+                      inquiry.status === '확인'
+                        ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                        : 'bg-green-500 hover:bg-green-600 text-white'
+                    }`}
+                  >
+                    <i className={`ri-${inquiry.status === '확인' ? 'eye-off' : 'eye'}-line`}></i>
+                    <span>{inquiry.status === '확인' ? '미확인으로' : '확인으로'}</span>
+                  </button>
+                  
+                  {/* 삭제 버튼 */}
+                  <button
+                    onClick={() => handleDeleteInquiry(inquiry.id, inquiry.name)}
+                    className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center space-x-2"
+                  >
+                    <i className="ri-delete-bin-line"></i>
+                    <span>삭제</span>
+                  </button>
+                </div>
               </div>
             </div>
+          ))}
+        </div>
+      )}
 
-            {selectedInquiry.status === 'pending' && (
-              <div className="flex gap-3 mt-6">
+      {/* 삭제 확인 모달 */}
+      {showDeleteConfirm && inquiryToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 mx-4 max-w-sm w-full">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i className="ri-delete-bin-line text-2xl text-red-500"></i>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">문의 삭제</h3>
+              <p className="text-gray-600 mb-6">
+                <span className="font-semibold text-red-600">{inquiryToDelete.name}</span>님의 문의를 정말로 삭제하시겠습니까?
+                <br />
+                <span className="text-sm text-gray-500">이 작업은 되돌릴 수 없습니다.</span>
+              </p>
+              <div className="flex gap-3">
                 <button
-                  onClick={() => {
-                    handleApprove(selectedInquiry.id);
-                    setShowDetailModal(false);
-                  }}
-                  className="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 px-4 rounded-lg whitespace-nowrap cursor-pointer"
+                  onClick={cancelDeleteInquiry}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  승인
+                  취소
                 </button>
                 <button
-                  onClick={() => {
-                    handleReject(selectedInquiry.id);
-                    setShowDetailModal(false);
-                  }}
-                  className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 px-4 rounded-lg whitespace-nowrap cursor-pointer"
+                  onClick={confirmDeleteInquiry}
+                  className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                 >
-                  거절
+                  삭제
                 </button>
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}

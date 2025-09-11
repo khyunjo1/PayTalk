@@ -16,7 +16,7 @@ const MENU_ITEMS = [
   { id: 'stores', label: '매장 관리', icon: 'ri-store-line' },
   { id: 'menus', label: '메뉴 관리', icon: 'ri-restaurant-line' },
   { id: 'orders', label: '주문 관리', icon: 'ri-shopping-cart-line' },
-  { id: 'users', label: '사장님 승인', icon: 'ri-user-line' },
+  { id: 'users', label: '사장님 관리', icon: 'ri-user-line' },
   { id: 'inquiries', label: '문의 관리', icon: 'ri-question-line' },
   { id: 'statistics', label: '통계', icon: 'ri-bar-chart-line' }
 ];

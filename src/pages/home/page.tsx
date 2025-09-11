@@ -1,155 +1,264 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signInWithKakao } from '../../lib/auth';
-import { useNewAuth } from '../../hooks/useNewAuth';
+import Header from '../../components/Header';
+import Footer from '../../components/Footer';
+import { createInquiry } from '../../lib/inquiryApi';
+import { getHomeStats, type HomeStats } from '../../lib/statsApi';
 
 export default function Home() {
   const navigate = useNavigate();
-  const [showLoginMessage, setShowLoginMessage] = useState(false);
-  const { user, loading } = useNewAuth();
+  const [showInquiryModal, setShowInquiryModal] = useState(false);
+  const [inquiryData, setInquiryData] = useState({
+    name: '',
+    phone: '',
+    storeName: ''
+  });
+  const [stats, setStats] = useState<HomeStats>({
+    totalStores: 0,
+    totalOrders: 0
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
-    // 로그인된 사용자는 권한에 따라 다른 페이지로 리다이렉트
-    if (!loading && user) {
-      if (user.role === 'admin') {
-        // 관리자(사장님)는 전용 대시보드로
-        navigate('/admin-dashboard');
-      } else if (user.role === 'super_admin') {
-        // 슈퍼 어드민은 슈퍼 어드민 페이지로
-        navigate('/super-admin');
-      } else {
-        // 일반 고객은 매장 페이지로
-        navigate('/stores');
-      }
-    }
-  }, [user, loading, navigate]);
+    loadStats();
+  }, []);
 
-
-  const handleKakaoLogin = async () => {
+  const loadStats = async () => {
     try {
-      const result = await signInWithKakao();
-      // 로그인 성공 시 자동으로 리다이렉트됨
+      setStatsLoading(true);
+      const data = await getHomeStats();
+      setStats(data);
     } catch (error) {
-      console.error('카카오 로그인 오류:', error);
-      setShowLoginMessage(true);
-      setTimeout(() => setShowLoginMessage(false), 3000);
+      console.error('통계 로드 실패:', error);
+    } finally {
+      setStatsLoading(false);
     }
   };
 
-  const handleOtherPageAccess = () => {
-    setShowLoginMessage(true);
-    setTimeout(() => setShowLoginMessage(false), 3000);
+  const handleInquirySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      await createInquiry({
+        name: inquiryData.name,
+        phone: inquiryData.phone,
+        store_name: inquiryData.storeName
+      });
+
+      alert('문의가 성공적으로 제출되었습니다. 빠른 시일 내에 연락드리겠습니다.');
+      setInquiryData({ name: '', phone: '', storeName: '' });
+      setShowInquiryModal(false);
+    } catch (error) {
+      console.error('문의 제출 오류:', error);
+      alert('문의 제출에 실패했습니다. 다시 시도해주세요.');
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white">
-      {/* 로고 및 브랜딩 - 왼쪽 상단 */}
-      <div className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="px-4 py-3">
-          <div className="flex items-center">
-            <div className="flex items-center gap-2">
-              <img 
-                src="https://static.readdy.ai/image/912b0945f01d9fdb4ff4544659653c90/2d4890bd82abce85d430bd82d04df8d6.png" 
-                alt="페이톡 로고" 
-                className="w-6 h-6"
-              />
-              <h1 className="text-lg font-bold text-orange-500" style={{ fontFamily: "Pacifico, serif" }}>
-                페이톡
-              </h1>
+    <div className="min-h-screen bg-gray-50">
+      <Header />
+      
+      {/* 히어로 섹션 */}
+      <section className="bg-gradient-to-br from-orange-500 to-orange-600 text-white py-20">
+        <div className="container mx-auto px-4 text-center">
+          <h1 className="text-5xl font-bold mb-6">페이톡</h1>
+          <p className="text-xl mb-12 max-w-2xl mx-auto">
+            반찬 사장님들을 위한 스마트한 주문 관리 시스템
+          </p>
+          
+          {/* 통계 섹션 */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-6">
+              <div className="text-4xl font-bold mb-2">
+                {statsLoading ? (
+                  <div className="animate-pulse bg-white bg-opacity-30 h-10 w-16 mx-auto rounded"></div>
+                ) : (
+                  stats.totalStores.toLocaleString()
+                )}
+              </div>
+              <div className="text-lg opacity-90">가입된 매장</div>
+            </div>
+            
+            <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-6">
+              <div className="text-4xl font-bold mb-2">
+                {statsLoading ? (
+                  <div className="animate-pulse bg-white bg-opacity-30 h-10 w-20 mx-auto rounded"></div>
+                ) : (
+                  stats.totalOrders.toLocaleString()
+                )}
+              </div>
+              <div className="text-lg opacity-90">총 주문 수</div>
+            </div>
+            
+            <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-6">
+              <div className="text-4xl font-bold mb-2 text-green-300">
+                0원
+              </div>
+              <div className="text-lg opacity-90">수수료</div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* 모바일 최적화 메인 콘텐츠 */}
-      <div className="px-4 py-8">
-        {/* 모바일 최적화 히어로 섹션 */}
-        <div className="text-center mb-12">
-          <h2 className="text-3xl sm:text-4xl md:text-6xl font-bold text-gray-800 mb-4 leading-tight">
-            페이톡과 함께하는<br />
-            <span className="text-orange-500">반찬 배달</span>
+      {/* 특징 섹션 */}
+      <section className="py-20">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center text-gray-800 mb-12">
+            페이톡만의 특별한 장점
           </h2>
-          <p className="text-sm sm:text-base md:text-xl text-gray-600 mb-8 max-w-lg mx-auto leading-relaxed px-4">
-            전문 반찬가게와 고객을 연결하는 스마트한 배달 플랫폼
-          </p>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="text-center p-6">
+              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i className="ri-smartphone-line text-2xl text-orange-500"></i>
+              </div>
+              <h3 className="text-xl font-semibold mb-3">간편한 주문 관리</h3>
+              <p className="text-gray-600">
+                직관적인 인터페이스로 주문을 쉽게 관리하고 상태를 실시간으로 추적할 수 있습니다.
+              </p>
+            </div>
+            <div className="text-center p-6">
+              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i className="ri-bar-chart-line text-2xl text-orange-500"></i>
+              </div>
+              <h3 className="text-xl font-semibold mb-3">상세한 통계</h3>
+              <p className="text-gray-600">
+                매출, 주문 현황, 인기 메뉴 등 사장님에게 필요한 모든 데이터를 한눈에 확인하세요.
+              </p>
+            </div>
+            <div className="text-center p-6">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i className="ri-money-dollar-circle-line text-2xl text-green-500"></i>
+              </div>
+              <h3 className="text-xl font-semibold mb-3">수수료 0원</h3>
+              <p className="text-gray-600">
+                배달의민족, 단골앱과 달리 수수료가 전혀 없습니다. 모든 수익이 사장님의 것입니다.
+              </p>
+            </div>
+            <div className="text-center p-6">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i className="ri-shield-check-line text-2xl text-blue-500"></i>
+              </div>
+              <h3 className="text-xl font-semibold mb-3">직접 고객 관리</h3>
+              <p className="text-gray-600">
+                중간 업체 없이 고객과 직접 소통하여 더 나은 서비스와 관계를 구축할 수 있습니다.
+              </p>
+            </div>
+            <div className="text-center p-6">
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i className="ri-settings-3-line text-2xl text-purple-500"></i>
+              </div>
+              <h3 className="text-xl font-semibold mb-3">완전한 자율성</h3>
+              <p className="text-gray-600">
+                메뉴, 가격, 운영시간을 자유롭게 설정하고 언제든지 변경할 수 있습니다.
+              </p>
+            </div>
+            <div className="text-center p-6">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i className="ri-customer-service-line text-2xl text-red-500"></i>
+              </div>
+              <h3 className="text-xl font-semibold mb-3">24/7 고객 지원</h3>
+              <p className="text-gray-600">
+                언제든지 문의사항이 있으시면 연락주세요. 빠르고 친절한 지원을 제공합니다.
+              </p>
+            </div>
+          </div>
         </div>
+      </section>
 
-        {/* 로그인 섹션 */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 mb-8 max-w-md mx-auto">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-            페이톡과 함께하는 반찬 배달
-          </h2>
-          <p className="text-gray-600 mb-6 text-center">
-            전문 반찬가게와 고객을 연결하는 스마트한 배달 플랫폼
+      {/* CTA 섹션 */}
+      <section className="bg-gray-800 text-white py-20">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-3xl font-bold mb-6">지금 시작하세요</h2>
+          <p className="text-xl mb-8 max-w-2xl mx-auto">
+            페이톡과 함께 반찬 사업을 더욱 효율적으로 관리해보세요.
           </p>
-          
-          {/* 카카오 로그인 버튼 */}
           <button
-            onClick={handleKakaoLogin}
-            className="w-full bg-yellow-400 hover:bg-yellow-500 text-gray-800 font-semibold py-4 px-4 rounded-xl transition-colors duration-200 flex items-center justify-center mb-4"
+            onClick={() => setShowInquiryModal(true)}
+            className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-lg font-semibold transition-colors"
           >
-            <i className="ri-message-3-fill text-xl mr-3"></i>
-            카카오톡으로 간편 로그인
+            매장 문의하기
           </button>
-          
-          {/* 로그인 메시지 */}
-          {showLoginMessage && (
-            <div className="text-center text-red-500 text-sm mb-4">
-              로그인이 필요합니다. 카카오톡으로 로그인해주세요.
-            </div>
-          )}
-          
         </div>
+      </section>
 
-      </div>
-
-      {/* 모바일 최적화 푸터 */}
-      <footer className="bg-gray-50 py-6 mt-8">
-        <div className="px-4 max-w-6xl mx-auto">
-          <div className="mb-4">
-            {/* 회사 정보 - 연락처 바로 위에 */}
-            <div className="mb-3">
-              <h3 className="text-lg font-bold text-orange-500" style={{ fontFamily: "Pacifico, serif" }}>
-                페이톡
-              </h3>
+      {/* 문의 모달 */}
+      {showInquiryModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 mx-4 max-w-md w-full">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-gray-800">매장 개설 문의</h3>
+              <button
+                onClick={() => setShowInquiryModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <i className="ri-close-line text-xl"></i>
+              </button>
             </div>
-
-            {/* 연락처 정보 */}
-            <div>
-              <h4 className="font-semibold text-gray-800 mb-2">연락처</h4>
-              <div className="space-y-1 text-sm text-gray-600">
-                <div className="flex items-center gap-2">
-                  <i className="ri-phone-line text-orange-500"></i>
-                  <span>02-1234-5678</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <i className="ri-mail-line text-orange-500"></i>
-                  <span>mnkijo424@gmail.com</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <i className="ri-time-line text-orange-500"></i>
-                  <span>평일 09:00 - 18:00</span>
-                </div>
+            
+            <form onSubmit={handleInquirySubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  이름 *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={inquiryData.name}
+                  onChange={(e) => setInquiryData({...inquiryData, name: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  placeholder="이름을 입력하세요"
+                />
               </div>
-            </div>
-          </div>
-
-          {/* 하단 정보 */}
-          <div className="border-t border-gray-200 pt-4">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-              <div className="text-gray-600 text-sm">
-                <p>© 2025 페이톡. 모든 권리 보유.</p>
-                <p className="mt-1">사업자등록번호: 227-09-52974 | 대표: 조광현</p>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  전화번호 *
+                </label>
+                <input
+                  type="tel"
+                  required
+                  value={inquiryData.phone}
+                  onChange={(e) => setInquiryData({...inquiryData, phone: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  placeholder="010-1234-5678"
+                />
               </div>
-              <div className="flex gap-4 text-sm text-gray-500">
-                <a href="#" className="hover:text-orange-500 transition-colors">이용약관</a>
-                <a href="#" className="hover:text-orange-500 transition-colors">개인정보처리방침</a>
-                <a href="#" className="hover:text-orange-500 transition-colors">사업자정보확인</a>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  가게 이름 *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={inquiryData.storeName}
+                  onChange={(e) => setInquiryData({...inquiryData, storeName: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  placeholder="가게 이름을 입력하세요"
+                />
               </div>
-            </div>
+              
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowInquiryModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                >
+                  문의 제출
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-      </footer>
+      )}
+
+      <Footer />
     </div>
   );
 }

@@ -211,12 +211,7 @@ export default function Menu() {
         <div className="px-4 py-4">
           {/* 헤더 */}
           <div className="flex items-center justify-between mb-4">
-            <button
-              onClick={() => navigate('/')}
-              className="p-2 hover:bg-gray-100 rounded-lg cursor-pointer transition-colors"
-            >
-              <i className="ri-arrow-left-line text-xl text-gray-600"></i>
-            </button>
+            <div className="w-10"></div>
             <h1 className="text-xl font-bold text-gray-800 flex-1 text-center">{store.name}</h1>
             <div className="w-10">
               {/* 사장님만 매장관리 버튼 표시 */}
