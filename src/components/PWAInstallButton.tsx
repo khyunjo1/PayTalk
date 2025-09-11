@@ -79,14 +79,7 @@ export default function PWAInstallButton({
   }
 
   if (!deferredPrompt) {
-    return (
-      <div className={`text-center ${className}`}>
-        <div className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-600 rounded-lg">
-          <i className="ri-smartphone-line text-lg mr-2"></i>
-          브라우저에서 "홈 화면에 추가"를 사용하세요
-        </div>
-      </div>
-    );
+    return null; // PWA 설치 불가능할 때는 아무것도 표시하지 않음
   }
 
   return (
