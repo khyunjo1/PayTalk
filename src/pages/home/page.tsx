@@ -4,6 +4,8 @@ import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import { createInquiry } from '../../lib/inquiryApi';
 import { getHomeStats, type HomeStats } from '../../lib/statsApi';
+import PushNotificationSettings from '../../components/PushNotificationSettings';
+import PushNotificationTest from '../../components/PushNotificationTest';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -97,6 +99,14 @@ export default function Home() {
               <div className="text-lg opacity-90">수수료</div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* 푸시 알림 설정 */}
+      <section className="py-8 bg-gray-50">
+        <div className="container mx-auto px-4 space-y-6">
+          <PushNotificationSettings />
+          <PushNotificationTest />
         </div>
       </section>
 

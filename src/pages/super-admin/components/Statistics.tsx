@@ -11,7 +11,7 @@ interface StatisticsData {
     id: string;
     name: string;
     revenue: number;
-    orderCount: number;
+  orderCount: number;
   }>;
   dailyStats: Array<{
     date: string;
@@ -331,8 +331,8 @@ export default function Statistics() {
     <div className="space-y-6">
       {/* 헤더 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between">
-          <div>
+      <div className="flex items-center justify-between">
+        <div>
             <h2 className="text-2xl font-bold text-gray-800 mb-2">통계 분석</h2>
             <p className="text-gray-600">상세한 비즈니스 분석 데이터를 확인하세요</p>
           </div>
@@ -436,8 +436,8 @@ export default function Statistics() {
               </div>
             </div>
           ))}
-        </div>
-      </div>
+                </div>
+              </div>
 
       {/* 시간대별 분석 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -450,8 +450,8 @@ export default function Statistics() {
               <p className="text-sm text-gray-500">{formatCurrency(slot.revenue)}</p>
             </div>
           ))}
-        </div>
-      </div>
+                </div>
+              </div>
 
       {/* 주문 상태 분포 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">

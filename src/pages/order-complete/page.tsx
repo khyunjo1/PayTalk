@@ -3,6 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import PushNotificationSettings from '../../components/PushNotificationSettings';
+import { linkPhoneToPushSubscription } from '../../lib/phoneBasedPush';
+import { subscribeToPush } from '../../lib/pushNotification';
 
 interface OrderData {
   id: string;
@@ -37,6 +40,7 @@ export default function OrderComplete() {
   const [orderData, setOrderData] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [pushLinked, setPushLinked] = useState(false);
 
   useEffect(() => {
     const loadOrderData = async () => {
@@ -104,6 +108,35 @@ export default function OrderComplete() {
       navigator.clipboard.writeText(orderData.stores.bank_account);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleLinkPushNotification = async () => {
+    try {
+      // 푸시 구독 생성
+      const subscription = await subscribeToPush();
+      if (!subscription) {
+        alert('푸시 알림 구독에 실패했습니다.');
+        return;
+      }
+
+      // 전화번호와 푸시 구독 연결
+      if (orderData?.customer_phone) {
+        const success = await linkPhoneToPushSubscription(
+          orderData.customer_phone, 
+          subscription
+        );
+        
+        if (success) {
+          setPushLinked(true);
+          alert('푸시 알림이 설정되었습니다! 주문 상태 변경 시 알림을 받으실 수 있습니다.');
+        } else {
+          alert('푸시 알림 설정에 실패했습니다.');
+        }
+      }
+    } catch (error) {
+      console.error('푸시 알림 연결 오류:', error);
+      alert('푸시 알림 설정 중 오류가 발생했습니다.');
     }
   };
 
@@ -233,14 +266,52 @@ export default function OrderComplete() {
           </div>
         </div>
 
+        {/* 푸시 알림 설정 */}
+        <div className="mb-6">
+          {!pushLinked ? (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <i className="ri-notification-line text-orange-500 text-xl mr-3"></i>
+                  <div>
+                    <h3 className="text-sm font-medium text-orange-800">주문 알림 받기</h3>
+                    <p className="text-xs text-orange-600 mt-1">
+                      입금 확인, 배달 완료 시 알림을 받으실 수 있습니다.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleLinkPushNotification}
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                  알림 설정
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-center">
+                <i className="ri-notification-3-line text-green-500 text-xl mr-3"></i>
+                <div>
+                  <h3 className="text-sm font-medium text-green-800">알림 설정 완료</h3>
+                  <p className="text-xs text-green-600 mt-1">
+                    주문 상태 변경 시 알림을 받으실 수 있습니다.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* 안내 카드 */}
         <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6">
           <div className="flex items-start gap-3">
             <i className="ri-message-line text-blue-500 text-xl mt-1"></i>
             <div>
-              <h3 className="font-bold text-blue-800 mb-2">알림톡 안내</h3>
+              <h3 className="font-bold text-blue-800 mb-2">푸시 알림 안내</h3>
               <p className="text-blue-700 text-sm">
-                입금 확인, 조리 시작, 배달 완료 등 각 단계별로 카카오톡 알림톡이 발송됩니다.
+                입금 확인, 배달 완료 등 각 단계별로 푸시 알림이 발송됩니다. 
+                알림을 허용하시면 SMS 비용 없이 무료로 받으실 수 있습니다.
               </p>
             </div>
           </div>

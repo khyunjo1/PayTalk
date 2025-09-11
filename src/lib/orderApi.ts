@@ -1,13 +1,9 @@
 // 주문 관리 API 함수
-// 요구사항 5: 주문 상태 변경 + 알림톡
+// 요구사항 5: 주문 상태 변경 + 푸시 알림
 
 import { supabase } from './supabase';
-// TODO: 알림톡 기능은 나중에 구현
-// import { 
-//   sendOrderReceivedNotification, 
-//   sendNewOrderNotificationToOwner,
-//   logAlimtalkSent
-// } from './kakaoAlimtalk';
+import { sendPushNotification, getOrderNotificationMessage, getStoreOrderNotificationMessage } from './pushApi';
+import { sendPushNotificationByPhone } from './phoneBasedPush';
 
 // 주문 생성
 export const createOrder = async (orderData: {
@@ -68,12 +64,12 @@ export const createOrder = async (orderData: {
     throw itemsError;
   }
 
-  // 알림톡 발송 (비동기로 처리하여 주문 생성에 영향 없도록)
+  // 푸시 알림 발송 (비동기로 처리하여 주문 생성에 영향 없도록)
   try {
     // 고객 정보와 매장 정보 가져오기
     const [userData, storeData, menuData] = await Promise.all([
       supabase.from('users').select('name, phone').eq('id', orderData.user_id).single(),
-      supabase.from('stores').select('name, phone, bank_account, account_holder').eq('id', orderData.store_id).single(),
+      supabase.from('stores').select('name, phone, bank_account, account_holder, owner_id').eq('id', orderData.store_id).single(),
       supabase.from('menus').select('name').in('id', orderData.items.map(item => item.menu_id))
     ]);
 
@@ -84,24 +80,40 @@ export const createOrder = async (orderData: {
         return `${menu?.name || '메뉴'} x${item.quantity}`;
       }).join(', ');
 
-      // TODO: 알림톡 기능은 나중에 구현
-      // 고객에게 주문 접수 알림톡 발송
-      // const customerNotification = await sendOrderReceivedNotification({
-      //   customerName: userData.data.name,
-      //   customerPhone: userData.data.phone,
-      //   storeName: storeData.data.name,
-      //   orderId: order.id,
-      //   orderItems: orderItemsText,
-      //   totalAmount: orderData.total,
-      //   deliveryAddress: orderData.delivery_address,
-      //   deliveryTime: orderData.delivery_time,
-      //   pickupTime: orderData.pickup_time,
-      //   depositorName: orderData.depositor_name,
-      //   bankAccount: storeData.data.bank_account,
-      //   accountHolder: storeData.data.account_holder
-      // });
+      // 고객에게 주문 접수 푸시 알림 발송 (전화번호 기반)
+      const customerNotification = {
+        title: '주문 접수 완료',
+        body: `${storeData.data.name}에 주문이 접수되었습니다. 입금 확인 후 배달하겠습니다.`
+      };
+      
+      // 전화번호 기반 푸시 알림 시도
+      if (userData.data.phone) {
+        await sendPushNotificationByPhone(
+          userData.data.phone,
+          customerNotification.title,
+          customerNotification.body,
+          { orderId: order.id, type: 'order_received' }
+        );
+      }
+      
+      // 기존 user_id 기반 푸시 알림도 백업으로 시도
+      await sendPushNotification(
+        orderData.user_id,
+        customerNotification.title,
+        customerNotification.body,
+        { orderId: order.id, type: 'order_received' }
+      );
 
-      // 사장님에게 신규 주문 알림톡 발송
+      // 사장님에게 신규 주문 푸시 알림 발송
+      if (storeData.data.owner_id) {
+        const storeNotification = getStoreOrderNotificationMessage(storeData.data.name, order.id);
+        await sendPushNotification(
+          storeData.data.owner_id,
+          storeNotification.title,
+          storeNotification.body,
+          { orderId: order.id, type: 'new_order' }
+        );
+      }
       // const ownerNotification = await sendNewOrderNotificationToOwner({
       //   ownerPhone: storeData.data.phone,
       //   storeName: storeData.data.name,
@@ -214,42 +226,33 @@ export const updateOrderStatus = async (orderId: string, status: '입금대기' 
     detail: { orderId, status, updatedOrder: data }
   }));
 
-  // 주문 상태 변경 시 알림톡 발송 (입금확인, 배달완료만)
-  if (status === '입금확인' || status === '배달완료') {
-    try {
-      if (data.users && data.stores && data.order_items) {
-        // 주문 아이템 이름 생성
-        const orderItemsText = data.order_items.map(item => 
-          `${item.menus?.name || '메뉴'} x${item.quantity}`
-        ).join(', ');
-
-        // TODO: 알림톡 기능은 나중에 구현
-        // 고객에게 주문 상태 변경 알림톡 발송
-        // const notification = await sendOrderStatusNotification({
-        //   customerName: data.users.name,
-        //   customerPhone: data.users.phone,
-        //   storeName: data.stores.name,
-        //   orderId: data.id,
-        //   orderItems: orderItemsText,
-        //   totalAmount: data.total,
-        //   deliveryAddress: data.delivery_address,
-        //   deliveryTime: data.delivery_time,
-        //   pickupTime: data.pickup_time,
-        //   depositorName: data.depositor_name
-        // }, status);
-
-        // 알림톡 발송 로그 저장
-        // await logAlimtalkSent({
-        //   orderId: data.id,
-        //   recipientPhone: data.users.phone,
-        //   templateId: status === '입금확인' ? 'PAYMENT_CONFIRMED_TEMPLATE' : 'DELIVERY_COMPLETED_TEMPLATE',
-        //   success: notification
-        // });
+  // 주문 상태 변경 시 푸시 알림 발송
+  try {
+    if (data.users) {
+      // 고객에게 주문 상태 변경 푸시 알림 발송
+      const notification = getOrderNotificationMessage(status, data.id);
+      
+      // 전화번호 기반 푸시 알림 시도
+      if (data.users.phone) {
+        await sendPushNotificationByPhone(
+          data.users.phone,
+          notification.title,
+          notification.body,
+          { orderId: data.id, status }
+        );
       }
-    } catch (alimtalkError) {
-      console.error('주문 상태 변경 알림톡 발송 오류:', alimtalkError);
-      // 알림톡 발송 실패해도 주문 상태 변경은 정상 처리
+      
+      // 기존 user_id 기반 푸시 알림도 백업으로 시도
+      await sendPushNotification(
+        data.users.id,
+        notification.title,
+        notification.body,
+        { orderId: data.id, status }
+      );
     }
+  } catch (pushError) {
+    console.error('주문 상태 변경 푸시 알림 발송 오류:', pushError);
+    // 푸시 알림 발송 실패해도 주문 상태 변경은 정상 처리
   }
 
   return data;

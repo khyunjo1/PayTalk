@@ -1,0 +1,27 @@
+{
+  "name": "PayTalk - 반찬 주문 플랫폼",
+  "short_name": "PayTalk",
+  "description": "간편한 반찬 주문과 배달 서비스",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#f97316",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["food", "shopping", "lifestyle"],
+  "lang": "ko",
+  "dir": "ltr"
+}

@@ -98,7 +98,7 @@ export default function InquiryManagement({ showToast }: InquiryManagementProps)
       {/* 헤더 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
-          <div>
+        <div>
             <h2 className="text-xl font-bold text-gray-800">문의 관리</h2>
             <p className="text-sm text-gray-600 mt-1">
               매장 개설 문의를 확인하고 관리할 수 있습니다.
@@ -138,15 +138,15 @@ export default function InquiryManagement({ showToast }: InquiryManagementProps)
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               />
-            </div>
-          </div>
+        </div>
+      </div>
           {searchTerm && (
-            <button
+          <button
               onClick={() => setSearchTerm('')}
               className="px-3 py-2 text-gray-500 hover:text-gray-700 transition-colors"
             >
               <i className="ri-close-line text-lg"></i>
-            </button>
+          </button>
           )}
         </div>
       </div>
@@ -191,9 +191,9 @@ export default function InquiryManagement({ showToast }: InquiryManagementProps)
                         문의일: {formatDate(inquiry.created_at)}
                       </p>
                     </div>
-                  </div>
-                </div>
-                
+        </div>
+      </div>
+
                 <div className="flex items-center space-x-2">
                   {/* 상태 변경 버튼 */}
                   <button
@@ -209,19 +209,19 @@ export default function InquiryManagement({ showToast }: InquiryManagementProps)
                   </button>
                   
                   {/* 삭제 버튼 */}
-                  <button
+              <button
                     onClick={() => handleDeleteInquiry(inquiry.id, inquiry.name)}
                     className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center space-x-2"
-                  >
+              >
                     <i className="ri-delete-bin-line"></i>
                     <span>삭제</span>
-                  </button>
-                </div>
-              </div>
+              </button>
             </div>
+              </div>
+              </div>
           ))}
-        </div>
-      )}
+                </div>
+              )}
 
       {/* 삭제 확인 모달 */}
       {showDeleteConfirm && inquiryToDelete && (

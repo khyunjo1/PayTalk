@@ -453,8 +453,8 @@ export default function Dashboard() {
                   <p className="text-xs text-gray-500">{store.owner_name}</p>
                 </div>
                 <span className="text-xs text-gray-500">{formatDate(store.created_at)}</span>
-              </div>
-            ))}
+            </div>
+          ))}
           </div>
         </div>
       </div>
