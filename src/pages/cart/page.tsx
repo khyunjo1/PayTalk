@@ -77,6 +77,7 @@ export default function Cart() {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isOrdering, setIsOrdering] = useState(false);
 
   useEffect(() => {
     const savedCart = localStorage.getItem('cart');
@@ -166,6 +167,8 @@ export default function Cart() {
   };
 
   const handleOrder = async () => {
+    if (isOrdering) return; // 이미 주문 중이면 무시
+    
     if (!storeInfo) {
       alert('매장 정보를 찾을 수 없습니다.');
       return;
@@ -211,6 +214,7 @@ export default function Cart() {
       return;
     }
 
+    setIsOrdering(true);
     try {
       // 주문접수시간 확인 후 배달날짜 자동 설정
       const now = new Date();
@@ -272,6 +276,8 @@ export default function Cart() {
     } catch (error) {
       console.error('주문 생성 오류:', error);
       alert('주문 생성 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsOrdering(false);
     }
   };
 
@@ -630,11 +636,25 @@ export default function Cart() {
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg">
         <button
           onClick={handleOrder}
-          className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-4 px-4 rounded-xl font-bold text-lg whitespace-nowrap cursor-pointer transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+          disabled={isOrdering}
+          className={`w-full py-4 px-4 rounded-xl font-bold text-lg whitespace-nowrap transition-all duration-200 shadow-lg ${
+            isOrdering 
+              ? 'bg-gray-400 cursor-not-allowed' 
+              : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 hover:shadow-xl transform hover:scale-[1.02] cursor-pointer'
+          } text-white`}
         >
           <div className="flex items-center justify-center gap-2">
-            <i className="ri-shopping-bag-line text-xl"></i>
-            <span>{total.toLocaleString()}원 주문하기</span>
+            {isOrdering ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <span>주문 처리 중...</span>
+              </>
+            ) : (
+              <>
+                <i className="ri-shopping-bag-line text-xl"></i>
+                <span>{total.toLocaleString()}원 주문하기</span>
+              </>
+            )}
           </div>
         </button>
       </div>

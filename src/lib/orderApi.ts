@@ -2,7 +2,7 @@
 // 요구사항 5: 주문 상태 변경 + 푸시 알림
 
 import { supabase } from './supabase';
-import { sendPushNotification, getOrderNotificationMessage, getStoreOrderNotificationMessage } from './pushApi';
+import { sendPushNotification, getOrderNotificationMessage, getStoreOrderNotificationMessage, checkUserPushSubscription } from './pushApi';
 import { sendPushNotificationByPhone } from './phoneBasedPush';
 
 // 주문 생성
@@ -15,6 +15,9 @@ export const createOrder = async (orderData: {
   pickup_time?: string;
   special_requests?: string;
   depositor_name: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_address?: string;
   subtotal: number;
   total: number;
   items: Array<{
@@ -35,6 +38,9 @@ export const createOrder = async (orderData: {
       pickup_time: orderData.pickup_time,
       special_requests: orderData.special_requests,
       depositor_name: orderData.depositor_name,
+      customer_name: orderData.customer_name,
+      customer_phone: orderData.customer_phone,
+      customer_address: orderData.customer_address,
       subtotal: orderData.subtotal,
       total: orderData.total,
       status: '입금대기'
@@ -107,12 +113,29 @@ export const createOrder = async (orderData: {
       // 사장님에게 신규 주문 푸시 알림 발송
       if (storeData.data.owner_id) {
         const storeNotification = getStoreOrderNotificationMessage(storeData.data.name, order.id);
-        await sendPushNotification(
+        console.log('사장님에게 푸시 알림 발송 시도:', {
+          ownerId: storeData.data.owner_id,
+          storeName: storeData.data.name,
+          orderId: order.id,
+          notification: storeNotification
+        });
+        
+        // 사장님이 푸시 알림을 구독했는지 확인
+        const hasOwnerSubscription = await checkUserPushSubscription(storeData.data.owner_id);
+        if (!hasOwnerSubscription) {
+          console.warn(`사장님(${storeData.data.owner_id})이 푸시 알림을 구독하지 않았습니다.`);
+        }
+        
+        const pushResult = await sendPushNotification(
           storeData.data.owner_id,
           storeNotification.title,
           storeNotification.body,
           { orderId: order.id, type: 'new_order' }
         );
+        
+        console.log('사장님 푸시 알림 발송 결과:', pushResult);
+      } else {
+        console.warn('매장에 owner_id가 설정되지 않음:', storeData.data);
       }
       // const ownerNotification = await sendNewOrderNotificationToOwner({
       //   ownerPhone: storeData.data.phone,
@@ -222,6 +245,9 @@ export const updateOrderStatus = async (orderId: string, status: '입금대기' 
 
   if (error) {
     console.error('주문 상태 업데이트 오류:', error);
+    console.error('주문 ID:', orderId);
+    console.error('새 상태:', status);
+    console.error('에러 상세:', error.message, error.details, error.hint);
     throw error;
   }
 
