@@ -216,6 +216,8 @@ export const getStoreOrders = async (storeId: string) => {
 
 // 주문 상태 업데이트
 export const updateOrderStatus = async (orderId: string, status: '입금대기' | '입금확인' | '배달완료' | '주문취소') => {
+  console.log('주문 상태 업데이트 시작:', { orderId, status });
+  
   const { data, error } = await supabase
     .from('orders')
     .update({ 
@@ -227,10 +229,6 @@ export const updateOrderStatus = async (orderId: string, status: '입금대기' 
       *,
       stores (
         name,
-        phone
-      ),
-      users (
-        id,
         phone
       ),
       order_items (
@@ -251,41 +249,43 @@ export const updateOrderStatus = async (orderId: string, status: '입금대기' 
     throw error;
   }
 
+  console.log('주문 상태 업데이트 성공:', { orderId, status, data });
+
   // 주문 상태 변경 이벤트 발생 (다른 페이지에서 감지)
   window.dispatchEvent(new CustomEvent('orderStatusChanged', {
     detail: { orderId, status, updatedOrder: data }
   }));
 
-  // 주문 상태 변경 시 푸시 알림 발송
-  try {
-    // 고객에게 주문 상태 변경 푸시 알림 발송
-    const notification = getOrderNotificationMessage(status, data.id);
-    
-    // 전화번호 기반 푸시 알림 시도 (고객 전화번호가 있는 경우)
-    if (data.customer_phone) {
-      console.log('고객 전화번호로 푸시 알림 발송 시도:', data.customer_phone);
-      await sendPushNotificationByPhone(
-        data.customer_phone,
-        notification.title,
-        notification.body,
-        { orderId: data.id, status }
-      );
+  // 주문 상태 변경 시 푸시 알림 발송 (비동기로 처리하여 주문 상태 변경에 영향 없도록)
+  setTimeout(async () => {
+    try {
+      console.log('푸시 알림 발송 시작:', { orderId: data.id, status, customerPhone: data.customer_phone });
+      
+      // 고객에게 주문 상태 변경 푸시 알림 발송
+      const notification = getOrderNotificationMessage(status, data.id);
+      
+      // 전화번호 기반 푸시 알림 시도 (고객 전화번호가 있는 경우)
+      if (data.customer_phone) {
+        console.log('고객 전화번호로 푸시 알림 발송 시도:', data.customer_phone);
+        const phoneResult = await sendPushNotificationByPhone(
+          data.customer_phone,
+          notification.title,
+          notification.body,
+          { orderId: data.id, status }
+        );
+        console.log('전화번호 기반 푸시 알림 결과:', phoneResult);
+      } else {
+        console.warn('고객 전화번호가 없습니다:', data);
+      }
+      
+      // user_id 기반 푸시 알림은 임시 UUID이므로 건너뜀
+      // 실제 사용자 인증이 필요한 경우에만 사용
+      console.log('user_id 기반 푸시 알림은 건너뜀 (임시 UUID):', data.user_id);
+    } catch (pushError) {
+      console.error('주문 상태 변경 푸시 알림 발송 오류:', pushError);
+      // 푸시 알림 발송 실패해도 주문 상태 변경은 정상 처리
     }
-    
-    // user_id 기반 푸시 알림도 백업으로 시도
-    if (data.users && data.users.id) {
-      console.log('사용자 ID로 푸시 알림 발송 시도:', data.users.id);
-      await sendPushNotification(
-        data.users.id,
-        notification.title,
-        notification.body,
-        { orderId: data.id, status }
-      );
-    }
-  } catch (pushError) {
-    console.error('주문 상태 변경 푸시 알림 발송 오류:', pushError);
-    // 푸시 알림 발송 실패해도 주문 상태 변경은 정상 처리
-  }
+  }, 100); // 100ms 후에 비동기로 실행
 
   return data;
 };

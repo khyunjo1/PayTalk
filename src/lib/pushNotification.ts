@@ -53,11 +53,15 @@ export const registerServiceWorker = async (): Promise<ServiceWorkerRegistration
 // 푸시 구독 생성
 export const subscribeToPush = async (): Promise<PushSubscription | null> => {
   try {
+    console.log('푸시 구독 생성 시작');
+    
     // Service Worker 지원 확인
     if (!('serviceWorker' in navigator)) {
       console.log('이 브라우저는 Service Worker를 지원하지 않습니다.');
       return null;
     }
+    
+    console.log('Service Worker 지원 확인됨');
 
     // Service Worker 등록 확인
     const registrations = await navigator.serviceWorker.getRegistrations();
@@ -78,9 +82,18 @@ export const subscribeToPush = async (): Promise<PushSubscription | null> => {
       return null;
     }
 
+    const vapidKey = process.env.VITE_VAPID_PUBLIC_KEY || '';
+    console.log('VAPID 키 확인:', vapidKey ? '설정됨' : '설정되지 않음');
+    
+    if (!vapidKey) {
+      console.error('VAPID 공개 키가 설정되지 않았습니다.');
+      return null;
+    }
+    
+    console.log('푸시 구독 생성 시도...');
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(process.env.VITE_VAPID_PUBLIC_KEY || '')
+      applicationServerKey: urlBase64ToUint8Array(vapidKey)
     });
     
     console.log('푸시 구독 성공:', subscription);

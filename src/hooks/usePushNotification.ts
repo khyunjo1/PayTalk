@@ -49,13 +49,21 @@ export const usePushNotification = (userId: string | null) => {
   }, [userId]);
 
   const requestPermission = async (): Promise<boolean> => {
-    if (!userId) return false;
+    console.log('푸시 알림 권한 요청 시작:', { userId });
+    
+    if (!userId) {
+      console.error('사용자 ID가 없습니다:', userId);
+      return false;
+    }
 
     setIsLoading(true);
     
     try {
       // 1. 알림 권한 요청
+      console.log('알림 권한 요청 중...');
       const hasPermission = await requestNotificationPermission();
+      console.log('알림 권한 요청 결과:', hasPermission);
+      
       if (!hasPermission) {
         console.log('알림 권한이 거부되었습니다.');
         return false;
@@ -72,14 +80,20 @@ export const usePushNotification = (userId: string | null) => {
       }
 
       // 2. 푸시 구독 생성 (Safari가 아닌 경우)
+      console.log('푸시 구독 생성 시도...');
       const subscription = await subscribeToPush();
+      console.log('푸시 구독 결과:', subscription);
+      
       if (!subscription) {
         console.log('푸시 구독 실패');
         return false;
       }
 
       // 3. 구독 정보를 서버에 저장 (user_id 기반)
+      console.log('푸시 구독 정보 저장 시도...');
       const saved = await savePushSubscription(subscription, userId);
+      console.log('푸시 구독 정보 저장 결과:', saved);
+      
       if (!saved) {
         console.log('푸시 구독 정보 저장 실패');
         return false;
