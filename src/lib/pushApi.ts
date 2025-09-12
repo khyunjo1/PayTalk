@@ -60,7 +60,7 @@ export const sendPushNotification = async (
     }
 
     // Safari는 기본 알림만 지원
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    const isSafari = /^((?!chrome|android|edg|firefox).)*safari/i.test(navigator.userAgent);
     
     if (isSafari) {
       // Safari에서는 기본 Notification API 사용

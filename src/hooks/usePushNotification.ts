@@ -61,7 +61,17 @@ export const usePushNotification = (userId: string | null) => {
         return false;
       }
 
-      // 2. 푸시 구독 생성
+      // Safari는 기본 알림만 지원하므로 Service Worker 없이도 성공으로 처리
+      const isSafari = /^((?!chrome|android|edg|firefox).)*safari/i.test(navigator.userAgent);
+      if (isSafari) {
+        console.log('Safari에서 기본 알림이 활성화되었습니다.');
+        setIsInitialized(true);
+        setIsEnabled(true);
+        setPermission('granted');
+        return true;
+      }
+
+      // 2. 푸시 구독 생성 (Safari가 아닌 경우)
       const subscription = await subscribeToPush();
       if (!subscription) {
         console.log('푸시 구독 실패');
