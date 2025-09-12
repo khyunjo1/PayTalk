@@ -22,23 +22,13 @@ export const sendPushNotificationByPhone = async (
       return false;
     }
 
-    // 2. 푸시 알림 발송
-    const subscription = subscriptionData.subscription;
-    
-    // 알림 권한 확인 및 요청
-    if (Notification.permission === 'default') {
-      const permission = await Notification.requestPermission();
-      if (permission !== 'granted') {
-        console.log('알림 권한이 거부되었습니다.');
-        return false;
-      }
-    } else if (Notification.permission === 'denied') {
-      console.log('알림 권한이 거부되었습니다.');
+    // 2. 알림 권한 확인
+    if (Notification.permission !== 'granted') {
+      console.log('알림 권한이 허용되지 않았습니다.');
       return false;
     }
     
-    // 실제로는 서버에서 푸시 알림을 발송해야 합니다
-    // 여기서는 클라이언트에서 로컬 알림을 보여주는 방식으로 구현
+    // 3. Service Worker를 통한 알림 표시
     if ('serviceWorker' in navigator && 'PushManager' in window) {
       const registration = await navigator.serviceWorker.ready;
       await registration.showNotification(title, {
@@ -46,7 +36,17 @@ export const sendPushNotificationByPhone = async (
         icon: '/favicon.ico',
         badge: '/favicon.ico',
         data,
-        vibrate: [200, 100, 200]
+        vibrate: [200, 100, 200],
+        actions: [
+          {
+            action: 'view',
+            title: '확인하기'
+          },
+          {
+            action: 'close',
+            title: '닫기'
+          }
+        ]
       });
     }
 

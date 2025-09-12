@@ -122,23 +122,17 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50 to-white">
       {/* 헤더 */}
-      <div className="bg-white/80 backdrop-blur-sm shadow-lg border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-6 py-6">
+      <div className="bg-white">
+        <div className="px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <span className="text-white font-bold text-lg">P</span>
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                    PayTalk
-                  </h1>
-                  <p className="text-sm text-gray-500 font-medium">사장님 대시보드</p>
-                </div>
-              </div>
+            <div className="flex items-center">
+              <img 
+                src="https://static.readdy.ai/image/912b0945f01d9fdb4ff4544659653c90/2d4890bd82abce85d430bd82d04df8d6.png" 
+                alt="페이톡 로고" 
+                className="w-12 h-12"
+              />
             </div>
-            <div className="flex items-center space-x-6">
+            <div className="flex items-center gap-4">
               <PWAInstallButton 
                 redirectType="admin" 
                 className="text-sm"
@@ -170,14 +164,38 @@ export default function AdminDashboard() {
               <p className="text-gray-500">장수반찬을 운영하고 계시군요! 🍽️</p>
             </div>
 
-            {/* 매장 관리하기 버튼 */}
-            <div className="flex justify-center mb-8">
+            {/* 관리 기능 버튼들 */}
+            <div className="grid grid-cols-2 gap-3 mb-8">
               <button
-                onClick={handleViewMyStore}
-                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-4 px-8 rounded-2xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3"
+                onClick={() => navigate(`/admin/${userStores[0]?.id}/orders`)}
+                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-3 px-4 rounded-xl font-medium text-sm shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2"
               >
-                <i className="ri-settings-3-line text-xl"></i>
-                <span>매장 관리하기</span>
+                <i className="ri-shopping-cart-line text-lg"></i>
+                <span>주문내역</span>
+              </button>
+              
+              <button
+                onClick={() => navigate(`/admin/${userStores[0]?.id}/menu`)}
+                className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-3 px-4 rounded-xl font-medium text-sm shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2"
+              >
+                <i className="ri-restaurant-line text-lg"></i>
+                <span>메뉴관리</span>
+              </button>
+              
+              <button
+                onClick={() => navigate(`/admin/${userStores[0]?.id}/analytics`)}
+                className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white py-3 px-4 rounded-xl font-medium text-sm shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2"
+              >
+                <i className="ri-bar-chart-line text-lg"></i>
+                <span>성과분석</span>
+              </button>
+              
+              <button
+                onClick={() => navigate(`/admin/${userStores[0]?.id}/store`)}
+                className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-3 px-4 rounded-xl font-medium text-sm shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2"
+              >
+                <i className="ri-store-line text-lg"></i>
+                <span>매장관리</span>
               </button>
             </div>
             

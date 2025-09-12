@@ -138,39 +138,39 @@ export default function UserManagement({ showToast }: UserManagementProps) {
   return (
     <div className="space-y-6">
       {/* 헤더 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-xl font-bold text-gray-800">사장님 관리</h2>
-            <p className="text-sm text-gray-600 mt-1">
-              가입 신청한 사장님들을 승인하거나 거부할 수 있습니다.
-            </p>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+        <div className="mb-4">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-800">사장님 관리</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            가입 신청한 사장님들을 승인하거나 거부할 수 있습니다.
+          </p>
+        </div>
+        
+        {/* 통계 카드 - 모바일에서 그리드로 배치 */}
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="text-center sm:text-right">
+            <div className="text-xl sm:text-2xl font-bold text-orange-500">
+              {pendingUsers.filter(u => u.status === 'pending').length}
+            </div>
+            <div className="text-xs sm:text-sm text-gray-500">승인 대기</div>
           </div>
-          <div className="flex space-x-6">
-            <div className="text-right">
-              <div className="text-2xl font-bold text-orange-500">
-                {pendingUsers.filter(u => u.status === 'pending').length}
-              </div>
-              <div className="text-sm text-gray-500">승인 대기</div>
+          <div className="text-center sm:text-right">
+            <div className="text-xl sm:text-2xl font-bold text-green-500">
+              {pendingUsers.filter(u => u.status === 'approved').length}
             </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold text-green-500">
-                {pendingUsers.filter(u => u.status === 'approved').length}
-              </div>
-              <div className="text-sm text-gray-500">승인 완료</div>
+            <div className="text-xs sm:text-sm text-gray-500">승인 완료</div>
+          </div>
+          <div className="text-center sm:text-right">
+            <div className="text-xl sm:text-2xl font-bold text-blue-500">
+              {pendingUsers.length}
             </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold text-blue-500">
-                {pendingUsers.length}
-              </div>
-              <div className="text-sm text-gray-500">전체 사장님</div>
-            </div>
+            <div className="text-xs sm:text-sm text-gray-500">전체 사장님</div>
           </div>
         </div>
         
         {/* 검색 기능 */}
-        <div className="flex items-center gap-4">
-          <div className="flex-1">
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <div className="flex-1 w-full">
             <div className="relative">
               <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
               <input
@@ -178,14 +178,14 @@ export default function UserManagement({ showToast }: UserManagementProps) {
                 placeholder="사장님 이름, 전화번호, 매장명으로 검색..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm sm:text-base"
               />
             </div>
           </div>
           {searchTerm && (
             <button
               onClick={() => setSearchTerm('')}
-              className="px-3 py-2 text-gray-500 hover:text-gray-700 transition-colors"
+              className="px-4 py-3 text-gray-500 hover:text-gray-700 transition-colors bg-gray-100 rounded-lg"
             >
               <i className="ri-close-line text-lg"></i>
             </button>
@@ -209,17 +209,17 @@ export default function UserManagement({ showToast }: UserManagementProps) {
       ) : (
         <div className="space-y-4">
           {filteredUsers.map((user) => (
-            <div key={user.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between">
+            <div key={user.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex-1">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                      <i className="ri-user-line text-orange-500 text-xl"></i>
+                  <div className="flex items-center space-x-3 sm:space-x-4">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                      <i className="ri-user-line text-orange-500 text-lg sm:text-xl"></i>
                     </div>
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <h3 className="text-lg font-semibold text-gray-800">{user.name}</h3>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-800 truncate">{user.name}</h3>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium w-fit ${
                           user.status === 'approved' 
                             ? 'bg-green-100 text-green-800' 
                             : user.status === 'pending'
@@ -243,10 +243,10 @@ export default function UserManagement({ showToast }: UserManagementProps) {
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-4">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
                   {/* 매장 선택 (승인 대기 중인 사용자만) */}
                   {user.status === 'pending' && (
-                    <div className="min-w-[200px]">
+                    <div className="w-full sm:min-w-[200px]">
                       <select
                         value={selectedStore[user.id] || ''}
                         onChange={(e) => setSelectedStore({
@@ -267,7 +267,7 @@ export default function UserManagement({ showToast }: UserManagementProps) {
                   
                   {/* 승인된 사용자의 매장명 표시 */}
                   {user.status === 'approved' && user.store_name && (
-                    <div className="min-w-[200px]">
+                    <div className="w-full sm:min-w-[200px]">
                       <div className="px-3 py-2 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800 font-medium">
                         <i className="ri-store-line mr-2"></i>
                         {user.store_name}
@@ -282,7 +282,7 @@ export default function UserManagement({ showToast }: UserManagementProps) {
                         <button
                           onClick={() => handleApprove(user.id, user.name)}
                           disabled={!selectedStore[user.id]}
-                          className="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors flex items-center space-x-2"
+                          className="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center space-x-2"
                         >
                           <i className="ri-check-line"></i>
                           <span>승인</span>
@@ -290,7 +290,7 @@ export default function UserManagement({ showToast }: UserManagementProps) {
                         
                         <button
                           onClick={() => handleReject(user.id, user.name)}
-                          className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center space-x-2"
+                          className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center space-x-2"
                         >
                           <i className="ri-close-line"></i>
                           <span>거부</span>

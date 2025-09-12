@@ -5,6 +5,7 @@ import { useNewAuth } from '../../hooks/useNewAuth';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import PWAInstallButton from '../../components/PWAInstallButton';
+import CustomerPushNotificationSettings from '../../components/CustomerPushNotificationSettings';
 
 interface MenuItem {
   id: string;
@@ -210,22 +211,27 @@ export default function Menu() {
       <Header />
       
       {/* 매장 정보 - menu 페이지 전용 */}
-      <div className="bg-white shadow-sm sticky top-0 z-10 border-b border-gray-100">
+      <div className="bg-white sticky top-0 z-10">
         <div className="px-4 py-4">
           {/* 헤더 */}
           <div className="flex items-center justify-between mb-4">
             <div className="w-10"></div>
-            <h1 className="text-xl font-bold text-gray-800 flex-1 text-center">{store.name}</h1>
+            <h1 className="text-lg font-bold text-gray-800 flex-1 text-center">{store.name}</h1>
             <div className="w-10">
               {/* 사장님만 매장관리 버튼 표시 */}
               {!authLoading && user && user.role === 'admin' && (
-                <button
-                  onClick={() => navigate(`/admin/${storeId}`)}
-                  className="px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-                >
-                  <i className="ri-settings-line"></i>
-                  매장관리
-                </button>
+                <div className="flex items-center gap-2">
+                  <div className="bg-orange-100 text-orange-600 px-2 py-1 rounded-full text-xs font-medium">
+                    매장관리자
+                  </div>
+                  <button
+                    onClick={() => navigate(`/admin/${storeId}`)}
+                    className="px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105 flex items-center gap-2"
+                  >
+                    <i className="ri-settings-line text-base"></i>
+                    <span className="hidden sm:inline">관리</span>
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -263,6 +269,27 @@ export default function Menu() {
               storeId={storeId} 
               className="text-sm"
             />
+          </div>
+        </div>
+      </div>
+
+      {/* 푸시 알림 설정 - menu 페이지에 추가 */}
+      <div className="px-4 py-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+          <h3 className="text-sm font-medium text-gray-800 mb-3 flex items-center gap-2">
+            <i className="ri-notification-line text-orange-500"></i>
+            주문 알림 설정
+          </h3>
+          <p className="text-xs text-gray-600 mb-4">
+            주문 상태 변경 시 실시간으로 알림을 받으실 수 있습니다.
+          </p>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="flex items-center text-blue-800">
+              <i className="ri-information-line mr-2"></i>
+              <div className="text-xs">
+                주문 완료 후 전화번호를 입력하시면 푸시 알림을 설정할 수 있습니다.
+              </div>
+            </div>
           </div>
         </div>
       </div>

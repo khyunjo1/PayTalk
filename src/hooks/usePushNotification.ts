@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import { 
   initializePushNotifications, 
-  getPushNotificationStatus 
+  getPushNotificationStatus,
+  requestNotificationPermission,
+  subscribeToPush
 } from '../lib/pushNotification';
+import { savePushSubscription } from '../lib/pushApi';
 
 export const usePushNotification = (userId: string | null) => {
   const [isInitialized, setIsInitialized] = useState(false);
@@ -51,15 +54,32 @@ export const usePushNotification = (userId: string | null) => {
     setIsLoading(true);
     
     try {
-      const success = await initializePushNotifications(userId);
-      setIsInitialized(success);
-      setIsEnabled(success);
-      
-      if (success) {
-        setPermission('granted');
+      // 1. 알림 권한 요청
+      const hasPermission = await requestNotificationPermission();
+      if (!hasPermission) {
+        console.log('알림 권한이 거부되었습니다.');
+        return false;
       }
+
+      // 2. 푸시 구독 생성
+      const subscription = await subscribeToPush();
+      if (!subscription) {
+        console.log('푸시 구독 실패');
+        return false;
+      }
+
+      // 3. 구독 정보를 서버에 저장 (user_id 기반)
+      const saved = await savePushSubscription(subscription, userId);
+      if (!saved) {
+        console.log('푸시 구독 정보 저장 실패');
+        return false;
+      }
+
+      setIsInitialized(true);
+      setIsEnabled(true);
+      setPermission('granted');
       
-      return success;
+      return true;
     } catch (error) {
       console.error('푸시 알림 권한 요청 오류:', error);
       return false;

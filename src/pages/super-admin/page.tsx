@@ -124,17 +124,14 @@ export default function SuperAdmin() {
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* 모바일 헤더 */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 bg-white shadow-sm border-b z-50 h-16">
+      <div className="lg:hidden fixed top-0 left-0 right-0 bg-white z-50 h-16">
         <div className="px-4 py-3 flex items-center justify-between h-full">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center">
             <img 
               src="https://static.readdy.ai/image/912b0945f01d9fdb4ff4544659653c90/2d4890bd82abce85d430bd82d04df8d6.png" 
               alt="페이톡 로고" 
-              className="w-6 h-6"
+              className="w-12 h-12"
             />
-            <h1 className="text-lg font-bold text-orange-500" style={{ fontFamily: "Pacifico, serif" }}>
-              슈퍼어드민
-            </h1>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -165,9 +162,13 @@ export default function SuperAdmin() {
       <div className={`${sidebarOpen ? 'w-64' : 'w-0'} lg:w-64 bg-white shadow-lg transition-all duration-300 fixed lg:relative h-full z-50 lg:z-40 overflow-hidden`}>
         <div className="p-4">
           <div className="flex items-center justify-between">
-            <h1 className={`font-bold text-xl text-orange-500 ${!sidebarOpen && 'lg:block hidden'}`} style={{ fontFamily: "Pacifico, serif" }}>
-              Super Admin
-            </h1>
+            <div className="flex items-center">
+              <img 
+                src="https://static.readdy.ai/image/912b0945f01d9fdb4ff4544659653c90/2d4890bd82abce85d430bd82d04df8d6.png" 
+                alt="페이톡 로고" 
+                className="w-10 h-10"
+              />
+            </div>
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="p-2 hover:bg-gray-100 rounded-lg cursor-pointer"

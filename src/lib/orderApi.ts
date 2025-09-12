@@ -192,7 +192,7 @@ export const getStoreOrders = async (storeId: string) => {
 };
 
 // 주문 상태 업데이트
-export const updateOrderStatus = async (orderId: string, status: '입금대기' | '입금확인' | '배달완료') => {
+export const updateOrderStatus = async (orderId: string, status: '입금대기' | '입금확인' | '배달완료' | '주문취소') => {
   const { data, error } = await supabase
     .from('orders')
     .update({ 
@@ -204,6 +204,10 @@ export const updateOrderStatus = async (orderId: string, status: '입금대기' 
       *,
       stores (
         name,
+        phone
+      ),
+      users (
+        id,
         phone
       ),
       order_items (
@@ -228,21 +232,23 @@ export const updateOrderStatus = async (orderId: string, status: '입금대기' 
 
   // 주문 상태 변경 시 푸시 알림 발송
   try {
-    if (data.users) {
-      // 고객에게 주문 상태 변경 푸시 알림 발송
-      const notification = getOrderNotificationMessage(status, data.id);
-      
-      // 전화번호 기반 푸시 알림 시도
-      if (data.users.phone) {
-        await sendPushNotificationByPhone(
-          data.users.phone,
-          notification.title,
-          notification.body,
-          { orderId: data.id, status }
-        );
-      }
-      
-      // 기존 user_id 기반 푸시 알림도 백업으로 시도
+    // 고객에게 주문 상태 변경 푸시 알림 발송
+    const notification = getOrderNotificationMessage(status, data.id);
+    
+    // 전화번호 기반 푸시 알림 시도 (고객 전화번호가 있는 경우)
+    if (data.customer_phone) {
+      console.log('고객 전화번호로 푸시 알림 발송 시도:', data.customer_phone);
+      await sendPushNotificationByPhone(
+        data.customer_phone,
+        notification.title,
+        notification.body,
+        { orderId: data.id, status }
+      );
+    }
+    
+    // user_id 기반 푸시 알림도 백업으로 시도
+    if (data.users && data.users.id) {
+      console.log('사용자 ID로 푸시 알림 발송 시도:', data.users.id);
       await sendPushNotification(
         data.users.id,
         notification.title,

@@ -45,7 +45,7 @@ export const getPushSubscription = async (userId: string): Promise<any> => {
   }
 };
 
-// 푸시 알림 발송 (서버에서 호출)
+// 푸시 알림 발송 (user_id 기반)
 export const sendPushNotification = async (
   userId: string, 
   title: string, 
@@ -53,14 +53,25 @@ export const sendPushNotification = async (
   data?: any
 ): Promise<boolean> => {
   try {
-    const subscription = await getPushSubscription(userId);
-    if (!subscription) {
-      console.log('사용자의 푸시 구독 정보가 없습니다.');
+    // 1. 사용자의 푸시 구독 정보 조회
+    const { data: subscriptionData, error } = await supabase
+      .from('user_push_subscriptions')
+      .select('subscription')
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !subscriptionData) {
+      console.log(`사용자 ${userId}의 푸시 구독 정보가 없습니다.`);
       return false;
     }
 
-    // 실제로는 서버에서 푸시 알림을 발송해야 합니다
-    // 여기서는 클라이언트에서 로컬 알림을 보여주는 방식으로 구현
+    // 2. 알림 권한 확인
+    if (Notification.permission !== 'granted') {
+      console.log('알림 권한이 허용되지 않았습니다.');
+      return false;
+    }
+
+    // 3. Service Worker를 통한 알림 표시
     if ('serviceWorker' in navigator && 'PushManager' in window) {
       const registration = await navigator.serviceWorker.ready;
       await registration.showNotification(title, {

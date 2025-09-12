@@ -87,34 +87,34 @@ export default function Home() {
           </p>
           
           {/* 통계 섹션 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-            <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-6">
-              <div className="text-4xl font-bold mb-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-4xl mx-auto">
+            <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-4 sm:p-6">
+              <div className="text-2xl sm:text-4xl font-bold mb-2">
                 {statsLoading ? (
-                  <div className="animate-pulse bg-white bg-opacity-30 h-10 w-16 mx-auto rounded"></div>
+                  <div className="animate-pulse bg-white bg-opacity-30 h-8 sm:h-10 w-16 sm:w-20 mx-auto rounded"></div>
                 ) : (
                   stats.totalStores.toLocaleString()
                 )}
               </div>
-              <div className="text-lg opacity-90">가입된 매장</div>
+              <div className="text-sm sm:text-lg opacity-90">가입된 매장</div>
             </div>
             
-            <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-6">
-              <div className="text-4xl font-bold mb-2">
+            <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-4 sm:p-6">
+              <div className="text-2xl sm:text-4xl font-bold mb-2">
                 {statsLoading ? (
-                  <div className="animate-pulse bg-white bg-opacity-30 h-10 w-20 mx-auto rounded"></div>
+                  <div className="animate-pulse bg-white bg-opacity-30 h-8 sm:h-10 w-16 sm:w-20 mx-auto rounded"></div>
                 ) : (
                   stats.totalOrders.toLocaleString()
                 )}
               </div>
-              <div className="text-lg opacity-90">총 주문 수</div>
+              <div className="text-sm sm:text-lg opacity-90">총 주문 수</div>
             </div>
             
-            <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-6">
-              <div className="text-4xl font-bold mb-2 text-green-300">
+            <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-4 sm:p-6 sm:col-span-2 lg:col-span-1">
+              <div className="text-2xl sm:text-4xl font-bold mb-2 text-green-300">
                 0원
               </div>
-              <div className="text-lg opacity-90">수수료</div>
+              <div className="text-sm sm:text-lg opacity-90">수수료</div>
             </div>
           </div>
         </div>
