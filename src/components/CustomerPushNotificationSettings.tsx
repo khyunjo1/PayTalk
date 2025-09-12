@@ -20,14 +20,38 @@ export default function CustomerPushNotificationSettings({
 
   useEffect(() => {
     // 브라우저 지원 여부 확인 (Safari 지원 포함)
-    const isSafari = /^((?!chrome|android|edg|firefox).)*safari/i.test(navigator.userAgent);
+    const userAgent = navigator.userAgent;
+    const isSafari = /^((?!chrome|android|edg|firefox).)*safari/i.test(userAgent);
+    const isChrome = /chrome/i.test(userAgent);
+    const isFirefox = /firefox/i.test(userAgent);
+    const isEdge = /edg/i.test(userAgent);
+    
     const hasNotification = 'Notification' in window;
     const hasServiceWorker = 'serviceWorker' in navigator;
     const hasPushManager = 'PushManager' in window;
     
-    // Safari는 기본 알림만 지원하므로 Notification API만 확인
-    // 다른 브라우저는 Service Worker와 PushManager도 확인
-    const supported = hasNotification && (isSafari || (hasServiceWorker && hasPushManager));
+    console.log('브라우저 감지 결과:', {
+      userAgent,
+      isSafari,
+      isChrome,
+      isFirefox,
+      isEdge,
+      hasNotification,
+      hasServiceWorker,
+      hasPushManager
+    });
+    
+    // 알려진 브라우저에서 Notification API를 지원하는지 확인
+    // Safari: 기본 알림만 지원
+    // Chrome, Firefox, Edge: Service Worker + PushManager 지원
+    const supported = hasNotification && (
+      isSafari || 
+      (isChrome && hasServiceWorker && hasPushManager) ||
+      (isFirefox && hasServiceWorker && hasPushManager) ||
+      (isEdge && hasServiceWorker && hasPushManager)
+    );
+    
+    console.log('최종 지원 여부:', supported);
     setIsSupported(supported);
     
     if (supported) {
@@ -56,6 +80,21 @@ export default function CustomerPushNotificationSettings({
       const isSafari = /^((?!chrome|android|edg|firefox).)*safari/i.test(navigator.userAgent);
       if (isSafari) {
         console.log('Safari에서 기본 알림이 활성화되었습니다.');
+        
+        // Safari에서는 더미 구독 정보로 전화번호 연결
+        const safariSubscription = {
+          endpoint: 'safari-notification',
+          keys: {
+            p256dh: 'safari-p256dh',
+            auth: 'safari-auth'
+          }
+        };
+        
+        const success = await linkPhoneToPushSubscription(phone, safariSubscription);
+        if (!success) {
+          console.warn('Safari 전화번호 연결 실패, 하지만 기본 알림은 동작합니다.');
+        }
+        
         setIsEnabled(true);
         setPermission('granted');
         onSuccess?.();
@@ -63,16 +102,22 @@ export default function CustomerPushNotificationSettings({
       }
 
       // 2. 푸시 구독 생성 (Safari가 아닌 경우)
+      console.log('푸시 구독 생성 시작...');
       const subscription = await subscribeToPush();
+      console.log('푸시 구독 결과:', subscription);
+      
       if (!subscription) {
-        onError?.('푸시 알림 구독에 실패했습니다.');
+        onError?.('푸시 알림 구독에 실패했습니다. VAPID 키가 설정되어 있는지 확인해주세요.');
         return;
       }
 
       // 3. 전화번호와 푸시 구독 연결
+      console.log('전화번호와 푸시 구독 연결 시작...', { phone, subscription });
       const success = await linkPhoneToPushSubscription(phone, subscription);
+      console.log('전화번호 연결 결과:', success);
+      
       if (!success) {
-        onError?.('푸시 알림 설정에 실패했습니다.');
+        onError?.('푸시 알림 설정에 실패했습니다. 다시 시도해주세요.');
         return;
       }
 

@@ -82,7 +82,7 @@ export const subscribeToPush = async (): Promise<PushSubscription | null> => {
       return null;
     }
 
-    const vapidKey = process.env.VITE_VAPID_PUBLIC_KEY || '';
+    const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
     console.log('VAPID 키 확인:', vapidKey ? '설정됨' : '설정되지 않음');
     
     if (!vapidKey) {

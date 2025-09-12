@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 
 // 푸시 구독 정보 저장
-export const savePushSubscription = async (userId: string, subscription: any): Promise<boolean> => {
+export const savePushSubscription = async (subscription: any, userId: string): Promise<boolean> => {
   try {
     const { error } = await supabase
       .from('user_push_subscriptions')
