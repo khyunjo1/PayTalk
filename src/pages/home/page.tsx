@@ -6,6 +6,7 @@ import { createInquiry } from '../../lib/inquiryApi';
 import { getHomeStats, type HomeStats } from '../../lib/statsApi';
 import PushNotificationSettings from '../../components/PushNotificationSettings';
 import PushNotificationTest from '../../components/PushNotificationTest';
+import PushDiagnostics from '../../components/PushDiagnostics';
 import { updateManifest } from '../../utils/manifestGenerator';
 
 export default function Home() {
@@ -125,6 +126,7 @@ export default function Home() {
         <div className="container mx-auto px-4 space-y-6">
           <PushNotificationSettings />
           <PushNotificationTest />
+          <PushDiagnostics />
         </div>
       </section>
 

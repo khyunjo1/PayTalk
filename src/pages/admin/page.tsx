@@ -1380,8 +1380,26 @@ export default function Admin() {
                           </span>
                         </div>
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-gray-500 space-y-1">
                         <div>주문일시: {date} {time}</div>
+                        {order.order_type === 'delivery' && order.delivery_address && (
+                          <div>배달주소: {order.delivery_address}</div>
+                        )}
+                        {order.delivery_time && (
+                          <div>배달시간: {order.delivery_time}</div>
+                        )}
+                        {order.pickup_time && (
+                          <div>픽업시간: {order.pickup_time}</div>
+                        )}
+                        {order.depositor_name && (
+                          <div>입금자명: {order.depositor_name}</div>
+                        )}
+                        {order.customer_name && (
+                          <div>고객명: {order.customer_name}</div>
+                        )}
+                        {order.customer_phone && (
+                          <div>연락처: {order.customer_phone}</div>
+                        )}
                       </div>
                     </div>
 
@@ -1407,51 +1425,15 @@ export default function Admin() {
                       </div>
                     </div>
 
-                    {/* 주문 상세 정보 */}
-                    <div className="mt-3 pt-3 border-t space-y-2">
-                      {order.delivery_address && (
-                        <div className="flex items-center text-sm text-gray-600">
-                          <i className="ri-map-pin-line mr-2"></i>
-                          <span>배달주소: {order.delivery_address}</span>
-                        </div>
-                      )}
-                      {order.delivery_time && (
-                        <div className="flex items-center text-sm text-gray-600">
-                          <i className="ri-time-line mr-2"></i>
-                          <span>배달시간: {order.delivery_time}</span>
-                        </div>
-                      )}
-                      {order.pickup_time && (
-                        <div className="flex items-center text-sm text-gray-600">
-                          <i className="ri-time-line mr-2"></i>
-                          <span>픽업시간: {order.pickup_time}</span>
-                        </div>
-                      )}
-                      {order.depositor_name && (
-                        <div className="flex items-center text-sm text-gray-600">
-                          <i className="ri-user-line mr-2"></i>
-                          <span>입금자명: {order.depositor_name}</span>
-                        </div>
-                      )}
-                      {order.customer_name && (
-                        <div className="flex items-center text-sm text-gray-600">
-                          <i className="ri-user-line mr-2"></i>
-                          <span>고객명: {order.customer_name}</span>
-                        </div>
-                      )}
-                      {order.customer_phone && (
-                        <div className="flex items-center text-sm text-gray-600">
-                          <i className="ri-phone-line mr-2"></i>
-                          <span>연락처: {order.customer_phone}</span>
-                        </div>
-                      )}
-                      {order.special_requests && (
+                    {/* 요청사항 */}
+                    {order.special_requests && (
+                      <div className="mt-3 pt-3 border-t">
                         <div className="flex items-center text-sm text-gray-600">
                           <i className="ri-message-line mr-2"></i>
                           <span>요청사항: {order.special_requests}</span>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
 
                     {/* 관리 버튼 */}
                     <div className="mt-4 pt-3 border-t">

@@ -17,6 +17,7 @@ import AdminOrders from "../pages/admin/orders/page";
 import AdminMenu from "../pages/admin/menu/page";
 import AdminAnalytics from "../pages/admin/analytics/page";
 import AdminStore from "../pages/admin/store/page";
+import OrderStatus from "../pages/order-status/[storeId]/page";
 
 const routes: RouteObject[] = [
   {
@@ -86,6 +87,10 @@ const routes: RouteObject[] = [
   {
     path: "/owner/menu",
     element: <OwnerMenu />,
+  },
+  {
+    path: "/order-status/:storeId",
+    element: <OrderStatus />,
   },
   {
     path: "*",

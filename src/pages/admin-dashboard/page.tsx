@@ -239,6 +239,76 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {/* 고객 주문 조회 링크 */}
+        <div className="bg-white/70 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8">
+          <div className="text-center mb-6">
+            <h2 className="text-xl font-bold text-gray-800 mb-2">고객 주문 조회 링크</h2>
+            <p className="text-gray-500">고객들이 주문 상태를 확인할 수 있는 링크입니다</p>
+          </div>
+          <div className="space-y-4">
+            {storesLoading ? (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-500 mr-3"></div>
+                  <span className="text-yellow-800">매장 정보를 불러오는 중...</span>
+                </div>
+              </div>
+            ) : userStores.length > 0 ? (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium text-blue-800">주문 조회 페이지 링크</h3>
+                    <p className="text-sm text-blue-600 mt-1">
+                      고객들에게 이 링크를 공유하세요
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const link = `${window.location.origin}/order-status/${userStores[0].id}`;
+                      navigator.clipboard.writeText(link);
+                      alert('링크가 복사되었습니다!');
+                    }}
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center"
+                  >
+                    <i className="ri-link mr-2"></i>
+                    링크 복사
+                  </button>
+                </div>
+                <div className="mt-3 p-3 bg-white rounded border text-sm text-gray-700 font-mono break-all">
+                  {`${window.location.origin}/order-status/${userStores[0].id}`}
+                </div>
+              </div>
+            ) : (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-center">
+                  <i className="ri-error-warning-line text-red-500 text-xl mr-3"></i>
+                  <div>
+                    <h3 className="font-medium text-red-800">매장 정보를 찾을 수 없습니다</h3>
+                    <p className="text-sm text-red-600 mt-1">
+                      관리자에게 문의하세요.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <i className="ri-information-line text-green-500 text-xl mr-3 mt-0.5"></i>
+                <div>
+                  <h3 className="font-medium text-green-800 mb-2">사용 방법</h3>
+                  <ul className="text-sm text-green-700 space-y-1">
+                    <li>• 고객들에게 이 링크를 공유하세요</li>
+                    <li>• 고객이 링크에 접속하면 전화번호를 입력합니다</li>
+                    <li>• 입력한 전화번호로 주문한 내역이 표시됩니다</li>
+                    <li>• 주문 상태가 실시간으로 업데이트됩니다</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* 푸시 알림 설정 */}
         <div className="bg-white/70 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8">
           <div className="text-center mb-6">

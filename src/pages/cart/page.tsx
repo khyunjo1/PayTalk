@@ -365,12 +365,16 @@ export default function Cart() {
               <input
                 type="tel"
                 value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
-                placeholder="010-1234-5678"
+                onChange={(e) => {
+                  const numbers = e.target.value.replace(/[^0-9]/g, '');
+                  const limited = numbers.slice(0, 11);
+                  setCustomerPhone(limited);
+                }}
+                placeholder="01023432321"
                 className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
               <div className="text-xs text-gray-500 mt-1">
-                알림톡 발송용
+                숫자만 입력하세요 (예: 01023432321)
               </div>
             </div>
           </div>
