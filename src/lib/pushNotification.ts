@@ -24,8 +24,13 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
     return false;
   }
 
-  const permission = await Notification.requestPermission();
-  return permission === 'granted';
+  try {
+    const permission = await Notification.requestPermission();
+    return permission === 'granted';
+  } catch (error) {
+    console.error('알림 권한 요청 실패:', error);
+    return false;
+  }
 };
 
 // Service Worker 등록
@@ -139,7 +144,14 @@ export const initializePushNotifications = async (userId: string): Promise<boole
       return false;
     }
 
-    // 2. Service Worker 등록
+    // Safari는 기본 알림만 지원하므로 Service Worker 없이도 성공으로 처리
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    if (isSafari) {
+      console.log('Safari에서 기본 알림이 활성화되었습니다.');
+      return true;
+    }
+
+    // 2. Service Worker 등록 (Safari가 아닌 경우)
     const registration = await registerServiceWorker();
     if (!registration) {
       console.log('Service Worker 등록 실패');
@@ -174,7 +186,15 @@ export const getPushNotificationStatus = (): {
   permission: NotificationPermission;
   enabled: boolean;
 } => {
-  const supported = 'Notification' in window && 'serviceWorker' in navigator;
+  // Safari는 기본 알림을 지원하지만 Service Worker Push API는 제한적
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  const hasNotification = 'Notification' in window;
+  const hasServiceWorker = 'serviceWorker' in navigator;
+  const hasPushManager = 'PushManager' in window;
+  
+  // Safari의 경우 기본 알림만 지원하므로 Notification API만 확인
+  // 다른 브라우저는 Service Worker와 PushManager도 확인
+  const supported = hasNotification && (isSafari || (hasServiceWorker && hasPushManager));
   const permission = supported ? Notification.permission : 'denied';
   const enabled = supported && permission === 'granted';
 

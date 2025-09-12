@@ -53,7 +53,28 @@ export const sendPushNotification = async (
   data?: any
 ): Promise<boolean> => {
   try {
-    // 1. 사용자의 푸시 구독 정보 조회
+    // 2. 알림 권한 확인
+    if (Notification.permission !== 'granted') {
+      console.log('알림 권한이 허용되지 않았습니다.');
+      return false;
+    }
+
+    // Safari는 기본 알림만 지원
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    
+    if (isSafari) {
+      // Safari에서는 기본 Notification API 사용
+      new Notification(title, {
+        body,
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        data
+      });
+      console.log('Safari에서 기본 알림이 발송되었습니다.');
+      return true;
+    }
+
+    // 1. 사용자의 푸시 구독 정보 조회 (Safari가 아닌 경우)
     const { data: subscriptionData, error } = await supabase
       .from('user_push_subscriptions')
       .select('subscription')
@@ -62,12 +83,6 @@ export const sendPushNotification = async (
 
     if (error || !subscriptionData) {
       console.log(`사용자 ${userId}의 푸시 구독 정보가 없습니다.`);
-      return false;
-    }
-
-    // 2. 알림 권한 확인
-    if (Notification.permission !== 'granted') {
-      console.log('알림 권한이 허용되지 않았습니다.');
       return false;
     }
 
