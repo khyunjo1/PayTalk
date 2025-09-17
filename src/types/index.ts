@@ -1,0 +1,205 @@
+// PayTalk 프로젝트 공통 타입 정의
+
+// 사용자 역할 타입
+export type UserRole = 'customer' | 'admin' | 'super_admin';
+
+// 사용자 인터페이스
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  profile_image?: string;
+  phone?: string;
+  role: UserRole;
+  created_at: string;
+  updated_at: string;
+}
+
+// 매장 상태 타입
+export type StoreStatus = 'active' | 'inactive';
+
+// 배달 시간 슬롯 인터페이스
+export interface DeliveryTimeSlot {
+  name: string;
+  start: string;
+  end: string;
+  enabled: boolean;
+}
+
+// 매장 인터페이스 (데이터베이스)
+export interface StoreDB {
+  id: string;
+  name: string;
+  category: string;
+  owner_name?: string;
+  delivery_area: string;
+  phone: string;
+  business_hours_start?: string;
+  business_hours_end?: string;
+  order_cutoff_time?: string;
+  minimum_order_amount?: number;
+  pickup_time_slots?: string[];
+  delivery_time_slots?: DeliveryTimeSlot[];
+  bank_account: string;
+  account_holder: string;
+  is_active?: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// 매장 인터페이스 (컴포넌트용)
+export interface Store {
+  id: string;
+  name: string;
+  category: string;
+  owner: string;
+  phone: string;
+  status: StoreStatus;
+  deliveryArea: string;
+  businessHoursStart: string;
+  businessHoursEnd: string;
+  orderCutoffTime: string;
+  minimumOrderAmount: number;
+  pickupTimeSlots: string[];
+  deliveryTimeSlots: DeliveryTimeSlot[];
+  bankAccount: string;
+  accountHolder: string;
+}
+
+// 메뉴 인터페이스 (데이터베이스)
+export interface MenuDB {
+  id: string;
+  store_id: string;
+  name: string;
+  price: number;
+  category: string;
+  description?: string;
+  is_available: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// 메뉴 인터페이스 (컴포넌트용)
+export interface MenuItem {
+  id: string;
+  name: string;
+  price: number;
+  category: string;
+  description: string;
+  isAvailable: boolean;
+  storeId: string;
+}
+
+// 메뉴 생성 데이터 타입
+export interface CreateMenuData {
+  store_id: string;
+  name: string;
+  price: number;
+  category?: string;
+  description?: string;
+  is_available?: boolean;
+}
+
+// 메뉴 수정 데이터 타입
+export interface UpdateMenuData {
+  name?: string;
+  price?: number;
+  category?: string;
+  description?: string;
+  is_available?: boolean;
+}
+
+// 일일 메뉴 페이지 타입 정의
+export interface DailyMenu {
+  id: string;
+  store_id: string;
+  menu_date: string;
+  title: string;
+  description?: string;
+  is_active: boolean;
+  cutoff_time?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DailyMenuItem {
+  id: string;
+  daily_menu_id: string;
+  menu_id: string;
+  initial_quantity: number;
+  current_quantity: number;
+  is_available: boolean;
+  created_at: string;
+  updated_at: string;
+  menu: MenuDB; // 메뉴 정보 조인
+}
+
+export interface CreateDailyMenuData {
+  store_id: string;
+  menu_date: string;
+  title?: string;
+  description?: string;
+}
+
+export interface CreateDailyMenuItemData {
+  daily_menu_id: string;
+  menu_id: string;
+  initial_quantity: number;
+}
+
+// 매장 생성 데이터 타입
+export interface CreateStoreData {
+  name: string;
+  category: string;
+  owner_name?: string;
+  delivery_area: string;
+  phone: string;
+  business_hours_start?: string;
+  business_hours_end?: string;
+  order_cutoff_time?: string;
+  minimum_order_amount?: number;
+  pickup_time_slots?: string[];
+  delivery_time_slots?: DeliveryTimeSlot[];
+  bank_account: string;
+  account_holder: string;
+  is_active?: boolean;
+}
+
+// 매장 수정 데이터 타입
+export interface UpdateStoreData {
+  name?: string;
+  category?: string;
+  owner_name?: string;
+  delivery_area?: string;
+  phone?: string;
+  business_hours_start?: string;
+  business_hours_end?: string;
+  order_cutoff_time?: string;
+  minimum_order_amount?: number;
+  pickup_time_slots?: string[];
+  delivery_time_slots?: DeliveryTimeSlot[];
+  bank_account?: string;
+  account_holder?: string;
+  is_active?: boolean;
+}
+
+// API 응답 타입
+export interface ApiResponse<T> {
+  data: T;
+  error?: string;
+}
+
+// 폼 상태 타입
+export interface FormState {
+  isLoading: boolean;
+  error?: string;
+  success?: string;
+}
+
+// 토스트 메시지 타입
+export interface ToastMessage {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'warning' | 'info';
+  duration?: number;
+}

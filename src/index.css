@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 드롭다운 스타일 개선 */
+select option {
+  background-color: white !important;
+  color: #374151 !important;
+  padding: 8px 12px !important;
+}
+
+select option:hover {
+  background-color: #f3f4f6 !important;
+}
+
+select option:checked {
+  background-color: #f97316 !important;
+  color: white !important;
+}
+
+/* 스크롤바 숨기기 */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
