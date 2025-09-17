@@ -1,0 +1,17 @@
+<!-- OneSignal SDK 설정 -->
+<!-- public/index.html에 추가할 코드 -->
+
+<!-- OneSignal SDK -->
+<script src="https://cdn.onesignal.com/sdks/OneSignalSDK.js" async=""></script>
+<script>
+  window.OneSignal = window.OneSignal || [];
+  OneSignal.push(function() {
+    OneSignal.init({
+      appId: "YOUR_ONESIGNAL_APP_ID", // OneSignal에서 발급받은 App ID로 변경
+      notifyButton: {
+        enable: false, // 알림 버튼 숨김
+      },
+      allowLocalhostAsSecureOrigin: true, // 개발환경용
+    });
+  });
+</script>
