@@ -76,9 +76,16 @@ export default function AdminStore() {
 
     try {
       const updateData = {
-        ...formData,
-        delivery_fee: formData.delivery_fee ? parseFloat(formData.delivery_fee) : 0,
-        minimum_order: formData.minimum_order ? parseFloat(formData.minimum_order) : 0
+        name: formData.name,
+        category: formData.category,
+        delivery_area: formData.delivery_area,
+        phone: formData.phone,
+        business_hours_start: formData.business_hours_start,
+        business_hours_end: formData.business_hours_end,
+        order_cutoff_time: formData.order_cutoff_time,
+        minimum_order_amount: formData.minimum_order_amount ? parseInt(formData.minimum_order_amount) : 0,
+        bank_account: formData.bank_account,
+        account_holder: formData.account_holder
       };
 
       const updatedStore = await updateStore(storeId, updateData);
@@ -91,18 +98,6 @@ export default function AdminStore() {
     }
   };
 
-  const copyOrderLink = async () => {
-    if (!storeId) return;
-    
-    try {
-      const orderLink = `${window.location.origin}/menu/${storeId}`;
-      await navigator.clipboard.writeText(orderLink);
-      alert('주문 링크가 복사되었습니다!');
-    } catch (error) {
-      console.error('링크 복사 실패:', error);
-      alert('링크 복사에 실패했습니다.');
-    }
-  };
 
   if (loading || storeLoading) {
     return (
@@ -231,75 +226,10 @@ export default function AdminStore() {
                 <p className="text-gray-800">{store.account_holder || '예금주명이 없습니다.'}</p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">주문 링크</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={`${window.location.origin}/menu/${storeId}`}
-                    readOnly
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm"
-                  />
-                  <button
-                    onClick={copyOrderLink}
-                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
-                  >
-                    <i className="ri-file-copy-line"></i>
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">고객주문조회 링크</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={`${window.location.origin}/order-status/${storeId}`}
-                    readOnly
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm"
-                  />
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(`${window.location.origin}/order-status/${storeId}`);
-                      alert('고객주문조회 링크가 복사되었습니다!');
-                    }}
-                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
-                  >
-                    <i className="ri-file-copy-line"></i>
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
         </div>
 
-        {/* 매장 통계 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-center">
-            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-              <i className="ri-calendar-line text-2xl text-orange-600"></i>
-            </div>
-            <h3 className="text-lg font-bold text-gray-800 mb-1">가입일</h3>
-            <p className="text-gray-600">
-              {new Date(store.created_at).toLocaleDateString('ko-KR')}
-            </p>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-center">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-              <i className="ri-shopping-cart-line text-2xl text-blue-600"></i>
-            </div>
-            <h3 className="text-lg font-bold text-gray-800 mb-1">주문 링크</h3>
-            <p className="text-gray-600 text-sm">고객이 주문할 수 있는 링크</p>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-center">
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-              <i className="ri-settings-line text-2xl text-green-600"></i>
-            </div>
-            <h3 className="text-lg font-bold text-gray-800 mb-1">관리</h3>
-          </div>
-        </div>
       </div>
 
       {/* 매장 정보 수정 폼 */}
@@ -333,78 +263,120 @@ export default function AdminStore() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    전화번호
+                    카테고리
                   </label>
                   <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    type="text"
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    placeholder="예: 한식반찬"
                   />
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  설명
+                  배달지역
                 </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                <input
+                  type="text"
+                  value={formData.delivery_area}
+                  onChange={(e) => setFormData({ ...formData, delivery_area: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  rows={3}
+                  placeholder="예: 진주, 삼천포, 사천"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  주소
+                  전화번호
                 </label>
                 <input
-                  type="text"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  운영시간
-                </label>
-                <input
-                  type="text"
-                  value={formData.business_hours}
-                  onChange={(e) => setFormData({ ...formData, business_hours: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  placeholder="예: 09:00 - 22:00"
+                  placeholder="예: 01032626543"
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    배달비
+                    운영시간 시작
                   </label>
                   <input
-                    type="number"
-                    value={formData.delivery_fee}
-                    onChange={(e) => setFormData({ ...formData, delivery_fee: e.target.value })}
+                    type="time"
+                    value={formData.business_hours_start}
+                    onChange={(e) => setFormData({ ...formData, business_hours_start: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                    min="0"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    최소 주문금액
+                    운영시간 종료
                   </label>
                   <input
-                    type="number"
-                    value={formData.minimum_order}
-                    onChange={(e) => setFormData({ ...formData, minimum_order: e.target.value })}
+                    type="time"
+                    value={formData.business_hours_end}
+                    onChange={(e) => setFormData({ ...formData, business_hours_end: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                    min="0"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  주문마감시간
+                </label>
+                <input
+                  type="time"
+                  value={formData.order_cutoff_time}
+                  onChange={(e) => setFormData({ ...formData, order_cutoff_time: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  최소 주문금액
+                </label>
+                <input
+                  type="number"
+                  value={formData.minimum_order_amount}
+                  onChange={(e) => setFormData({ ...formData, minimum_order_amount: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  min="0"
+                  placeholder="예: 10000"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    계좌번호
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.bank_account}
+                    onChange={(e) => setFormData({ ...formData, bank_account: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    placeholder="예: 3333-33-33333"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    예금주명
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.account_holder}
+                    onChange={(e) => setFormData({ ...formData, account_holder: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    placeholder="예: 윤윤자"
                   />
                 </div>
               </div>

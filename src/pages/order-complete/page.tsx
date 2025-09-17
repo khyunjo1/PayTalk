@@ -153,160 +153,158 @@ export default function OrderComplete() {
       <Header />
       
       <div className="max-w-lg mx-auto p-4 space-y-6">
-        {/* 성공 메시지 카드 */}
-        <div className="bg-white rounded-3xl shadow-xl p-8 text-center">
-          <div className="w-24 h-24 bg-gradient-to-r from-green-400 to-green-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-            <i className="ri-check-line text-4xl text-white"></i>
+        {/* 주문 완료 영역 */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
+          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i className="ri-check-line text-3xl text-green-600"></i>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">주문 완료!</h1>
-          <p className="text-gray-600 text-lg mb-4">{orderData.stores.name}</p>
-          <p className="text-sm text-gray-500">주문번호: {orderData.id.slice(-8).toUpperCase()}</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">주문 완료!</h1>
+          <p className="text-sm text-gray-500 mb-4">주문번호: {orderData.id.slice(-8).toUpperCase()}</p>
+          <p className="text-sm text-gray-500">입금 확인 후 조리가 시작됩니다</p>
+        </div>
+
+        {/* 결제 금액 카드 */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <h3 className="text-lg font-bold text-gray-900 mb-4">주문 메뉴</h3>
+          <div className="space-y-3">
+            {orderData.daily_menu_orders?.map((item, index) => (
+              <div key={index} className="flex justify-between items-center py-2">
+                <div className="flex-1">
+                  <span className="text-gray-900 font-medium">{item.menus.name}</span>
+                  <span className="text-gray-500 ml-2">× {item.quantity}개</span>
+                </div>
+                <span className="text-gray-800 font-semibold">
+                  {((item.menus?.price || 0) * item.quantity).toLocaleString()}원
+                </span>
+              </div>
+            ))}
+          </div>
           
-          <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl p-4 mt-6 text-white">
-            <p className="font-semibold">입금 확인 후 조리가 시작됩니다</p>
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-gray-600">상품 금액</span>
+              <span className="text-gray-800">{orderData.subtotal.toLocaleString()}원</span>
+            </div>
+            {orderData.order_type === 'delivery' && (
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-gray-600">배달비</span>
+                <span className="text-gray-800">
+                  {(orderData.delivery_fee || (orderData.total - orderData.subtotal) || 0).toLocaleString()}원
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between items-center pt-3 border-t border-gray-200">
+              <span className="text-lg font-bold text-gray-900">총 결제 금액</span>
+              <span className="text-2xl font-bold text-orange-600">{orderData.total.toLocaleString()}원</span>
+            </div>
           </div>
         </div>
 
-        {/* 통합 주문 정보 카드 */}
-        <div className="bg-white rounded-3xl shadow-xl p-6">
-          {/* 주문 메뉴 */}
-          <div className="mb-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <i className="ri-restaurant-line text-orange-500"></i>
-              주문 메뉴
-            </h3>
-            <div className="space-y-3">
-              {orderData.daily_menu_orders?.map((item, index) => (
-                <div key={index} className="flex justify-between items-center p-3 bg-orange-50 rounded-xl">
-                  <div>
-                    <p className="font-semibold text-gray-900">{item.menus.name}</p>
-                    <p className="text-sm text-gray-600">{item.quantity}개</p>
-                  </div>
-                  <p className="text-lg font-bold text-orange-600">
-                    {((item.menus?.price || 0) * item.quantity).toLocaleString()}원
-                  </p>
-                </div>
-              ))}
+        {/* 입금 정보 카드 */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <h3 className="text-lg font-bold text-gray-900 mb-4">입금 정보</h3>
+          
+          <div className="bg-gray-50 rounded-xl p-4 mb-4">
+            <div className="text-2xl font-bold text-gray-900 mb-1 font-mono">
+              {orderData.stores.bank_account}
             </div>
-            
-            <div className="space-y-2 pt-4 mt-4 border-t border-gray-200">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">상품 금액</span>
-                <span className="text-gray-800">{orderData.subtotal.toLocaleString()}원</span>
-              </div>
-              {orderData.order_type === 'delivery' && (
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">배달비</span>
-                  <span className="text-gray-800">
-                    {(orderData.delivery_fee || (orderData.total - orderData.subtotal) || 0).toLocaleString()}원
-                  </span>
-                </div>
-              )}
-              <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                <span className="text-lg font-bold text-gray-900">총 결제 금액</span>
-                <span className="text-xl font-bold text-orange-600">{orderData.total.toLocaleString()}원</span>
-              </div>
+            <div className="text-sm text-gray-500">
+              예금주: {orderData.stores.account_holder}
             </div>
           </div>
 
-          {/* 입금 정보 */}
-          <div className="mb-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <i className="ri-bank-card-line text-blue-500"></i>
-              입금 정보
-            </h3>
-            
-            <div className="bg-gray-50 rounded-xl p-4 mb-4">
-              <div className="text-sm text-gray-600 mb-2">입금 계좌</div>
-              <div className="font-mono text-lg font-bold text-gray-900 mb-1">
-                {orderData.stores.bank_account}
-              </div>
-              <div className="text-sm text-gray-600">
-                예금주: {orderData.stores.account_holder}
-              </div>
-            </div>
+          <button
+            onClick={copyAccountNumber}
+            className="w-full bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 shadow-sm hover:shadow-md"
+          >
+            <i className="ri-file-copy-line"></i>
+            복사
+          </button>
+        </div>
 
-            <button
-              onClick={copyAccountNumber}
-              className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl"
-            >
-              <i className="ri-file-copy-line mr-2"></i>
-              계좌번호 복사
-            </button>
+        {/* 픽업 정보 카드 */}
+        <div className="bg-green-50 rounded-2xl shadow-sm border border-green-100 p-6">
+          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <i className="ri-calendar-line text-green-600"></i>
+            픽업 시간
+          </h3>
+          
+          <div className="space-y-3">
+            {orderData.delivery_address && (
+              <div className="flex items-start gap-3 p-3 bg-white rounded-xl">
+                <i className="ri-map-pin-line text-green-600 mt-1"></i>
+                <div>
+                  <div className="text-sm text-gray-600 font-medium">배달 주소</div>
+                  <div className="text-gray-900 font-semibold">{orderData.delivery_address}</div>
+                </div>
+              </div>
+            )}
+            
+            {orderData.delivery_time && (
+              <div className="flex items-start gap-3 p-3 bg-white rounded-xl">
+                <i className="ri-time-line text-green-600 mt-1"></i>
+                <div>
+                  <div className="text-sm text-gray-600 font-medium">배달 시간</div>
+                  <div className="text-gray-900 font-bold">
+                    {(() => {
+                      const parts = orderData.delivery_time.split(' ');
+                      if (parts.length >= 3) {
+                        const dateStr = parts[0];
+                        const timeSlot = parts.slice(1).join(' ');
+                        const [year, month, day] = dateStr.split('-').map(Number);
+                        const date = new Date(year, month - 1, day);
+                        const formattedDate = date.toLocaleDateString('ko-KR', {
+                          month: 'long',
+                          day: 'numeric'
+                        });
+                        return `${formattedDate} ${timeSlot}`;
+                      }
+                      return orderData.delivery_time;
+                    })()}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {orderData.pickup_time && (
+              <div className="flex items-start gap-3 p-3 bg-white rounded-xl">
+                <i className="ri-time-line text-green-600 mt-1"></i>
+                <div>
+                  <div className="text-sm text-gray-600 font-medium">픽업 시간</div>
+                  <div className="text-gray-900 font-bold">{orderData.pickup_time}</div>
+                </div>
+              </div>
+            )}
           </div>
+        </div>
 
-          {/* 배달/픽업 정보 */}
-          <div className="mb-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <i className={orderData.order_type === 'delivery' ? 'ri-truck-line text-green-500' : 'ri-store-line text-green-500'}></i>
-              {orderData.order_type === 'delivery' ? '배달 정보' : '픽업 정보'}
-            </h3>
-            
-            <div className="space-y-3">
-              {orderData.delivery_address && (
-                <div className="flex items-start gap-3 p-3 bg-green-50 rounded-xl">
-                  <i className="ri-map-pin-line text-green-500 mt-1"></i>
-                  <div>
-                    <div className="text-sm text-gray-600 font-medium">배달 주소</div>
-                    <div className="text-gray-900 font-semibold">{orderData.delivery_address}</div>
-                  </div>
-                </div>
-              )}
-              
-              {orderData.delivery_time && (
-                <div className="flex items-start gap-3 p-3 bg-green-50 rounded-xl">
-                  <i className="ri-time-line text-green-500 mt-1"></i>
-                  <div>
-                    <div className="text-sm text-gray-600 font-medium">배달 시간</div>
-                    <div className="text-gray-900 font-semibold">
-                      {(() => {
-                        const parts = orderData.delivery_time.split(' ');
-                        if (parts.length >= 3) {
-                          const dateStr = parts[0];
-                          const timeSlot = parts.slice(1).join(' ');
-                          const [year, month, day] = dateStr.split('-').map(Number);
-                          const date = new Date(year, month - 1, day);
-                          const formattedDate = date.toLocaleDateString('ko-KR', {
-                            month: 'long',
-                            day: 'numeric'
-                          });
-                          return `${formattedDate} ${timeSlot}`;
-                        }
-                        return orderData.delivery_time;
-                      })()}
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {orderData.pickup_time && (
-                <div className="flex items-start gap-3 p-3 bg-green-50 rounded-xl">
-                  <i className="ri-time-line text-green-500 mt-1"></i>
-                  <div>
-                    <div className="text-sm text-gray-600 font-medium">픽업 시간</div>
-                    <div className="text-gray-900 font-semibold">{orderData.pickup_time}</div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+        {/* 문의 안내 카드 */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 text-center">
+          <h3 className="text-lg font-bold text-gray-900 mb-4">문의 안내</h3>
+          <p className="text-gray-500 text-sm mb-4">주문 취소나 문의사항이 있으시면</p>
+          <a 
+            href={`tel:${orderData.stores.phone}`}
+            className="text-2xl font-bold text-orange-600 hover:text-orange-700 transition-colors"
+          >
+            {orderData.stores.phone}
+          </a>
+          <p className="text-gray-500 text-sm mt-2">로 연락해주세요</p>
+        </div>
 
-          {/* 문의 및 상태 확인 */}
-          <div className="border-t border-gray-200 pt-6">
-            <div className="text-center mb-4">
-              <h3 className="text-lg font-bold text-gray-900 mb-2">문의 안내</h3>
-              <p className="text-gray-600 mb-2">주문 취소나 문의사항이 있으시면</p>
-              <p className="text-xl font-bold text-orange-600">{orderData.stores.phone}</p>
-              <p className="text-gray-600">로 연락해주세요</p>
+        {/* 하단 고객센터 정보 */}
+        <div className="bg-gray-50 rounded-2xl p-6">
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <i className="ri-phone-line text-gray-500"></i>
+              <span className="text-gray-600 text-sm">전화: {orderData.stores.phone}</span>
             </div>
-            
-            <div className="text-center">
-              <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                <i className="ri-message-3-line text-white"></i>
-              </div>
-              <p className="text-gray-600 text-sm">
-                입금 후 주문 상태는 밴드 글 링크에서 확인하세요.
-              </p>
+            <div className="flex items-center gap-3">
+              <i className="ri-time-line text-gray-500"></i>
+              <span className="text-gray-600 text-sm">운영시간: 09:00 - 18:00</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <i className="ri-information-line text-gray-500"></i>
+              <span className="text-gray-600 text-sm">입금 후 주문 상태는 밴드 글 링크에서 확인하세요</span>
             </div>
           </div>
         </div>
@@ -314,7 +312,7 @@ export default function OrderComplete() {
 
       {/* 복사 완료 토스트 */}
       {copied && (
-        <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-2xl shadow-lg z-50 font-semibold">
+        <div className="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm font-medium">
           계좌번호가 복사되었습니다
         </div>
       )}

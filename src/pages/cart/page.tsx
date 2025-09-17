@@ -317,6 +317,11 @@ export default function Cart() {
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const total = subtotal + (orderType === 'delivery' ? deliveryFee : 0);
+  
+  // 최소주문금액 체크 (배달만)
+  const minimumOrderAmount = storeInfo?.minimum_order_amount || 0;
+  const isMinimumOrderMet = orderType === 'pickup' || subtotal >= minimumOrderAmount;
+  const remainingAmount = minimumOrderAmount - subtotal;
 
   const updateQuantity = (itemId: string, newQuantity: number) => {
     if (newQuantity === 0) {
@@ -374,11 +379,17 @@ export default function Cart() {
         alert('배달 희망 시간을 선택해주세요.');
         return;
       }
+      // 배달 시 최소주문금액 체크
+      if (subtotal < minimumOrderAmount) {
+        alert(`최소주문금액 ${minimumOrderAmount.toLocaleString()}원을 맞춰주세요.\n\n현재 주문금액: ${subtotal.toLocaleString()}원\n부족한 금액: ${remainingAmount.toLocaleString()}원`);
+        return;
+      }
     } else {
       if (!pickupTime) {
         alert('픽업 희망 시간을 선택해주세요.');
         return;
       }
+      // 픽업은 최소주문금액 체크 없음
     }
 
     if (!depositorName.trim()) {
@@ -514,6 +525,19 @@ export default function Cart() {
               <i className="ri-map-pin-line text-orange-500"></i>
               배달지역 선택
             </h3>
+            
+            {/* 최소주문금액 안내 */}
+            {!isMinimumOrderMet && (
+              <div className="mb-4 p-4 bg-orange-50 border border-orange-200 rounded-xl">
+                <div className="flex items-center gap-2 text-orange-700">
+                  <i className="ri-information-line text-lg"></i>
+                  <span className="font-semibold">최소주문금액 미달</span>
+                </div>
+                <p className="text-sm text-orange-600 mt-1">
+                  {remainingAmount.toLocaleString()}원 더 담으면 주문 가능합니다
+                </p>
+              </div>
+            )}
             <div className="grid gap-3">
               {deliveryAreas.map((area) => (
                 <button
@@ -866,9 +890,9 @@ export default function Cart() {
         <div className="max-w-4xl mx-auto">
           <button
             onClick={handleOrder}
-            disabled={isOrdering}
+            disabled={isOrdering || !isMinimumOrderMet}
             className={`w-full py-5 px-6 rounded-2xl font-bold text-xl whitespace-nowrap transition-all duration-300 shadow-xl ${
-              isOrdering 
+              isOrdering || !isMinimumOrderMet
                 ? 'bg-gray-400 cursor-not-allowed' 
                 : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 hover:shadow-2xl transform hover:scale-[1.02] cursor-pointer'
             } text-white`}
@@ -878,6 +902,11 @@ export default function Cart() {
                 <>
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
                   <span>주문 처리 중...</span>
+                </>
+              ) : !isMinimumOrderMet ? (
+                <>
+                  <i className="ri-information-line text-2xl"></i>
+                  <span>최소주문금액 미달</span>
                 </>
               ) : (
                 <>

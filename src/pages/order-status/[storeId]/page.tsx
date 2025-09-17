@@ -145,6 +145,7 @@ export default function OrderStatus() {
   };
 
 
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100">
       <Header />
@@ -272,240 +273,202 @@ export default function OrderStatus() {
                   </div>
                 </div>
                 <div className="space-y-6">
-                  {orders.map((order) => (
-                    <div key={order.id} className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-white/50 overflow-hidden hover:shadow-2xl transition-all duration-300">
-                      {/* 헤더 - 고객명과 상태 */}
-                      <div className={`p-4 sm:p-6 ${
-                        order.status === '입금대기' ? 'bg-gradient-to-r from-orange-400 to-orange-500' :
-                        order.status === '입금확인' ? 'bg-gradient-to-r from-orange-400 to-orange-500' :
-                        order.status === '배달완료' ? 'bg-gradient-to-r from-green-400 to-emerald-500' :
-                        order.status === '주문취소' ? 'bg-gradient-to-r from-red-400 to-red-500' :
-                        'bg-gradient-to-r from-gray-400 to-slate-500'
-                      }`}>
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-lg sm:text-2xl font-bold text-white mb-1 sm:mb-2 truncate">
-                              주문 #{order.id.slice(-8)}
-                            </h3>
-                            <p className="text-white/90 text-sm sm:text-lg">
-                              {formatDate(order.created_at)}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2 ml-3">
-                            <div className="text-2xl sm:text-4xl">
-                              {order.status === '입금대기' && '💳'}
-                              {order.status === '입금확인' && '👨‍🍳'}
-                              {order.status === '배달완료' && '🎉'}
-                              {order.status === '주문취소' && '😢'}
+                  {orders.map((order) => {
+                    const getStatusInfo = (status: string) => {
+                      switch (status) {
+                        case '입금대기':
+                          return {
+                            text: '입금 대기중',
+                            color: 'text-orange-600',
+                            bgColor: 'bg-orange-50',
+                            icon: '💳',
+                            description: '입금 확인 후 주문이 진행됩니다'
+                          };
+                        case '입금확인':
+                          return {
+                            text: '입금 확인',
+                            color: 'text-blue-600',
+                            bgColor: 'bg-blue-50',
+                            icon: '👨‍🍳',
+                            description: '주방에서 준비 중입니다'
+                          };
+                        case '배달완료':
+                          return {
+                            text: '배달 완료',
+                            color: 'text-green-600',
+                            bgColor: 'bg-green-50',
+                            icon: '🎉',
+                            description: '주문이 완료되었습니다'
+                          };
+                        case '주문취소':
+                          return {
+                            text: '주문 취소',
+                            color: 'text-red-600',
+                            bgColor: 'bg-red-50',
+                            icon: '😢',
+                            description: '주문이 취소되었습니다'
+                          };
+                        default:
+                          return {
+                            text: status,
+                            color: 'text-gray-600',
+                            bgColor: 'bg-gray-50',
+                            icon: '❓',
+                            description: ''
+                          };
+                      }
+                    };
+
+                    const statusInfo = getStatusInfo(order.status);
+                    const formatPrice = (price: number) => (price || 0).toLocaleString('ko-KR');
+
+                    return (
+                      <div key={order.id} className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                        {/* 주문 상태 카드 */}
+                        <div className="p-6 border-b-2 border-gray-200">
+                          <div className="flex items-center justify-between mb-4">
+                            <div>
+                              <h3 className="text-xl font-bold text-gray-900">주문 #{order.id.slice(-8)}</h3>
+                              <p className="text-base text-gray-600 font-medium">{formatDate(order.created_at)}</p>
                             </div>
-                            <div className="text-right">
-                              <div className="text-xs sm:text-sm text-white/80">입금자</div>
-                              <div className="text-sm sm:text-base font-semibold text-white">{order.depositor_name}</div>
-                            </div>
-                          </div>
+                            <div className={`px-5 py-3 rounded-full ${statusInfo.bgColor} border-2 ${
+                              statusInfo.color === 'text-orange-600' ? 'border-orange-200' :
+                              statusInfo.color === 'text-blue-600' ? 'border-blue-200' :
+                              statusInfo.color === 'text-green-600' ? 'border-green-200' :
+                              statusInfo.color === 'text-red-600' ? 'border-red-200' :
+                              'border-gray-200'
+                            }`}>
+                              <span className={`text-base font-bold ${statusInfo.color}`}>
+                                {statusInfo.text}
+                              </span>
                         </div>
                       </div>
 
-                      {/* 상태 버튼들 */}
-                      <div className="p-4 bg-gray-50">
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          <div className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium ${
-                            order.status === '입금대기' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-600'
-                          }`}>
-                            입금 대기
-                          </div>
-                          <div className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium ${
-                            order.status === '입금확인' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'
-                          }`}>
-                            배달
-                          </div>
-                          <div className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium ${
-                            order.status === '배달완료' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-                          }`}>
-                            배달완료
+                          <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-xl border border-gray-200">
+                            <span className="text-4xl">{statusInfo.icon}</span>
+                            <div>
+                              <p className="font-bold text-gray-900 text-lg">{statusInfo.description}</p>
+                              <p className="text-base text-gray-700 font-medium">
+                                {order.customer_name}님의 주문
+                              </p>
+                            </div>
                           </div>
                         </div>
-                        
-                        {order.status === '입금확인' ? (
-                          <div className="flex items-center gap-3">
-                            <span className="text-xl sm:text-2xl">✅</span>
+
+                        {/* 매장 정보 */}
+                        <div className="p-6 border-b-2 border-gray-200">
+                          <h4 className="text-xl font-bold text-gray-900 mb-4">매장 정보</h4>
+                          <div className="flex items-start gap-4">
+                            <div className="w-16 h-16 bg-orange-100 rounded-xl flex items-center justify-center border-2 border-orange-200">
+                              <i className="ri-store-3-line text-2xl text-orange-600"></i>
+                            </div>
                             <div className="flex-1">
-                              <p className="text-gray-800 font-bold text-sm sm:text-base">
-                                입금이 확인되었습니다!
-                              </p>
-                              <p className="text-gray-600 text-xs sm:text-sm mt-1">
-                                배달이 곧 갈거예요! 조금만 기다려주세요! 
-                                <span className="animate-bounce ml-1">⏰</span>
-                              </p>
+                              <h5 className="font-bold text-gray-900 text-lg mb-2">{order.stores.name}</h5>
+                              <p className="text-base text-gray-700 font-medium">{order.stores.phone}</p>
                             </div>
                           </div>
-                        ) : order.status === '입금대기' ? (
+                        </div>
+
+                        {/* 주문 정보 */}
+                        <div className="p-6 border-b-2 border-gray-200">
+                          <h4 className="text-xl font-bold text-gray-900 mb-4">주문 정보</h4>
+                          <div className="space-y-4">
                           <div className="flex items-center gap-3">
-                            <span className="text-xl sm:text-2xl">💳</span>
-                            <div className="flex-1">
-                              <p className="text-gray-800 font-bold text-sm sm:text-base">
-                                입금 대기중이에요! 💕
-                              </p>
-                            </div>
-                          </div>
-                        ) : order.status === '배달완료' ? (
-                          <div className="flex items-center gap-3">
-                            <span className="text-xl sm:text-2xl">🎉</span>
-                            <div className="flex-1">
-                              <p className="text-gray-800 font-bold text-sm sm:text-base">
-                                배달이 완료되었어요! 맛있게 드세요! 🍽️
-                              </p>
-                            </div>
-                          </div>
-                        ) : order.status === '주문취소' ? (
-                          <div className="flex items-center gap-3">
-                            <span className="text-xl sm:text-2xl">😢</span>
-                            <div className="flex-1">
-                              <p className="text-gray-800 font-bold text-sm sm:text-base">
-                                주문이 취소되었어요... 😔
-                              </p>
-                              <p className="text-gray-600 text-xs sm:text-sm mt-1">
-                                죄송합니다. 다시 주문해주세요! 💕
-                              </p>
-                            </div>
-                          </div>
-                        ) : null}
+                              <i className="ri-user-line text-gray-600 w-6 text-xl"></i>
+                              <span className="text-base text-gray-800 font-medium">{order.customer_name}</span>
+                              <span className="text-base text-gray-600">({order.customer_phone})</span>
                       </div>
 
-                      {/* 주문 정보 */}
-                      <div className="p-4 space-y-3">
-                        <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
-                          <span className="px-2 py-1 bg-gray-100 rounded-full text-xs">
-                            {order.order_type === 'delivery' ? '🚚 배달' : '🏃‍♂️ 픽업'}
+                            <div className="flex items-center gap-3">
+                              <i className="ri-truck-line text-gray-600 w-6 text-xl"></i>
+                              <span className="text-base text-gray-800 font-medium">
+                                {order.order_type === 'delivery' ? '배달' : '픽업'}
                           </span>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {order.order_type === 'delivery' && order.delivery_address && (
-                            <div className="flex items-start gap-2 text-xs sm:text-sm">
-                              <i className="ri-map-pin-line text-orange-500 mt-0.5 flex-shrink-0"></i>
-                              <div>
-                                <div className="text-gray-500 text-xs">배달주소</div>
-                                <div className="text-gray-700 break-words">{order.delivery_address}</div>
-                              </div>
+                            {order.delivery_address && (
+                              <div className="flex items-start gap-3">
+                                <i className="ri-map-pin-line text-gray-600 w-6 mt-1 text-xl"></i>
+                                <span className="text-base text-gray-800 font-medium">{order.delivery_address}</span>
                             </div>
                           )}
                           
-                          {order.order_type === 'pickup' && order.customer_phone && (
-                            <div className="flex items-center gap-2 text-xs sm:text-sm">
-                              <i className="ri-phone-line text-orange-500 flex-shrink-0"></i>
-                              <div>
-                                <div className="text-gray-500 text-xs">연락처</div>
-                                <div className="text-gray-700">{order.customer_phone}</div>
-                              </div>
+                            {(order.delivery_time || order.pickup_time) && (
+                              <div className="flex items-center gap-3">
+                                <i className="ri-time-line text-gray-600 w-6 text-xl"></i>
+                                <span className="text-base text-gray-800 font-medium">
+                                  {order.delivery_time || order.pickup_time}
+                                </span>
                             </div>
                           )}
                           
-                          {order.delivery_time && (
-                            <div className="flex items-center gap-2 text-xs sm:text-sm">
-                              <i className="ri-time-line text-orange-500 flex-shrink-0"></i>
-                              <div>
-                                <div className="text-gray-500 text-xs">배달시간</div>
-                                <div className="text-gray-700">{order.delivery_time}</div>
-                              </div>
+                            <div className="flex items-center gap-3">
+                              <i className="ri-bank-card-line text-gray-600 w-6 text-xl"></i>
+                              <span className="text-base text-gray-800 font-medium">입금자: {order.depositor_name}</span>
                             </div>
-                          )}
-                          
-                          {order.pickup_time && (
-                            <div className="flex items-center gap-2 text-xs sm:text-sm">
-                              <i className="ri-time-line text-orange-500 flex-shrink-0"></i>
-                              <div>
-                                <div className="text-gray-500 text-xs">픽업시간</div>
-                                <div className="text-gray-700">{order.pickup_time}</div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
 
-                      {/* 요청사항 */}
-                      {order.special_requests && (
-                        <div className="p-4 bg-orange-50">
-                          <div className="flex items-start gap-2">
-                            <i className="ri-message-3-line text-orange-500 mt-0.5"></i>
-                            <div>
-                              <p className="text-sm font-medium text-orange-800">특별 요청사항</p>
-                              <p className="text-sm text-orange-700 mt-1">{order.special_requests}</p>
+                            {order.special_requests && (
+                              <div className="flex items-start gap-3">
+                                <i className="ri-message-3-line text-gray-600 w-6 mt-1 text-xl"></i>
+                              <div>
+                                  <p className="text-base font-bold text-gray-800">특별 요청사항</p>
+                                  <p className="text-base text-gray-700 mt-1">{order.special_requests}</p>
+                                </div>
                             </div>
+                          )}
                           </div>
                         </div>
-                      )}
 
                       {/* 주문 메뉴 */}
-                      <div className="p-4 bg-gray-50 border-t border-gray-200">
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="font-semibold text-gray-800 flex items-center gap-2 text-sm sm:text-base">
-                            <i className="ri-restaurant-line text-orange-500"></i>
-                            주문 상품
-                          </h4>
+                        <div className="p-6 border-b-2 border-gray-200">
+                          <h4 className="text-xl font-bold text-gray-900 mb-4">주문 메뉴</h4>
+                          <div className="space-y-3">
+                            {order.order_items?.map((item, index) => (
+                              <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
+                                <div className="flex-1">
+                                  <h5 className="font-bold text-gray-900 text-lg">{item.menus?.name || '메뉴'}</h5>
+                                  <p className="text-base text-gray-600 mt-1 font-medium">수량: {item.quantity}개</p>
                         </div>
-                        
-                        <div className="space-y-2">
-                          {order.order_items?.map((item, index) => (
-                            <div key={index} className="bg-orange-50 rounded-lg p-3">
-                              <div className="flex justify-between items-start">
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-gray-800 text-sm sm:text-base break-words">
-                                    {item.menus?.name || '메뉴'}
+                                <div className="text-right">
+                                  <p className="font-bold text-gray-900 text-lg">
+                                    {formatPrice((item.price || 0) * item.quantity)}원
                                   </p>
-                                  {item.quantity > 1 && (
-                                    <p className="text-xs text-gray-600 mt-1">({item.quantity}개)</p>
-                                  )}
+                                  <p className="text-base text-gray-600">
+                                    {formatPrice(item.price || 0)}원 × {item.quantity}
+                                  </p>
                                 </div>
-                                <p className="font-bold text-orange-600 text-sm sm:text-base ml-2">
-                                  {((item.price || 0) * item.quantity).toLocaleString()}원
-                                </p>
                               </div>
+                            ))}
                             </div>
-                          ))}
                         </div>
                         
-                        <div className="space-y-2 pt-3 mt-3 border-t border-gray-200">
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-600 text-sm">상품 금액</span>
-                            <span className="text-gray-800 text-sm">{order.subtotal?.toLocaleString() || '0'}원</span>
-                          </div>
-                          {order.order_type === 'delivery' && (
+                        {/* 결제 정보 */}
+                        <div className="p-6">
+                          <h4 className="text-xl font-bold text-gray-900 mb-4">결제 정보</h4>
+                          <div className="space-y-3">
                             <div className="flex justify-between items-center">
-                              <span className="text-gray-600 text-sm">배달비</span>
-                              <span className="text-gray-800 text-sm">
-                                {(order.delivery_fee || (order.total - order.subtotal) || 0).toLocaleString()}원
-                              </span>
+                              <span className="text-base text-gray-700 font-medium">상품 금액</span>
+                              <span className="text-base text-gray-900 font-bold">{formatPrice(order.subtotal || 0)}원</span>
+                            </div>
+                            {order.order_type === 'delivery' && (
+                              <div className="flex justify-between items-center">
+                                <span className="text-base text-gray-700 font-medium">배달비</span>
+                                <span className="text-base text-gray-900 font-bold">{formatPrice(order.delivery_fee || 0)}원</span>
                             </div>
                           )}
-                          <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                            <div className="flex items-center gap-2">
-                              <i className="ri-money-dollar-circle-line text-orange-500"></i>
-                              <span className="font-bold text-sm sm:text-lg text-gray-800">총 결제금액</span>
+                            <div className="border-t-2 border-gray-200 pt-4">
+                              <div className="flex justify-between items-center">
+                                <span className="text-xl font-bold text-gray-900">총 결제금액</span>
+                                <span className="text-2xl font-bold text-orange-600">
+                                  {formatPrice(order.total || 0)}원
+                                </span>
+                              </div>
                             </div>
-                            <span className="font-bold text-lg sm:text-xl text-orange-600">
-                              {order.total?.toLocaleString() || '0'}원
-                            </span>
                           </div>
                         </div>
                       </div>
-
-                      {/* 액션 버튼들 */}
-                      <div className="p-4 bg-white border-t border-gray-200">
-                        <div className="flex gap-2">
-                          <button className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2.5 px-4 rounded-lg text-sm font-medium transition-colors">
-                            입금확인
-                          </button>
-                          <button className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2.5 px-4 rounded-lg text-sm font-medium transition-colors">
-                            배달완료
-                          </button>
-                          <button className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2.5 px-4 rounded-lg text-sm font-medium transition-colors">
-                            주문취소
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 
                 {/* 페이지네이션 */}

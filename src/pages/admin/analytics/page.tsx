@@ -106,55 +106,9 @@ export default function AdminAnalytics() {
     }
   };
 
-  // 숫자를 만/십만/백만 단위로 포맷팅하는 함수
+  // 숫자를 천단위 콤마로 포맷팅하는 함수
   const formatNumber = (num: number): string => {
-    if (num >= 100000000) { // 1억 이상
-      const eok = Math.floor(num / 100000000);
-      const remainder = num % 100000000;
-      if (remainder === 0) {
-        return `${eok}억원`;
-      } else {
-        const man = Math.floor(remainder / 10000);
-        return `${eok}억 ${man}만원`;
-      }
-    } else if (num >= 10000000) { // 1천만 이상
-      const cheonman = Math.floor(num / 10000000);
-      const remainder = num % 10000000;
-      if (remainder === 0) {
-        return `${cheonman}천만원`;
-      } else {
-        const man = Math.floor(remainder / 10000);
-        return `${cheonman}천만 ${man}만원`;
-      }
-    } else if (num >= 1000000) { // 100만 이상
-      const baekman = Math.floor(num / 1000000);
-      const remainder = num % 1000000;
-      if (remainder === 0) {
-        return `${baekman}백만원`;
-      } else {
-        const man = Math.floor(remainder / 10000);
-        return `${baekman}백만 ${man}만원`;
-      }
-    } else if (num >= 100000) { // 10만 이상
-      const sipman = Math.floor(num / 100000);
-      const remainder = num % 100000;
-      if (remainder === 0) {
-        return `${sipman}십만원`;
-      } else {
-        const man = Math.floor(remainder / 10000);
-        return `${sipman}십만 ${man}만원`;
-      }
-    } else if (num >= 10000) { // 1만 이상
-      const man = Math.floor(num / 10000);
-      const remainder = num % 10000;
-      if (remainder === 0) {
-        return `${man}만원`;
-      } else {
-        return `${man}만 ${remainder.toLocaleString()}원`;
-      }
-    } else {
-      return `${num.toLocaleString()}원`;
-    }
+    return `${num.toLocaleString()}원`;
   };
 
   const handlePeriodSelect = (period: 'today' | 'thisWeek' | 'thisMonth' | 'custom') => {

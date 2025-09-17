@@ -467,6 +467,33 @@ export default function AdminOrders() {
     return index + 1;
   };
 
+  const formatKoreanCurrency = (amount: number) => {
+    if (amount >= 100000000) {
+      const 억 = Math.floor(amount / 100000000);
+      const 만 = Math.floor((amount % 100000000) / 10000);
+      if (만 === 0) {
+        return `${억}억원`;
+      }
+      return `${억}억 ${만}만원`;
+    } else if (amount >= 10000) {
+      const 만 = Math.floor(amount / 10000);
+      const 천 = Math.floor((amount % 10000) / 1000);
+      if (천 === 0) {
+        return `${만}만원`;
+      }
+      return `${만}만 ${천}천원`;
+    } else if (amount >= 1000) {
+      const 천 = Math.floor(amount / 1000);
+      const 나머지 = amount % 1000;
+      if (나머지 === 0) {
+        return `${천}천원`;
+      }
+      return `${천}천 ${나머지}원`;
+    } else {
+      return `${amount}원`;
+    }
+  };
+
 
 
 
@@ -549,7 +576,7 @@ export default function AdminOrders() {
                 </div>
                 <div className="text-center sm:text-right">
                   <div className="text-2xl sm:text-3xl font-bold text-orange-500 mb-1">
-                    {(finalFilteredOrders.reduce((sum, order) => sum + (order.total || 0), 0)).toLocaleString()}원
+                    {formatKoreanCurrency(finalFilteredOrders.reduce((sum, order) => sum + (order.total || 0), 0))}
                   </div>
                   <div className="text-gray-500 text-xs sm:text-sm font-medium">
                     총 결제금액
@@ -887,7 +914,7 @@ export default function AdminOrders() {
                           <div className="flex justify-between items-center pt-2 border-t border-gray-200">
                             <span className="font-semibold text-gray-800 text-sm sm:text-base">총 결제금액</span>
                             <span className="text-lg sm:text-2xl font-bold text-orange-600">
-                              {(order.total || 0).toLocaleString()}원
+                              {formatKoreanCurrency(order.total || 0)}
                             </span>
                           </div>
                         </div>

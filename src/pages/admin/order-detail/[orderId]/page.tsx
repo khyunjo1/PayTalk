@@ -452,27 +452,39 @@ export default function OrderDetail() {
             <div className="space-y-4">
               {/* 상태 변경 버튼들 */}
               <div className="flex flex-col sm:flex-row gap-3">
-                {['배달완료', '주문취소'].map((status) => {
-                  if (status === order.status) return null;
-                  if (status === '배달완료' && order.order_type !== 'delivery') return null;
+                {(() => {
+                  const getAvailableStatuses = () => {
+                    switch (order.status) {
+                      case '입금대기':
+                        return ['입금확인', '주문취소'];
+                      case '입금확인':
+                        // 픽업은 입금확인이 최종 상태, 배달만 배달완료 가능
+                        return order.order_type === 'delivery' ? ['배달완료', '주문취소'] : ['주문취소'];
+                      case '배달완료':
+                        return []; // 완료된 상태는 변경 불가
+                      case '주문취소':
+                        return []; // 취소된 상태는 변경 불가
+                      default:
+                        return [];
+                    }
+                  };
 
-                  return (
+                  return getAvailableStatuses().map((status) => (
                     <button
                       key={status}
                       onClick={() => handleStatusChange(order.id, status)}
                       className={`flex-1 px-4 sm:px-6 py-3 rounded-xl text-sm sm:text-base font-semibold transition-all duration-200 ${
-                        status === '배달완료' 
+                        status === '입금확인' 
+                          ? 'bg-blue-500 hover:bg-blue-600 text-white'
+                          : status === '배달완료' 
                           ? 'bg-green-500 hover:bg-green-600 text-white' 
                           : 'bg-red-500 hover:bg-red-600 text-white'
                       }`}
-                      style={{
-                        backgroundColor: status === '배달완료' ? '#4CAF50' : '#FF4D4D'
-                      }}
                     >
                       {status}
                     </button>
-                  );
-                })}
+                  ));
+                })()}
               </div>
 
               {/* 현재 상태 표시 */}

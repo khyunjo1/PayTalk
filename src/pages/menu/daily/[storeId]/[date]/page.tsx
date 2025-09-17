@@ -470,10 +470,6 @@ export default function DailyMenuPage() {
             </div>
           </div>
           
-          {/* 최소주문금액 */}
-          <div className="text-gray-700 text-xs sm:text-sm mb-4 sm:mb-6 px-2">
-            최소주문 <span className="font-bold">{store?.minimum_order_amount?.toLocaleString() || '0'}원</span>
-          </div>
           
           {/* 내 주문 보러가기 버튼 */}
           <button
@@ -646,11 +642,9 @@ export default function DailyMenuPage() {
               <div className="text-lg sm:text-2xl font-bold text-gray-800">
                 {getTotalPrice().toLocaleString()}원
               </div>
-              {getTotalPrice() < (store?.minimum_order_amount || 0) && (
-                <div className="text-xs sm:text-sm text-orange-600 font-medium">
-                  {(store?.minimum_order_amount || 0) - getTotalPrice()}원 더 담으면 주문 가능
-                </div>
-              )}
+              <div className="text-xs sm:text-sm text-orange-600 font-medium">
+                배달주문 최소주문금액 {store?.minimum_order_amount?.toLocaleString() || '0'}원
+              </div>
             </div>
             
 
