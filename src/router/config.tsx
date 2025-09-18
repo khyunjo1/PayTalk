@@ -25,7 +25,7 @@ import DeliverySettings from "../pages/admin/delivery-settings/[storeId]/page";
 const routes: RouteObject[] = [
   {
     path: "/",
-    element: <AdminDashboard />,
+    element: <Login />,
   },
   {
     path: "/homepage",

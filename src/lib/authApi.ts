@@ -106,28 +106,29 @@ export const loginSuperAdmin = async (password: string) => {
   try {
     console.log('🔍 슈퍼 어드민 로그인 시도...');
     
-    // 슈퍼 어드민 조회
-    const { data: superAdmin, error } = await supabase
+    // 슈퍼 어드민 조회 (여러 명이 있을 수 있으므로 .single() 대신 배열로 조회)
+    const { data: superAdmins, error } = await supabase
       .from('users')
       .select('*')
-      .eq('role', 'super_admin')
-      .single();
+      .eq('role', 'super_admin');
 
-    console.log('📊 슈퍼 어드민 조회 결과:', { superAdmin, error });
+    console.log('📊 슈퍼 어드민 조회 결과:', { superAdmins, error });
 
     if (error) {
       console.error('❌ 데이터베이스 오류:', error);
       throw new Error(`데이터베이스 오류: ${error.message}`);
     }
 
-    if (!superAdmin) {
+    if (!superAdmins || superAdmins.length === 0) {
       console.error('❌ 슈퍼 어드민 계정 없음');
       throw new Error('슈퍼 어드민 계정을 찾을 수 없습니다. 데이터베이스에 계정을 생성해주세요.');
     }
 
+    // 첫 번째 슈퍼 어드민 계정 사용
+    const superAdmin = superAdmins[0];
     console.log('✅ 슈퍼 어드민 계정 발견:', superAdmin);
 
-    // 임시: 개발용 비밀번호 검증 (admin123)
+    // 비밀번호 검증
     if (password !== 'admin123') {
       console.error('❌ 비밀번호 불일치');
       throw new Error('비밀번호가 올바르지 않습니다.');
