@@ -22,7 +22,7 @@ export const savePushSubscription = async (subscription: any, userId: string): P
 
       // 일반 supabase 클라이언트 사용
       const { data, error } = await supabase
-        .from('user_push_subscriptions')
+        .from('push_subscriptions')
         .upsert({
           user_id: userId,
           subscription: subscription,
@@ -66,7 +66,7 @@ export const saveOneSignalPlayerId = async (playerId: string, userId: string): P
 
     // 원래 작동했던 upsert 방식 사용
     const { data, error } = await supabase
-      .from('user_push_subscriptions')
+      .from('push_subscriptions')
       .upsert({
         user_id: userId,
         onesignal_player_id: playerId,
@@ -95,15 +95,15 @@ export const saveOneSignalPlayerId = async (playerId: string, userId: string): P
 export const getPushSubscription = async (userId: string): Promise<any> => {
   try {
     const { data, error } = await supabase
-      .from('user_push_subscriptions')
+      .from('push_subscriptions')
       .select('subscription')
       .eq('user_id', userId)
       .single();
 
     if (error) {
       // 테이블이 없는 경우 null 반환
-      if (error.code === 'PGRST116' || error.message.includes('relation "user_push_subscriptions" does not exist')) {
-        console.log('user_push_subscriptions 테이블이 존재하지 않습니다.');
+      if (error.code === 'PGRST116' || error.message.includes('relation "push_subscriptions" does not exist')) {
+        console.log('push_subscriptions 테이블이 존재하지 않습니다.');
         return null;
       }
       console.error('푸시 구독 정보 조회 오류:', error);
@@ -123,7 +123,7 @@ export const checkUserPushSubscription = async (userId: string): Promise<boolean
     console.log(`사용자 ${userId}의 푸시 구독 상태 확인 중...`);
     
     const { data: subscriptionData, error } = await supabase
-      .from('user_push_subscriptions')
+      .from('push_subscriptions')
       .select('subscription')
       .eq('user_id', userId)
       .single();
@@ -131,10 +131,10 @@ export const checkUserPushSubscription = async (userId: string): Promise<boolean
     if (error) {
       // 테이블이 없거나 다른 에러인 경우 false 반환
       if (error.code === 'PGRST116' || 
-          error.message.includes('relation "user_push_subscriptions" does not exist') ||
+          error.message.includes('relation "push_subscriptions" does not exist') ||
           error.code === 'PGRST301' ||
           error.message.includes('406')) {
-        console.log('user_push_subscriptions 테이블이 존재하지 않거나 접근할 수 없습니다. 기본 알림을 사용합니다.');
+        console.log('push_subscriptions 테이블이 존재하지 않거나 접근할 수 없습니다. 기본 알림을 사용합니다.');
         return false;
       }
       console.log(`사용자 ${userId}의 푸시 구독 정보 조회 실패:`, error.message, error.code);

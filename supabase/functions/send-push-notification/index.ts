@@ -28,7 +28,7 @@ serve(async (req) => {
     console.log('사용자 ID로 OneSignal Player ID 조회:', userId)
 
     const { data: subscriptionData, error: subscriptionError } = await supabaseClient
-      .from('user_push_subscriptions')
+      .from('push_subscriptions')
       .select('onesignal_player_id')
       .eq('user_id', userId)
       .eq('is_active', true)
@@ -132,8 +132,14 @@ async function sendOneSignalNotification(params: {
   const notification = {
     app_id: appId,
     include_player_ids: [playerId],
-    headings: { en: title },
-    contents: { en: body },
+    headings: {
+      ko: title,
+      en: title
+    },
+    contents: {
+      ko: body,
+      en: body
+    },
     data: data || {},
     web_url: 'https://pay-talk.vercel.app',
     chrome_web_icon: '/favicon.ico',
