@@ -70,8 +70,7 @@ export const saveOneSignalPlayerId = async (playerId: string, userId: string): P
       .upsert({
         user_id: userId,
         onesignal_player_id: playerId,
-        is_active: true,
-        updated_at: new Date().toISOString()
+        is_active: true
       }, {
         onConflict: 'user_id'
       })
