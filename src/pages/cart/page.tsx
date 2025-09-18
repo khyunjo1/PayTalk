@@ -27,7 +27,7 @@ interface CartItem {
   id: string;
   name: string;
   price: number;
-  quantity: number;
+  available: boolean;
 }
 
 interface StoreInfo {
@@ -182,33 +182,31 @@ export default function Cart() {
               const menuIds = dailyMenuData.items.map((item: any) => item.menuId);
               const { data: menuData } = await supabase
                 .from('menus')
-                .select('id, name, price')
+                .select('id, name, price, available')
                 .in('id', menuIds);
-              
+
               if (menuData) {
                 const dailyMenuItems = dailyMenuData.items.map((item: any, index: number) => {
                   const menu = menuData.find(m => m.id === item.menuId);
                   return {
-                    id: `daily-${index}-${Date.now()}-${item.menuId}`, // UUID를 마지막에 배치
-                    originalMenuId: item.menuId, // 원본 메뉴 ID 저장
+                    id: `daily-${index}-${Date.now()}-${item.menuId}`,
+                    originalMenuId: item.menuId,
                     name: menu?.name || `메뉴-${item.menuId}`,
                     price: menu?.price || 0,
-                    quantity: item.quantity
+                    available: menu?.available !== false
                   };
                 });
-                
-                // 일일 메뉴 아이템으로 장바구니 교체 (기존 장바구니 초기화)
+
                 setCart(dailyMenuItems);
               }
             } catch (error) {
               console.error('메뉴 정보 가져오기 오류:', error);
-              // 오류 시 임시 데이터로 처리
               const dailyMenuItems = dailyMenuData.items.map((item: any, index: number) => ({
-                id: `daily-${index}-${Date.now()}-${item.menuId}`, // UUID를 마지막에 배치
-                originalMenuId: item.menuId, // 원본 메뉴 ID 저장
+                id: `daily-${index}-${Date.now()}-${item.menuId}`,
+                originalMenuId: item.menuId,
                 name: `일일메뉴-${item.menuId}`,
                 price: 0,
-                quantity: item.quantity
+                available: true
               }));
               setCart(dailyMenuItems);
             }
@@ -298,7 +296,7 @@ export default function Cart() {
     );
   }
 
-  const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const subtotal = cart.filter(item => item.available).reduce((sum, item) => sum + item.price, 0);
   const total = subtotal + (orderType === 'delivery' ? deliveryFee : 0);
   
   // 최소주문금액 체크 (배달만)
@@ -306,19 +304,6 @@ export default function Cart() {
   const isMinimumOrderMet = orderType === 'pickup' || subtotal >= minimumOrderAmount;
   const remainingAmount = minimumOrderAmount - subtotal;
 
-  const updateQuantity = (itemId: string, newQuantity: number) => {
-    if (newQuantity === 0) {
-      const updatedCart = cart.filter(item => item.id !== itemId);
-      setCart(updatedCart);
-      localStorage.setItem('cart', JSON.stringify(updatedCart));
-    } else {
-      const updatedCart = cart.map(item =>
-        item.id === itemId ? { ...item, quantity: newQuantity } : item
-      );
-      setCart(updatedCart);
-      localStorage.setItem('cart', JSON.stringify(updatedCart));
-    }
-  };
 
   const removeItem = (itemId: string) => {
     const updatedCart = cart.filter(item => item.id !== itemId);
@@ -416,9 +401,8 @@ export default function Cart() {
         total: total,
         delivery_area_id: orderType === 'delivery' ? selectedDeliveryArea : undefined,
         payment_method: paymentMethod,
-        items: cart.map(item => ({
-          menu_id: (item as any).originalMenuId || item.id, // originalMenuId가 있으면 사용, 없으면 기존 id 사용
-          quantity: item.quantity,
+        items: cart.filter(item => item.available).map(item => ({
+          menu_id: (item as any).originalMenuId || item.id,
           price: item.price
         })),
         // 일일 메뉴 데이터 추가
@@ -866,36 +850,30 @@ export default function Cart() {
           </div>
           <div className="max-h-64 overflow-y-auto space-y-3 pr-2 mb-4">
             {cart.map((item) => (
-              <div key={item.id} className="flex items-center justify-between py-2">
+              <div key={item.id} className="flex items-center justify-between py-3 px-4 bg-gray-50 rounded-lg">
                 <div className="flex-1">
-                  <div className="font-medium text-gray-800">{item.name}</div>
-                  <div className="text-sm text-gray-600">{(item.price || 0).toLocaleString()}원</div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center bg-white border border-gray-200 rounded-full">
-                    <button
-                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                      className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-orange-500 hover:bg-orange-50 rounded-l-full transition-colors"
-                    >
-                      <i className="ri-subtract-line text-sm"></i>
-                    </button>
-                    <span className="px-3 py-1 text-sm font-medium text-gray-700 min-w-[2rem] text-center">
-                      {item.quantity}
-                    </span>
-                    <button
-                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                      className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-orange-500 hover:bg-orange-50 rounded-r-full transition-colors"
-                    >
-                      <i className="ri-add-line text-sm"></i>
-                    </button>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-800">{item.name}</div>
+                      <div className="text-sm text-gray-600">{(item.price || 0).toLocaleString()}원</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className={`px-3 py-1 rounded-full text-xs font-bold ${
+                        item.available
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {item.available ? '판매가능' : '품절'}
+                      </div>
+                      <button
+                        onClick={() => removeItem(item.id)}
+                        className="w-8 h-8 flex items-center justify-center text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors"
+                        title="메뉴 삭제"
+                      >
+                        <i className="ri-delete-bin-line text-sm"></i>
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => removeItem(item.id)}
-                    className="w-8 h-8 flex items-center justify-center text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors"
-                    title="메뉴 삭제"
-                  >
-                    <i className="ri-delete-bin-line text-sm"></i>
-                  </button>
                 </div>
               </div>
             ))}

@@ -240,17 +240,17 @@ export default function AdminMenu() {
                       <span className="text-sm text-gray-500">
                         {isExpanded ? '접기' : '펼치기'}
                       </span>
-                      <i className={`ri-arrow-down-s-line text-xl text-gray-400 transition-transform duration-300 ${
+                      <i className={`ri-arrow-down-s-line text-xl text-gray-400 ${
                         isExpanded ? 'rotate-180' : ''
                       }`}></i>
                     </div>
                   </button>
                   
                   {/* 카테고리 메뉴 목록 */}
-                  <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                  <div className={`overflow-hidden ${
                     isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
                   }`}>
-                    <div className="px-6 pb-6">
+                    <div className="px-6 pt-4 pb-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {categoryMenus.map((menu) => (
                           <div key={menu.id} className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl hover:scale-102 transition-all duration-300 group">

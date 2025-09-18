@@ -15,6 +15,7 @@ export default function Login() {
 
   // 로그인 폼 상태
   const [loginForm, setLoginForm] = useState({
+    phone: '',
     password: ''
   });
 
@@ -31,9 +32,15 @@ export default function Login() {
     setLoading(true);
     setError('');
 
+    // 입력값 검증
+    if (!loginForm.phone || !loginForm.password) {
+      setError('전화번호와 비밀번호를 모두 입력해주세요.');
+      setLoading(false);
+      return;
+    }
+
     try {
-      // 임시로 전화번호를 빈 문자열로 전달 (실제로는 비밀번호만 사용)
-      await login('', loginForm.password);
+      await login(loginForm.phone, loginForm.password);
       navigate('/admin-dashboard');
     } catch (error: any) {
       setError(error.message || '로그인에 실패했습니다.');
@@ -132,12 +139,35 @@ export default function Login() {
               <form onSubmit={handleLogin} className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
+                    전화번호
+                  </label>
+                  <input
+                    type="tel"
+                    value={loginForm.phone}
+                    onChange={(e) => {
+                      // 숫자만 입력 허용
+                      const value = e.target.value.replace(/[^0-9]/g, '');
+                      setLoginForm({...loginForm, phone: value});
+                    }}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    placeholder="01012345678"
+                    maxLength={11}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     비밀번호
                   </label>
                   <input
                     type="password"
                     value={loginForm.password}
-                    onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
+                    onChange={(e) => {
+                      // 숫자만 입력 허용
+                      const value = e.target.value.replace(/[^0-9]/g, '');
+                      setLoginForm({...loginForm, password: value});
+                    }}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                     placeholder="4자리 숫자 비밀번호를 입력하세요"
                     maxLength={4}

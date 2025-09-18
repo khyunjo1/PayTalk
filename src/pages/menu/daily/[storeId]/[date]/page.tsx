@@ -28,8 +28,6 @@ interface DailyMenuItem {
   id: string;
   daily_menu_id: string;
   menu_id: string;
-  initial_quantity: number;
-  current_quantity: number;
   is_available: boolean;
   menu?: {
     id: string;
@@ -48,7 +46,7 @@ export default function DailyMenuPage() {
   const [dailyMenu, setDailyMenu] = useState<DailyMenu | null>(null);
   const [dailyMenuItems, setDailyMenuItems] = useState<DailyMenuItem[]>([]);
   const [store, setStore] = useState<any>(null);
-  const [cart, setCart] = useState<Record<string, number>>({});
+  const [cart, setCart] = useState<Map<string, number>>(new Map());
   const [isOrderClosed, setIsOrderClosed] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
@@ -233,33 +231,35 @@ export default function DailyMenuPage() {
   };
 
 
-  const handleAddToCart = (menuId: string) => {
-    // 해당 메뉴의 남은 수량 확인
+  const handleToggleCart = (menuId: string) => {
     const menuItem = dailyMenuItems.find(item => item.menu_id === menuId);
-    if (!menuItem) return;
-    
-    const currentCartQuantity = cart[menuId] || 0;
-    if (currentCartQuantity >= menuItem.current_quantity) {
-      alert('남은 수량을 초과할 수 없습니다.');
-      return;
-    }
-    
-    setCart(prev => ({
-      ...prev,
-      [menuId]: (prev[menuId] || 0) + 1
-    }));
-  };
+    if (!menuItem || !menuItem.is_available) return;
 
-  const handleRemoveFromCart = (menuId: string) => {
     setCart(prev => {
-      const newCart = { ...prev };
-      if (newCart[menuId] > 1) {
-        newCart[menuId] -= 1;
+      const newCart = new Map(prev);
+      if (newCart.has(menuId)) {
+        newCart.delete(menuId);
       } else {
-        delete newCart[menuId];
+        newCart.set(menuId, 1);
       }
       return newCart;
     });
+  };
+
+  const handleQuantityChange = (menuId: string, quantity: number) => {
+    if (quantity <= 0) {
+      setCart(prev => {
+        const newCart = new Map(prev);
+        newCart.delete(menuId);
+        return newCart;
+      });
+    } else {
+      setCart(prev => {
+        const newCart = new Map(prev);
+        newCart.set(menuId, quantity);
+        return newCart;
+      });
+    }
   };
 
   const toggleCategory = (category: string) => {
@@ -279,14 +279,17 @@ export default function DailyMenuPage() {
   const filteredMenuItems = dailyMenuItems;
 
   const getTotalPrice = () => {
-    return dailyMenuItems.reduce((total, item) => {
-      const quantity = cart[item.menu_id] || 0;
-      return total + ((item.menu?.price || 0) * quantity);
+    return Array.from(cart.entries()).reduce((total, [menuId, quantity]) => {
+      const menuItem = dailyMenuItems.find(item => item.menu_id === menuId);
+      if (menuItem && menuItem.menu) {
+        return total + (menuItem.menu.price || 0) * quantity;
+      }
+      return total;
     }, 0);
   };
 
   const getCartItemCount = () => {
-    return Object.values(cart).reduce((sum, quantity) => sum + quantity, 0);
+    return Array.from(cart.values()).reduce((total, quantity) => total + quantity, 0);
   };
 
 
@@ -306,9 +309,8 @@ export default function DailyMenuPage() {
     const dailyMenuData = {
       dailyMenuId: dailyMenu?.id,
       menuDate: dailyMenu?.menu_date,
-      items: Object.entries(cart).map(([menuId, quantity]) => ({
-        menuId,
-        quantity
+      items: Array.from(cart).map(menuId => ({
+        menuId
       })),
     };
     
@@ -518,17 +520,17 @@ export default function DailyMenuPage() {
                         <span className="text-xs text-gray-500">
                           {isExpanded ? '접기' : '펼치기'}
                         </span>
-                        <i className={`ri-arrow-down-s-line text-lg text-gray-400 transition-transform duration-300 ${
+                        <i className={`ri-arrow-down-s-line text-lg text-gray-400 ${
                           isExpanded ? 'rotate-180' : ''
                         }`}></i>
                       </div>
                     </button>
                     
                     {/* 카테고리 메뉴 목록 */}
-                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                    <div className={`overflow-hidden ${
                       isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
                     }`}>
-                      <div className="px-4 pb-4">
+                      <div className="px-4 pt-4 pb-4">
                         <div className="space-y-3">
                           {categoryItems.map((item) => (
                             <div key={item.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200 group">
@@ -551,7 +553,7 @@ export default function DailyMenuPage() {
                                   </p>
                                 )}
 
-                                {/* 상태와 수량 정보 */}
+                                {/* 상태 정보 */}
                                 <div className="flex flex-wrap items-center gap-2 mb-3">
                                   <span className={`px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${
                                     item.is_available
@@ -559,73 +561,52 @@ export default function DailyMenuPage() {
                                       : 'bg-red-100 text-red-700'
                                   }`}>
                                     <i className={`ri-${item.is_available ? 'check' : 'close'}-line text-xs`}></i>
-                                    {item.is_available ? '주문가능' : '품절'}
-                                  </span>
-                                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                                    남은 수량: {item.current_quantity}개
+                                    {item.is_available ? '판매가능' : '품절'}
                                   </span>
                                 </div>
 
                                 {/* 장바구니 수량 조절 UI */}
                                 <div className="flex items-center justify-end">
-                                  {(() => {
-                                    const cartItem = cart[item.menu_id];
-
-                                    if (!cartItem) {
-                                      // 장바구니에 없는 경우 - 담기 버튼
-                                      return (
-                                        <button
-                                          onClick={() => handleAddToCart(item.menu_id)}
-                                          disabled={!item.is_available || isOrderClosed}
-                                          className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 text-xs sm:text-sm ${
-                                            item.is_available && !isOrderClosed
-                                              ? 'bg-white text-gray-900 hover:bg-gray-900 hover:text-white border border-gray-300 hover:border-gray-900 shadow-sm hover:shadow-lg'
-                                              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                          }`}
-                                        >
-                                          <i className="ri-add-line mr-1"></i>
-                                          담기
-                                        </button>
-                                      );
-                                    } else {
-                                      // 장바구니에 있는 경우 - 수량 조절 UI
-                                      return (
-                                        <div className="flex items-center gap-2 sm:gap-3 justify-end">
-                                          {/* 수량 조절 버튼들 */}
-                                          <div className="flex items-center rounded-xl overflow-hidden">
-                                            <button
-                                              onClick={() => handleRemoveFromCart(item.menu_id)}
-                                              disabled={!item.is_available || isOrderClosed}
-                                              className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-orange-600 hover:bg-orange-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                                            >
-                                              <i className="ri-subtract-line text-sm sm:text-lg"></i>
-                                            </button>
-                                            <span className="px-3 sm:px-4 py-2 text-orange-700 font-bold text-base sm:text-lg min-w-[2.5rem] sm:min-w-[3rem] text-center bg-white">
-                                              {cartItem}
-                                            </span>
-                                            <button
-                                              onClick={() => handleAddToCart(item.menu_id)}
-                                              disabled={!item.is_available || isOrderClosed || item.current_quantity <= cartItem}
-                                              className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-orange-600 hover:bg-orange-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                                              title={item.current_quantity <= cartItem ? '남은 수량을 초과할 수 없습니다' : '수량 추가'}
-                                            >
-                                              <i className="ri-add-line text-sm sm:text-lg"></i>
-                                            </button>
-                                          </div>
-
-                                          {/* 삭제 버튼 */}
-                                          <button
-                                            onClick={() => handleRemoveFromCart(item.menu_id)}
-                                            disabled={!item.is_available || isOrderClosed}
-                                            className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl text-sm font-medium transition-all duration-200 flex items-center justify-center bg-red-100 text-red-600 hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-                                            title="메뉴 삭제"
-                                          >
-                                            <i className="ri-delete-bin-line text-sm sm:text-lg"></i>
-                                          </button>
-                                        </div>
-                                      );
-                                    }
-                                  })()}
+                                  {cart.has(item.menu_id) ? (
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={() => {
+                                          const currentQuantity = cart.get(item.menu_id) || 0;
+                                          handleQuantityChange(item.menu_id, currentQuantity - 1);
+                                        }}
+                                        disabled={!item.is_available || isOrderClosed}
+                                        className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-600 hover:text-gray-800 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                      >
+                                        <i className="ri-subtract-line text-sm"></i>
+                                      </button>
+                                      <span className="w-8 text-center font-semibold text-gray-900">
+                                        {cart.get(item.menu_id) || 0}
+                                      </span>
+                                      <button
+                                        onClick={() => {
+                                          const currentQuantity = cart.get(item.menu_id) || 0;
+                                          handleQuantityChange(item.menu_id, currentQuantity + 1);
+                                        }}
+                                        disabled={!item.is_available || isOrderClosed}
+                                        className="w-8 h-8 rounded-full bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                      >
+                                        <i className="ri-add-line text-sm"></i>
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleToggleCart(item.menu_id)}
+                                      disabled={!item.is_available || isOrderClosed}
+                                      className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 text-xs sm:text-sm ${
+                                        item.is_available && !isOrderClosed
+                                          ? 'bg-white text-gray-900 hover:bg-gray-900 hover:text-white border border-gray-300 hover:border-gray-900 shadow-sm hover:shadow-lg'
+                                          : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                      }`}
+                                    >
+                                      <i className="ri-add-line mr-1"></i>
+                                      담기
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -648,10 +629,10 @@ export default function DailyMenuPage() {
       {getCartItemCount() > 0 && (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
           <div className="flex items-center justify-between p-3 max-w-4xl mx-auto">
-            {/* 왼쪽: 가격 정보 */}
+            {/* 왼쪽: 수량 정보 */}
             <div className="flex-1 min-w-0">
               <div className="text-base font-bold text-gray-900">
-                {getTotalPrice().toLocaleString()}원
+                {getCartItemCount()}개
               </div>
               <div className="text-xs text-orange-600 font-medium">
                 최소주문 {store?.minimum_order_amount?.toLocaleString() || '0'}원
@@ -669,7 +650,7 @@ export default function DailyMenuPage() {
               }`}
             >
               <i className="ri-shopping-cart-line text-sm"></i>
-              <span>{getCartItemCount()}개 주문</span>
+              <span>{getTotalPrice().toLocaleString()}원 주문</span>
             </button>
           </div>
         </div>

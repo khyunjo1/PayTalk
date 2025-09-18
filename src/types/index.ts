@@ -126,8 +126,6 @@ export interface DailyMenuItem {
   id: string;
   daily_menu_id: string;
   menu_id: string;
-  initial_quantity: number;
-  current_quantity: number;
   is_available: boolean;
   created_at: string;
   updated_at: string;
@@ -144,7 +142,6 @@ export interface CreateDailyMenuData {
 export interface CreateDailyMenuItemData {
   daily_menu_id: string;
   menu_id: string;
-  initial_quantity: number;
 }
 
 // 매장 생성 데이터 타입

@@ -113,17 +113,13 @@ export const addDailyMenuItem = async (data: CreateDailyMenuItemData): Promise<D
   if (!data.menu_id) {
     throw new Error('메뉴 ID가 필요합니다.');
   }
-  if (data.initial_quantity < 0) {
-    throw new Error('수량은 0 이상이어야 합니다.');
-  }
 
   const { data: result, error } = await supabase
     .from('daily_menu_items')
     .insert({
       daily_menu_id: data.daily_menu_id,
       menu_id: data.menu_id,
-      initial_quantity: data.initial_quantity,
-      current_quantity: data.initial_quantity
+      is_available: true
     })
     .select(`
       *,
@@ -139,51 +135,6 @@ export const addDailyMenuItem = async (data: CreateDailyMenuItemData): Promise<D
   return result;
 };
 
-// 일일 메뉴 아이템 수량 수정
-export const updateDailyMenuItemQuantity = async (
-  itemId: string, 
-  newQuantity: number
-): Promise<DailyMenuItem> => {
-  if (newQuantity < 0) {
-    throw new Error('수량은 0 이상이어야 합니다.');
-  }
-
-  // 먼저 현재 아이템 정보를 가져와서 current_quantity 계산
-  const { data: currentItem, error: fetchError } = await supabase
-    .from('daily_menu_items')
-    .select('initial_quantity, current_quantity')
-    .eq('id', itemId)
-    .single();
-
-  if (fetchError) {
-    console.error('아이템 조회 오류:', fetchError);
-    throw new Error(`아이템 조회에 실패했습니다: ${fetchError.message}`);
-  }
-
-  // 새로운 current_quantity = 기존 current_quantity + (새로운 initial_quantity - 기존 initial_quantity)
-  const newCurrentQuantity = currentItem.current_quantity + (newQuantity - currentItem.initial_quantity);
-
-  const { data: result, error } = await supabase
-    .from('daily_menu_items')
-    .update({
-      initial_quantity: newQuantity,
-      current_quantity: Math.max(0, newCurrentQuantity),
-      is_available: newQuantity > 0
-    })
-    .eq('id', itemId)
-    .select(`
-      *,
-      menu:menus(*)
-    `)
-    .single();
-
-  if (error) {
-    console.error('일일 메뉴 아이템 수량 수정 오류:', error);
-    throw new Error(`수량 수정에 실패했습니다: ${error.message}`);
-  }
-
-  return result;
-};
 
 // 일일 메뉴 아이템 품절 처리
 export const toggleDailyMenuItemAvailability = async (
@@ -210,49 +161,6 @@ export const toggleDailyMenuItemAvailability = async (
   return result;
 };
 
-// 고객 주문 시 수량 차감
-export const deductDailyMenuItemQuantity = async (
-  itemId: string, 
-  quantity: number
-): Promise<DailyMenuItem> => {
-  if (quantity <= 0) {
-    throw new Error('차감할 수량은 0보다 커야 합니다.');
-  }
-
-  // 먼저 현재 수량 조회
-  const { data: currentItem, error: fetchError } = await supabase
-    .from('daily_menu_items')
-    .select('current_quantity')
-    .eq('id', itemId)
-    .single();
-
-  if (fetchError) {
-    throw new Error(`현재 수량 조회에 실패했습니다: ${fetchError.message}`);
-  }
-
-  const newQuantity = Math.max(0, currentItem.current_quantity - quantity);
-  const isAvailable = newQuantity > 0;
-
-  const { data: result, error } = await supabase
-    .from('daily_menu_items')
-    .update({
-      current_quantity: newQuantity,
-      is_available: isAvailable
-    })
-    .eq('id', itemId)
-    .select(`
-      *,
-      menu:menus(*)
-    `)
-    .single();
-
-  if (error) {
-    console.error('수량 차감 오류:', error);
-    throw new Error(`수량 차감에 실패했습니다: ${error.message}`);
-  }
-
-  return result;
-};
 
 // 일일 메뉴 아이템 삭제
 export const removeDailyMenuItem = async (itemId: string): Promise<void> => {

@@ -101,44 +101,6 @@ export const createOrder = async (orderData: {
       } else {
         console.log('일일 메뉴 주문 데이터 저장 성공');
         
-        // 일일 메뉴 아이템 수량 차감
-        try {
-          for (const item of orderData.daily_menu_data.items) {
-            // 해당 메뉴의 일일메뉴 아이템 ID 찾기
-            const { data: dailyMenuItem, error: findError } = await supabase
-              .from('daily_menu_items')
-              .select('id, current_quantity')
-              .eq('daily_menu_id', orderData.daily_menu_data!.daily_menu_id)
-              .eq('menu_id', item.menuId)
-              .single();
-
-            if (findError || !dailyMenuItem) {
-              console.error(`일일메뉴 아이템 조회 실패 (menu_id: ${item.menuId}):`, findError);
-              continue;
-            }
-
-            // 수량 차감
-            const newQuantity = Math.max(0, dailyMenuItem.current_quantity - item.quantity);
-            const isAvailable = newQuantity > 0;
-
-            const { error: updateError } = await supabase
-              .from('daily_menu_items')
-              .update({
-                current_quantity: newQuantity,
-                is_available: isAvailable
-              })
-              .eq('id', dailyMenuItem.id);
-
-            if (updateError) {
-              console.error(`일일메뉴 아이템 수량 차감 실패 (item_id: ${dailyMenuItem.id}):`, updateError);
-            } else {
-              console.log(`일일메뉴 아이템 수량 차감 성공: ${item.menuId} - ${item.quantity}개 차감`);
-            }
-          }
-        } catch (quantityError) {
-          console.error('일일메뉴 수량 차감 중 오류:', quantityError);
-          // 수량 차감 실패해도 주문은 성공으로 처리
-        }
       }
     } catch (error) {
       console.error('일일 메뉴 주문 데이터 저장 중 오류:', error);

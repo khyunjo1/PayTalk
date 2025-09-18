@@ -65,28 +65,32 @@ export const registerOwner = async (userData: {
   }
 };
 
-// 사장님 로그인 (비밀번호만으로)
+// 사장님 로그인 (전화번호 + 비밀번호)
 export const loginOwner = async (phone: string, password: string) => {
   try {
-    // 모든 admin 사용자 조회
-    const { data: users, error } = await supabase
+    // 전화번호와 비밀번호 모두 필수
+    if (!phone || !password) {
+      throw new Error('전화번호와 비밀번호를 모두 입력해주세요.');
+    }
+
+    // 전화번호와 비밀번호가 모두 일치하는 사용자 조회
+    const { data: user, error } = await supabase
       .from('users')
       .select('*')
-      .eq('role', 'admin');
+      .eq('role', 'admin')
+      .eq('phone', phone)
+      .eq('password', password)
+      .single();
 
     if (error) {
-      throw new Error('사용자 조회에 실패했습니다.');
+      if (error.code === 'PGRST116') {
+        throw new Error('전화번호 또는 비밀번호가 올바르지 않습니다.');
+      }
+      throw new Error('로그인 중 오류가 발생했습니다.');
     }
-
-    if (!users || users.length === 0) {
-      throw new Error('등록된 사장님이 없습니다.');
-    }
-
-    // 비밀번호가 일치하는 사용자 찾기
-    const user = users.find(u => u.password === password);
 
     if (!user) {
-      throw new Error('비밀번호가 올바르지 않습니다.');
+      throw new Error('전화번호 또는 비밀번호가 올바르지 않습니다.');
     }
 
     // 승인 상태 확인

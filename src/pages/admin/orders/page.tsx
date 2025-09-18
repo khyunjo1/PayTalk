@@ -509,6 +509,80 @@ export default function AdminOrders() {
     }
   };
 
+  const formatOrderToText = (order: Order) => {
+    const orderDate = new Date(order.created_at);
+    const formattedDate = orderDate.toLocaleDateString('ko-KR');
+    const formattedTime = orderDate.toLocaleTimeString('ko-KR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    let orderText = `===== 주문상세내역 =====\n\n`;
+    orderText += `📋 주문번호: ${getOrderNumber(order, finalFilteredOrders)}\n`;
+    orderText += `📅 주문일시: ${formattedDate} ${formattedTime}\n`;
+    orderText += `📊 주문상태: ${order.status}\n`;
+    orderText += `🚚 주문타입: ${order.order_type === 'delivery' ? '배달' : '픽업'}\n\n`;
+
+    orderText += `===== 고객정보 =====\n`;
+    if (order.customer_name) orderText += `👤 고객명: ${order.customer_name}\n`;
+    if (order.customer_phone) orderText += `📞 연락처: ${order.customer_phone}\n`;
+    if (order.depositor_name) orderText += `💳 입금자명: ${order.depositor_name}\n`;
+    if (order.delivery_address) orderText += `📍 배달주소: ${order.delivery_address}\n`;
+    if (order.delivery_time) orderText += `⏰ 배달시간: ${order.delivery_time}\n`;
+    if (order.pickup_time) orderText += `⏰ 픽업시간: ${order.pickup_time}\n`;
+    if (order.special_requests) orderText += `📝 요청사항: ${order.special_requests}\n`;
+    orderText += `💰 결제방식: ${order.payment_method === 'bank_transfer' ? '무통장입금' : '제로페이'}\n\n`;
+
+    orderText += `===== 주문메뉴 =====\n`;
+
+    if (order.daily_menu_orders && order.daily_menu_orders.length > 0) {
+      order.daily_menu_orders.forEach((item) => {
+        const itemTotal = (item.menus?.price || 0) * item.quantity;
+        orderText += `• ${item.menus?.name || '메뉴'} x ${item.quantity}개\n`;
+        orderText += `  - 단가: ${(item.menus?.price || 0).toLocaleString()}원\n`;
+        orderText += `  - 소계: ${itemTotal.toLocaleString()}원\n`;
+        orderText += `  - 날짜: ${item.daily_menus.menu_date} (일일메뉴)\n\n`;
+      });
+    } else if (order.order_items && order.order_items.length > 0) {
+      order.order_items.forEach((item) => {
+        const itemTotal = item.price * item.quantity;
+        orderText += `• ${item.menus?.name || '메뉴'} x ${item.quantity}개\n`;
+        orderText += `  - 단가: ${item.price.toLocaleString()}원\n`;
+        orderText += `  - 소계: ${itemTotal.toLocaleString()}원\n\n`;
+      });
+    } else {
+      orderText += `주문 메뉴 정보를 불러올 수 없습니다.\n\n`;
+    }
+
+    orderText += `===== 결제정보 =====\n`;
+    orderText += `💵 상품금액: ${(order.subtotal || 0).toLocaleString()}원\n`;
+    if (order.order_type === 'delivery') {
+      const deliveryFee = order.delivery_fee || (order.total - order.subtotal) || 0;
+      orderText += `🚛 배달비: ${deliveryFee.toLocaleString()}원\n`;
+    }
+    orderText += `💰 총 결제금액: ${(order.total || 0).toLocaleString()}원\n\n`;
+
+    orderText += `===== 매장정보 =====\n`;
+    orderText += `🏪 매장명: ${storeName}\n`;
+    orderText += `📄 생성일시: ${new Date().toLocaleString('ko-KR')}\n`;
+
+    return orderText;
+  };
+
+  const copyOrderToClipboard = async (order: Order, event: React.MouseEvent) => {
+    event.stopPropagation();
+
+    try {
+      const orderText = formatOrderToText(order);
+      await navigator.clipboard.writeText(orderText);
+
+      alert('주문상세내역이 클립보드에 복사되었습니다!');
+    } catch (error) {
+      console.error('복사 실패:', error);
+      alert('복사에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
 
 
 
@@ -805,17 +879,27 @@ export default function AdminOrders() {
                         </div>
                       </div>
                       
-                      {/* 상세보기 버튼 - 모바일 최적화 */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/admin/${storeId}/order-detail/${order.id}`);
-                        }}
-                        className="px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-semibold transition-all duration-200 flex items-center gap-1 shadow-sm flex-shrink-0"
-                      >
-                        <i className="ri-eye-line text-xs"></i>
-                        <span>상세보기</span>
-                      </button>
+                      {/* 버튼 그룹 - 모바일 최적화 */}
+                      <div className="flex gap-2 flex-shrink-0">
+                        <button
+                          onClick={(e) => copyOrderToClipboard(order, e)}
+                          className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-semibold transition-all duration-200 flex items-center gap-1 shadow-sm"
+                          title="주문상세내역 복사"
+                        >
+                          <i className="ri-file-copy-line text-xs"></i>
+                          <span>복사</span>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/admin/${storeId}/order-detail/${order.id}`);
+                          }}
+                          className="px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-semibold transition-all duration-200 flex items-center gap-1 shadow-sm"
+                        >
+                          <i className="ri-eye-line text-xs"></i>
+                          <span>상세보기</span>
+                        </button>
+                      </div>
                     </div>
 
                     {/* 2. 고객 정보 미리보기 - 모바일 최적화 */}
