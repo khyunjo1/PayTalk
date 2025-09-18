@@ -185,7 +185,7 @@ export const createOrder = async (orderData: {
               userId: storeData.data.owner_id,
               title: storeNotification.title,
               body: storeNotification.body,
-              data: { orderId: order.id, type: 'new_order' }
+              data: { orderId: order.id, type: 'new_order', storeId: orderData.store_id }
             }
           });
           
