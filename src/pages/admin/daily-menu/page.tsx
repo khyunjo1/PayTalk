@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useNewAuth } from '../../../hooks/useNewAuth';
 import { getMenus } from '../../../lib/menuApi';
@@ -480,7 +480,7 @@ export default function AdminDailyMenu() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-500 mx-auto mb-4"></div>
           <p className="text-gray-600">로딩 중...</p>
         </div>
       </div>
@@ -513,7 +513,7 @@ export default function AdminDailyMenu() {
         {/* 날짜 선택 */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sm:p-8 mb-6 sm:mb-8">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-gray-500 to-gray-600 rounded-xl flex items-center justify-center">
               <i className="ri-calendar-line text-white text-lg"></i>
             </div>
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900">메뉴 날짜 선택</h2>
@@ -524,15 +524,8 @@ export default function AdminDailyMenu() {
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm sm:text-base font-medium min-h-[48px] bg-gray-50 focus:bg-white transition-all"
+              className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-500 focus:border-gray-500 text-sm sm:text-base font-medium min-h-[48px] bg-gray-50 focus:bg-white transition-all"
             />
-            <button
-              onClick={loadData}
-              className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl hover:from-orange-600 hover:to-red-600 transition-all text-sm font-semibold min-h-[48px] sm:min-w-[100px] shadow-lg hover:shadow-xl"
-            >
-              <i className="ri-search-line mr-2"></i>
-              조회
-            </button>
           </div>
         </div>
 
@@ -549,7 +542,7 @@ export default function AdminDailyMenu() {
               <button
                 onClick={handleCreateDailyMenu}
                 disabled={saving}
-                className="px-8 py-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl hover:from-orange-600 hover:to-red-600 transition-all disabled:opacity-50 text-sm sm:text-base font-semibold shadow-lg hover:shadow-xl"
+                className="px-8 py-4 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-xl hover:from-gray-600 hover:to-gray-700 transition-all disabled:opacity-50 text-sm sm:text-base font-semibold shadow-lg hover:shadow-xl"
               >
                 <i className="ri-add-line mr-2"></i>
                 {saving ? '생성 중...' : '일일 메뉴 페이지 생성'}
@@ -594,7 +587,7 @@ export default function AdminDailyMenu() {
         {dailyMenu && (
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sm:p-8 mb-6 sm:mb-8">
             <div className="flex items-center gap-4 mb-8">
-              <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-gray-500 to-gray-600 rounded-2xl flex items-center justify-center">
                 <i className="ri-restaurant-line text-white text-xl"></i>
               </div>
               <div>
@@ -624,20 +617,22 @@ export default function AdminDailyMenu() {
               <div className="mb-6">
                 <h3 className="text-lg font-bold text-gray-900">카테고리 필터</h3>
               </div>
-              <div className="flex flex-wrap gap-3">
-                {categories.map((category) => (
-                  <button
-                    key={category}
-                    onClick={() => setSelectedCategory(category)}
-                    className={`px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200 border ${
-                      selectedCategory === category
-                        ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg border-transparent'
-                        : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-200 hover:border-orange-300'
-                    }`}
-                  >
-                    {category}
-                  </button>
-                ))}
+              <div className="overflow-x-auto">
+                <div className="flex gap-3 pb-2 min-w-max">
+                  {categories.map((category) => (
+                    <button
+                      key={category}
+                      onClick={() => setSelectedCategory(category)}
+                      className={`px-4 sm:px-6 py-2 sm:py-3 rounded-full text-xs sm:text-sm font-semibold transition-all duration-300 transform hover:scale-105 whitespace-nowrap flex-shrink-0 ${
+                        selectedCategory === category
+                          ? 'bg-gray-800 text-white shadow-lg'
+                          : 'bg-white text-gray-800 hover:bg-gray-50 border border-gray-200 shadow-sm hover:shadow-md'
+                      }`}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
             
@@ -647,8 +642,8 @@ export default function AdminDailyMenu() {
                   key={menu.id}
                   className={`group relative bg-white rounded-2xl border transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${
                     selectedMenus.has(menu.id)
-                      ? 'border-orange-200 shadow-xl ring-2 ring-orange-100'
-                      : 'border-gray-200 hover:border-orange-200 hover:shadow-lg'
+                      ? 'border-gray-300 shadow-xl ring-2 ring-gray-100'
+                      : 'border-gray-200 hover:border-gray-300 hover:shadow-lg'
                   }`}
                 >
                   {/* 선택 체크박스 */}
@@ -657,8 +652,8 @@ export default function AdminDailyMenu() {
                       onClick={() => handleMenuToggle(menu.id)}
                       className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
                         selectedMenus.has(menu.id)
-                          ? 'border-orange-500 bg-gradient-to-r from-orange-500 to-red-500 shadow-lg'
-                          : 'border-gray-300 bg-white group-hover:border-orange-300'
+                          ? 'border-gray-900 bg-gray-900 shadow-lg'
+                          : 'border-gray-300 bg-white group-hover:border-gray-400'
                       }`}
                     >
                       {selectedMenus.has(menu.id) && (
@@ -688,7 +683,7 @@ export default function AdminDailyMenu() {
                       {/* 초기 설정 시 수량 입력 */}
                       {!dailyMenuItems.find(item => item.menu_id === menu.id) && (
                         <div className="space-y-4">
-                          <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-4 border border-orange-100">
+                          <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl p-4 border border-gray-200">
                             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                               <label className="text-sm font-semibold text-gray-700 sm:min-w-0">초기 수량 설정</label>
                               <div className="flex items-center gap-2">
@@ -792,7 +787,7 @@ export default function AdminDailyMenu() {
                               <div className="grid grid-cols-2 gap-3">
                                 <button
                                   onClick={() => openQuantityModal(menu.id, 'add', currentQuantity)}
-                                  className="group flex items-center justify-center gap-2 py-3 px-3 sm:px-4 bg-white border border-gray-200 hover:bg-orange-500 hover:border-orange-500 text-gray-700 hover:text-white rounded-xl font-semibold transition-all duration-200 shadow-sm hover:shadow-lg min-h-[48px]"
+                                  className="group flex items-center justify-center gap-2 py-3 px-3 sm:px-4 bg-white border border-gray-200 hover:bg-gray-600 hover:border-gray-600 text-gray-700 hover:text-white rounded-xl font-semibold transition-all duration-200 shadow-sm hover:shadow-lg min-h-[48px]"
                                 >
                                   <i className="ri-add-line text-base sm:text-lg group-hover:scale-110 transition-transform"></i>
                                   <span className="text-xs sm:text-sm">추가</span>
@@ -800,7 +795,7 @@ export default function AdminDailyMenu() {
                                 
                                 <button
                                   onClick={() => openQuantityModal(menu.id, 'subtract', currentQuantity)}
-                                  className="group flex items-center justify-center gap-2 py-3 px-3 sm:px-4 bg-white border border-gray-200 hover:bg-orange-500 hover:border-orange-500 text-gray-700 hover:text-white rounded-xl font-semibold transition-all duration-200 shadow-sm hover:shadow-lg min-h-[48px]"
+                                  className="group flex items-center justify-center gap-2 py-3 px-3 sm:px-4 bg-white border border-gray-200 hover:bg-gray-600 hover:border-gray-600 text-gray-700 hover:text-white rounded-xl font-semibold transition-all duration-200 shadow-sm hover:shadow-lg min-h-[48px]"
                                 >
                                   <i className="ri-subtract-line text-base sm:text-lg group-hover:scale-110 transition-transform"></i>
                                   <span className="text-xs sm:text-sm">줄이기</span>
@@ -812,7 +807,7 @@ export default function AdminDailyMenu() {
                                 onClick={() => handleToggleItemAvailability(dailyMenuItem.id, isAvailable)}
                                 className={`w-full py-3 px-4 rounded-xl font-semibold transition-all duration-200 min-h-[48px] ${
                                   isAvailable
-                                    ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg hover:shadow-xl'
+                                    ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg hover:shadow-xl'
                                     : 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg hover:shadow-xl'
                                 }`}
                               >
@@ -845,7 +840,7 @@ export default function AdminDailyMenu() {
                   <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                     <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                       quantityModal.action === 'add' 
-                        ? 'bg-orange-100 text-orange-600' 
+                        ? 'bg-gray-100 text-gray-600' 
                         : 'bg-gray-100 text-gray-600'
                     }`}>
                       <i className={`ri-${quantityModal.action === 'add' ? 'add' : 'subtract'}-line text-base sm:text-lg`}></i>
@@ -891,7 +886,7 @@ export default function AdminDailyMenu() {
                     value={quantityInput}
                     onChange={(e) => setQuantityInput(e.target.value)}
                     placeholder="수량을 입력하세요"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base sm:text-lg font-medium focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors min-h-[48px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl text-base sm:text-lg font-medium focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition-colors min-h-[48px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     autoFocus
                   />
                   {quantityModal.action === 'subtract' && (
@@ -913,7 +908,7 @@ export default function AdminDailyMenu() {
                     disabled={!quantityInput}
                     className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px] ${
                       quantityModal.action === 'add'
-                        ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg hover:shadow-xl'
+                        ? 'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white shadow-lg hover:shadow-xl'
                         : 'bg-gradient-to-r from-gray-500 to-slate-500 hover:from-gray-600 hover:to-slate-600 text-white shadow-lg hover:shadow-xl'
                     }`}
                   >

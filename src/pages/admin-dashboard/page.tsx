@@ -109,7 +109,7 @@ export default function AdminDashboard() {
           <>
             {/* 매장 정보 */}
         {userStores.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-8">
+          <div className="bg-white rounded-xl shadow-md border-2 border-gray-300 p-8 mb-8">
             <div className="text-center mb-8">
               <h2 className="text-2xl font-bold text-gray-800 mb-2">
                 {userStores[0]?.name || '매장 정보 없음'}
@@ -181,7 +181,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* 알림 설정 */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-8">
+        <div className="bg-white rounded-xl shadow-md border-2 border-gray-300 p-8 mb-8">
           <div className="text-center mb-6">
             <h2 className="text-xl font-bold text-gray-800 mb-2">알림 설정</h2>
           </div>

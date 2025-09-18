@@ -499,8 +499,8 @@ export default function DailyMenuPage() {
                     onClick={() => setSelectedCategory(category)}
                     className={`px-4 sm:px-6 py-2 sm:py-3 rounded-full text-xs sm:text-sm font-semibold transition-all duration-300 transform hover:scale-105 whitespace-nowrap flex-shrink-0 ${
                       selectedCategory === category
-                        ? 'bg-gradient-to-r from-orange-400 to-orange-500 text-white shadow-lg shadow-orange-400/30'
-                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 shadow-sm hover:shadow-md'
+                        ? 'bg-gray-800 text-white shadow-lg'
+                        : 'bg-white text-gray-800 hover:bg-gray-50 border border-gray-200 shadow-sm hover:shadow-md'
                     }`}
                   >
                     {category}
@@ -534,7 +534,7 @@ export default function DailyMenuPage() {
                         {item.menu?.name || '메뉴 정보 없음'}
                       </h3>
                       <div className="text-right flex-shrink-0">
-                        <span className="text-xl sm:text-2xl font-bold text-orange-600">
+                        <span className="text-xl sm:text-2xl font-bold text-gray-900">
                           {(item.menu?.price || 0).toLocaleString()}원
                         </span>
                       </div>
@@ -574,7 +574,7 @@ export default function DailyMenuPage() {
                               disabled={!item.is_available || isOrderClosed}
                               className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 text-xs sm:text-sm ${
                                 item.is_available && !isOrderClosed
-                                  ? 'bg-gradient-to-r from-orange-400 to-orange-500 text-white shadow-lg shadow-orange-400/30 hover:shadow-xl hover:shadow-orange-400/40'
+                                  ? 'bg-white text-gray-900 hover:bg-gray-900 hover:text-white border border-gray-300 hover:border-gray-900 shadow-sm hover:shadow-lg'
                                   : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                               }`}
                             >

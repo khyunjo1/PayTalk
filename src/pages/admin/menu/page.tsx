@@ -204,36 +204,38 @@ export default function AdminMenu() {
         {/* 카테고리 필터 */}
         {menus.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setSelectedMenuCategory('all')}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
-                  selectedMenuCategory === 'all'
-                    ? 'bg-gray-800 text-white'
-                    : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50'
-                }`}
-              >
-                <i className={`ri-restaurant-line mr-1.5 ${selectedMenuCategory === 'all' ? 'text-white' : 'text-gray-600'}`}></i>
-                전체
-              </button>
-              {STANDARD_CATEGORIES.map(category => {
-                const count = menus.filter(menu => menu.category === category).length;
-                if (count === 0) return null;
-                return (
-                  <button
-                    key={category}
-                    onClick={() => setSelectedMenuCategory(category)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
-                      selectedMenuCategory === category
-                        ? 'bg-gray-800 text-white'
-                        : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    <i className={`ri-restaurant-line mr-1.5 ${selectedMenuCategory === category ? 'text-white' : 'text-gray-600'}`}></i>
-                    {category}
-                  </button>
-                );
-              })}
+            <div className="overflow-x-auto">
+              <div className="flex gap-2 pb-2 min-w-max">
+                <button
+                  onClick={() => setSelectedMenuCategory('all')}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
+                    selectedMenuCategory === 'all'
+                      ? 'bg-gray-800 text-white'
+                      : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  <i className={`ri-restaurant-line mr-1.5 ${selectedMenuCategory === 'all' ? 'text-white' : 'text-gray-600'}`}></i>
+                  전체
+                </button>
+                {STANDARD_CATEGORIES.map(category => {
+                  const count = menus.filter(menu => menu.category === category).length;
+                  if (count === 0) return null;
+                  return (
+                    <button
+                      key={category}
+                      onClick={() => setSelectedMenuCategory(category)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
+                        selectedMenuCategory === category
+                          ? 'bg-gray-800 text-white'
+                          : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <i className={`ri-restaurant-line mr-1.5 ${selectedMenuCategory === category ? 'text-white' : 'text-gray-600'}`}></i>
+                      {category}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
@@ -245,74 +247,92 @@ export default function AdminMenu() {
             <p className="text-gray-600">메뉴를 불러오는 중...</p>
           </div>
         ) : filteredMenus.length > 0 ? (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-            {filteredMenus.map((menu, index) => (
-              <div key={menu.id} className={`px-4 py-4 hover:bg-gray-50 transition-colors duration-200 ${index !== filteredMenus.length - 1 ? 'border-b border-gray-100' : ''}`}>
-                <div className="flex gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start mb-1">
-                      <h3 className="font-semibold text-black text-base truncate">{menu.name}</h3>
-                      <div className="flex items-center gap-2">
-                        <span className="text-black font-semibold text-base">
-                          {(menu.price || 0).toLocaleString()}원
-                        </span>
-                      </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            {filteredMenus.map((menu) => (
+              <div key={menu.id} className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl hover:scale-102 transition-all duration-300 group">
+                {/* 메뉴 정보 */}
+                <div className="p-4 sm:p-6">
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-800 group-hover:text-orange-600 transition-colors flex-1 pr-2">
+                      {menu.name}
+                    </h3>
+                    <div className="text-right flex-shrink-0">
+                      <span className="text-xl sm:text-2xl font-bold text-gray-900">
+                        {(menu.price || 0).toLocaleString()}원
+                      </span>
                     </div>
-                    <p className="text-sm text-gray-500 mb-2 line-clamp-2 leading-relaxed">{menu.description}</p>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs px-3 py-1.5 rounded-full font-medium bg-gray-100 text-gray-600">
-                          {menu.category}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => {
-                            setEditingMenu(menu);
-                            setMenuForm({
-                              name: menu.name,
-                              description: menu.description || '',
-                              price: menu.price.toString(),
-                              category: menu.category
-                            });
-                            setShowMenuModal(true);
-                          }}
-                          className="w-8 h-8 rounded-full text-sm font-medium transition-all duration-200 flex items-center justify-center bg-white text-black border border-gray-300 hover:bg-gray-100"
-                        >
-                          <i className="ri-edit-line text-sm"></i>
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (confirm('정말로 이 메뉴를 삭제하시겠습니까?')) {
-                              handleDeleteMenu(menu.id);
-                            }
-                          }}
-                          className="w-8 h-8 rounded-full text-sm font-medium transition-all duration-200 flex items-center justify-center text-gray-500 hover:text-red-500 hover:bg-red-50"
-                        >
-                          <i className="ri-delete-bin-line text-sm"></i>
-                        </button>
-                      </div>
-                    </div>
+                  </div>
+                  
+                  {menu.description && (
+                    <p className="text-gray-600 mb-4 line-clamp-2 leading-relaxed text-sm sm:text-base">
+                      {menu.description}
+                    </p>
+                  )}
+                  
+                  {/* 상태와 카테고리 정보 */}
+                  <div className="flex flex-wrap items-center gap-2 mb-4">
+                    <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-semibold flex items-center gap-1 ${
+                      menu.is_available 
+                        ? 'bg-green-100 text-green-700 border border-green-200' 
+                        : 'bg-red-100 text-red-700 border border-red-200'
+                    }`}>
+                      <i className={`ri-${menu.is_available ? 'check' : 'close'}-line text-xs`}></i>
+                      {menu.is_available ? '판매중' : '판매중지'}
+                    </span>
+                    <span className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
+                      {menu.category}
+                    </span>
+                  </div>
+                  
+                  {/* 관리 버튼들 */}
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => {
+                        setEditingMenu(menu);
+                        setMenuForm({
+                          name: menu.name,
+                          description: menu.description || '',
+                          price: menu.price.toString(),
+                          category: menu.category
+                        });
+                        setShowMenuModal(true);
+                      }}
+                      className="px-4 py-2 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 text-xs sm:text-sm bg-white text-gray-900 hover:bg-gray-900 hover:text-white border border-gray-300 hover:border-gray-900 shadow-sm hover:shadow-lg"
+                    >
+                      <i className="ri-edit-line mr-1"></i>
+                      수정
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm('정말로 이 메뉴를 삭제하시겠습니까?')) {
+                          handleDeleteMenu(menu.id);
+                        }
+                      }}
+                      className="px-4 py-2 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 text-xs sm:text-sm bg-white text-red-600 hover:bg-red-600 hover:text-white border border-red-300 hover:border-red-600 shadow-sm hover:shadow-lg"
+                    >
+                      <i className="ri-delete-bin-line mr-1"></i>
+                      삭제
+                    </button>
                   </div>
                 </div>
               </div>
             ))}
           </div>
         ) : selectedMenuCategory === 'all' ? (
-          <div className="text-center py-12">
-            <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <i className="ri-restaurant-line text-3xl text-orange-400"></i>
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/50 p-12 text-center">
+            <div className="w-24 h-24 bg-gradient-to-br from-orange-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <i className="ri-restaurant-line text-4xl text-orange-400"></i>
             </div>
-            <h3 className="text-lg font-medium text-gray-600 mb-2">메뉴가 없습니다</h3>
-            <p className="text-gray-500">위의 "메뉴 추가" 버튼을 눌러<br />새로운 메뉴를 추가해보세요!</p>
+            <h3 className="text-2xl font-bold text-gray-800 mb-3">메뉴가 없습니다</h3>
+            <p className="text-gray-600 text-lg">위의 "메뉴 추가" 버튼을 눌러<br />새로운 메뉴를 추가해보세요!</p>
           </div>
         ) : (
-          <div className="text-center py-12">
-            <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <i className="ri-restaurant-line text-3xl text-orange-400"></i>
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/50 p-12 text-center">
+            <div className="w-24 h-24 bg-gradient-to-br from-orange-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <i className="ri-restaurant-line text-4xl text-orange-400"></i>
             </div>
-            <h3 className="text-lg font-medium text-gray-600 mb-2">메뉴가 없습니다</h3>
-            <p className="text-gray-500">이 카테고리에 등록된 메뉴가 없습니다.</p>
+            <h3 className="text-2xl font-bold text-gray-800 mb-3">메뉴가 없습니다</h3>
+            <p className="text-gray-600 text-lg">이 카테고리에 등록된 메뉴가 없습니다.</p>
           </div>
         )}
       </div>

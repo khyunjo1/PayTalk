@@ -167,7 +167,7 @@ export default function Admin() {
   // 주문 상태 변경 이벤트 감지 (다른 페이지에서 상태 변경 시 자동 새로고침)
   useEffect(() => {
     const handleOrderStatusChanged = (event: CustomEvent) => {
-      const { orderId, status, updatedOrder } = event.detail;
+      const { orderId, status } = event.detail;
       console.log(`다른 페이지에서 주문 ${orderId} 상태가 ${status}로 변경됨. 데이터 새로고침 중...`);
       
       // 로컬 상태 업데이트
@@ -270,38 +270,39 @@ export default function Admin() {
     }
   }, [currentStore]);
 
+  // 매장 정보 로드 함수
+  const loadStoreInfo = async () => {
+    if (storeId) {
+      try {
+        console.log('🔍 매장 정보 로드 시도, storeId:', storeId);
+        const { data: storeData, error } = await supabase
+          .from('stores')
+          .select('*')
+          .eq('id', storeId)
+          .single();
+        
+        if (error) {
+          console.error('❌ 매장 정보 로드 실패:', error);
+          return;
+        }
+        
+        if (storeData) {
+          setCurrentStore(storeData);
+          setStoreName(storeData.name); // 매장 이름 설정
+          console.log('✅ 매장 정보 로드됨:', storeData);
+        } else {
+          console.log('⚠️ 매장 데이터 없음');
+        }
+      } catch (error) {
+        console.error('❌ 매장 정보 로드 오류:', error);
+      }
+    } else {
+      console.log('⚠️ storeId 없음');
+    }
+  };
+
   // URL의 storeId로 매장 정보 가져오기 (매장 관리 탭용)
   useEffect(() => {
-    const loadStoreInfo = async () => {
-      if (storeId) {
-        try {
-          console.log('🔍 매장 정보 로드 시도, storeId:', storeId);
-          const { data: storeData, error } = await supabase
-            .from('stores')
-            .select('*')
-            .eq('id', storeId)
-            .single();
-          
-          if (error) {
-            console.error('❌ 매장 정보 로드 실패:', error);
-            return;
-          }
-          
-          if (storeData) {
-            setCurrentStore(storeData);
-            setStoreName(storeData.name); // 매장 이름 설정
-            console.log('✅ 매장 정보 로드됨:', storeData);
-          } else {
-            console.log('⚠️ 매장 데이터 없음');
-          }
-        } catch (error) {
-          console.error('❌ 매장 정보 로드 오류:', error);
-        }
-      } else {
-        console.log('⚠️ storeId 없음');
-      }
-    };
-    
     loadStoreInfo();
   }, [storeId]);
 
@@ -1291,7 +1292,7 @@ export default function Admin() {
         {/* 검색 및 필터 섹션 */}
         <div className="space-y-4 mb-6 no-print">
           {/* 검색 바 */}
-          <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+          <div className="bg-white rounded-lg border-2 border-gray-300 p-4 shadow-md">
             <div className="flex items-center gap-2 mb-3">
               <i className="ri-search-line text-orange-500"></i>
               <span className="text-sm font-medium text-gray-700">검색</span>
@@ -1309,7 +1310,7 @@ export default function Admin() {
         </div>
 
         {/* 필터 카드 */}
-          <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+          <div className="bg-white rounded-lg border-2 border-gray-300 p-4 shadow-md">
             <div className="flex items-center gap-2 mb-3">
               <i className="ri-filter-3-line text-orange-500"></i>
               <span className="text-sm font-medium text-gray-700">필터</span>
@@ -1451,14 +1452,14 @@ export default function Admin() {
             {/* 주문 상세 목록 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
           {loadingOrders ? (
-            <div className="col-span-full bg-white rounded-lg p-8 shadow-sm">
+            <div className="col-span-full bg-white rounded-lg p-8 shadow-md border-2 border-gray-300">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
                 <p className="text-gray-600">주문 데이터를 불러오는 중...</p>
               </div>
             </div>
               ) : paginatedOrders.length === 0 ? (
-            <div className="col-span-full bg-white rounded-lg p-8 shadow-sm">
+            <div className="col-span-full bg-white rounded-lg p-8 shadow-md border-2 border-gray-300">
               <div className="text-center text-gray-500">
                 <i className="ri-shopping-cart-line text-4xl mb-4"></i>
                 <p>선택한 조건에 해당하는 주문이 없습니다.</p>
@@ -1475,7 +1476,7 @@ export default function Admin() {
               };
               
               return (
-                <div key={order.id} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
+                <div key={order.id} className="bg-white rounded-lg shadow-md border-2 border-gray-300 hover:shadow-lg hover:border-orange-400 transition-all duration-200 overflow-hidden">
                   <div className="p-4 lg:p-5">
                     <div className="mb-4">
                       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-3 gap-2">
@@ -1825,7 +1826,7 @@ export default function Admin() {
             </div>
 
             {/* 통계 필터 카드 */}
-            <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm mb-6">
+            <div className="bg-white rounded-lg border-2 border-gray-300 p-4 shadow-md mb-6">
               <div className="flex items-center gap-2 mb-3">
                 <i className="ri-calendar-check-line text-orange-500"></i>
                 <span className="text-sm font-medium text-gray-700">통계 기간</span>
@@ -1913,7 +1914,7 @@ export default function Admin() {
 
             {/* 통계 카드 */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="bg-white rounded-lg p-4 shadow-sm">
+              <div className="bg-white rounded-lg p-4 shadow-md border-2 border-gray-300">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-600">{getPeriodTitle('총 매출')}</p>
@@ -1925,7 +1926,7 @@ export default function Admin() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg p-4 shadow-sm">
+              <div className="bg-white rounded-lg p-4 shadow-md border-2 border-gray-300">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-600">{getPeriodTitle('총 주문수')}</p>
@@ -1937,7 +1938,7 @@ export default function Admin() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg p-4 shadow-sm">
+              <div className="bg-white rounded-lg p-4 shadow-md border-2 border-gray-300">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-600">{getPeriodTitle('평균 주문액')}</p>
@@ -1949,7 +1950,7 @@ export default function Admin() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg p-4 shadow-sm">
+              <div className="bg-white rounded-lg p-4 shadow-md border-2 border-gray-300">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-gray-600">{getPeriodTitle('매출 증가율')}</p>
@@ -1967,7 +1968,7 @@ export default function Admin() {
             {/* 추가 통계 섹션 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               {/* 픽업 시간대별 주문 분석 */}
-              <div className="bg-white rounded-lg p-6 shadow-sm">
+              <div className="bg-white rounded-lg p-6 shadow-md border-2 border-gray-300">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
                   <i className="ri-store-line text-orange-500"></i>
                   {getPeriodTitle('픽업 시간대별 주문')}
@@ -1997,7 +1998,7 @@ export default function Admin() {
               </div>
 
               {/* 배달 시간대별 주문 분석 */}
-              <div className="bg-white rounded-lg p-6 shadow-sm">
+              <div className="bg-white rounded-lg p-6 shadow-md border-2 border-gray-300">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
                   <i className="ri-truck-line text-orange-500"></i>
                   {getPeriodTitle('배달 시간대별 주문')}
@@ -2028,7 +2029,7 @@ export default function Admin() {
             </div>
 
             {/* 요일별 성과 */}
-            <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
+            <div className="bg-white rounded-lg p-6 shadow-md border-2 border-gray-300 mb-6">
               <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
                 <i className="ri-calendar-line text-orange-500"></i>
                 요일별 성과 (전체 기간)
@@ -2051,7 +2052,7 @@ export default function Admin() {
             </div>
 
             {/* 인기 메뉴 */}
-            <div className="bg-white rounded-lg p-4 shadow-sm">
+            <div className="bg-white rounded-lg p-4 shadow-md border-2 border-gray-300">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">{getPeriodTitle('인기 메뉴')}</h3>
               <div className="space-y-3">
                 {popularMenus.length > 0 ? (
@@ -2225,7 +2226,7 @@ export default function Admin() {
       {/* 메뉴 추가/수정 모달 */}
       {showMenuModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md border-2 border-gray-300 shadow-xl">
             <h3 className="text-lg font-semibold mb-4">
               {editingMenu ? '메뉴 수정' : '메뉴 추가'}
             </h3>
@@ -2332,7 +2333,7 @@ export default function Admin() {
                   <p className="text-sm text-gray-600">고객들이 이 링크로 주문할 수 있습니다</p>
                 </div>
                 
-                <div className="bg-white rounded-xl p-4 mb-4 border border-gray-200 shadow-sm">
+                <div className="bg-white rounded-xl p-4 mb-4 border-2 border-gray-300 shadow-md">
                   <div className="font-mono text-sm text-gray-700 break-all">
                     {storeId ? `${window.location.origin}/menu/${storeId}` : '로딩 중...'}
                   </div>
@@ -2362,7 +2363,7 @@ export default function Admin() {
             </div>
             
             {/* 매장 정보 카드 */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-lg shadow-md border-2 border-gray-300 p-6">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-semibold text-gray-800">매장 정보</h3>
                 <button
@@ -2495,7 +2496,7 @@ export default function Admin() {
       {/* 상태 변경 확인 모달 */}
       {showStatusConfirm && pendingStatusChange && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 mx-4 max-w-sm w-full">
+          <div className="bg-white rounded-xl p-6 mx-4 max-w-sm w-full border-2 border-gray-300 shadow-xl">
             <div className="text-center">
               <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <i className="ri-question-line text-2xl text-orange-500"></i>
@@ -2533,7 +2534,7 @@ export default function Admin() {
         {/* 매장 정보 수정 모달 */}
         {showStoreEditModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border-2 border-gray-300 shadow-xl">
               <div className="p-6">
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-xl font-semibold text-gray-800">매장 정보 수정</h3>
