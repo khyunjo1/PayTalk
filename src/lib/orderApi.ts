@@ -309,6 +309,28 @@ export const getStoreOrders = async (storeId: string) => {
 export const updateOrderStatus = async (orderId: string, status: '입금대기' | '입금확인' | '배달완료' | '주문취소') => {
   console.log('주문 상태 업데이트 시작:', { orderId, status });
   
+  // 먼저 주문이 존재하는지 확인
+  const { data: existingOrder, error: checkError } = await supabase
+    .from('orders')
+    .select('id, status, store_id')
+    .eq('id', orderId)
+    .single();
+    
+  if (checkError) {
+    console.error('주문 존재 확인 오류:', checkError);
+    throw new Error(`주문을 찾을 수 없습니다: ${checkError.message}`);
+  }
+  
+  console.log('기존 주문 정보:', existingOrder);
+  
+  // 현재 사용자 정보 확인
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError) {
+    console.error('사용자 정보 확인 오류:', userError);
+  } else {
+    console.log('현재 사용자:', user?.id, user?.email);
+  }
+  
   const { data, error } = await supabase
     .from('orders')
     .update({ 
@@ -337,6 +359,7 @@ export const updateOrderStatus = async (orderId: string, status: '입금대기' 
     console.error('주문 ID:', orderId);
     console.error('새 상태:', status);
     console.error('에러 상세:', error.message, error.details, error.hint);
+    console.error('에러 코드:', error.code);
     throw error;
   }
 
