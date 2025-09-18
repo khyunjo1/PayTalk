@@ -87,7 +87,8 @@ serve(async (req) => {
         playerId: playerId,
         title,
         body,
-        data: data || {}
+        data: data || {},
+        targetUrl: targetUrl
       })
 
       console.log('OneSignal 푸시 알림 발송 성공:', pushResult)
@@ -134,8 +135,9 @@ async function sendOneSignalNotification(params: {
   title: string;
   body: string;
   data?: any;
+  targetUrl: string;
 }) {
-  const { appId, apiKey, playerId, title, body, data } = params;
+  const { appId, apiKey, playerId, title, body, data, targetUrl } = params;
 
   const notification = {
     app_id: appId,
