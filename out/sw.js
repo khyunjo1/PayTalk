@@ -75,6 +75,8 @@ self.addEventListener('push', (event) => {
     body: notificationData.body,
     icon: notificationData.icon,
     badge: notificationData.badge,
+    tag: 'paytalk-notification',
+    renotify: true,
     vibrate: [200, 100, 200],
     data: {
       ...notificationData.data,
