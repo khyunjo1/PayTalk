@@ -67,6 +67,7 @@ export default function Cart() {
   const [depositorName, setDepositorName] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'bank_transfer' | 'zeropay'>('bank_transfer');
   const [loading, setLoading] = useState(true);
   const [isOrdering, setIsOrdering] = useState(false);
   const [dailyMenuCartData, setDailyMenuCartData] = useState<any>(null);
@@ -374,7 +375,8 @@ export default function Cart() {
       // 픽업은 최소주문금액 체크 없음
     }
 
-    if (!depositorName.trim()) {
+    // 무통장입금인 경우에만 입금자명 검사
+    if (paymentMethod === 'bank_transfer' && !depositorName.trim()) {
       alert('입금자명을 입력해주세요.');
       return;
     }
@@ -405,7 +407,7 @@ export default function Cart() {
         delivery_time: orderType === 'delivery' ? deliveryTime : undefined,
         pickup_time: orderType === 'pickup' ? pickupTime : undefined,
         special_requests: specialRequests || undefined,
-        depositor_name: depositorName,
+        depositor_name: paymentMethod === 'bank_transfer' ? depositorName : '',
         customer_name: customerName,
         customer_phone: customerPhone,
         customer_address: orderType === 'delivery' ? deliveryAddress : undefined,
@@ -413,6 +415,7 @@ export default function Cart() {
         delivery_fee: orderType === 'delivery' ? deliveryFee : 0,
         total: total,
         delivery_area_id: orderType === 'delivery' ? selectedDeliveryArea : undefined,
+        payment_method: paymentMethod,
         items: cart.map(item => ({
           menu_id: (item as any).originalMenuId || item.id, // originalMenuId가 있으면 사용, 없으면 기존 id 사용
           quantity: item.quantity,
@@ -784,26 +787,73 @@ export default function Cart() {
           </div>
         )}
 
-        {/* 입금자 정보 */}
+        {/* 결제 방식 선택 */}
         <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-gray-200 hover:border-orange-300 transition-all duration-300">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
-              <i className="ri-bank-line text-orange-500 text-lg"></i>
+              <i className="ri-bank-card-line text-orange-500 text-lg"></i>
             </div>
-            <h2 className="text-xl font-bold text-gray-800">입금자 정보 (무통장입금)</h2>
+            <h2 className="text-xl font-bold text-gray-800">결제 방식</h2>
           </div>
-          <div>
-            <label className="block text-base font-semibold text-gray-800 mb-2">
-              입금자명 <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={depositorName}
-              onChange={(e) => setDepositorName(e.target.value)}
-              placeholder="입금자명을 입력해주세요"
-              className="w-full p-4 border-2 border-gray-300 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-500 transition-all duration-200 hover:border-gray-400"
-            />
+          
+          {/* 결제 방식 선택 버튼 */}
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            <button
+              onClick={() => setPaymentMethod('bank_transfer')}
+              className={`py-4 px-4 rounded-xl border-2 text-center cursor-pointer transition-all duration-300 font-semibold ${
+                paymentMethod === 'bank_transfer'
+                  ? 'border-orange-500 bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg transform scale-105'
+                  : 'border-gray-300 text-gray-600 hover:border-orange-300 hover:bg-orange-50 hover:shadow-md'
+              }`}
+            >
+              <div className="flex flex-col items-center gap-2">
+                <i className="ri-bank-line text-xl"></i>
+                <span className="text-sm">무통장입금</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setPaymentMethod('zeropay')}
+              className={`py-4 px-4 rounded-xl border-2 text-center cursor-pointer transition-all duration-300 font-semibold ${
+                paymentMethod === 'zeropay'
+                  ? 'border-orange-500 bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg transform scale-105'
+                  : 'border-gray-300 text-gray-600 hover:border-orange-300 hover:bg-orange-50 hover:shadow-md'
+              }`}
+            >
+              <div className="flex flex-col items-center gap-2">
+                <i className="ri-qr-code-line text-xl"></i>
+                <span className="text-sm">제로페이</span>
+              </div>
+            </button>
           </div>
+
+          {/* 무통장입금 선택 시 입금자명 입력 */}
+          {paymentMethod === 'bank_transfer' && (
+            <div>
+              <label className="block text-base font-semibold text-gray-800 mb-2">
+                입금자명 <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={depositorName}
+                onChange={(e) => setDepositorName(e.target.value)}
+                placeholder="입금자명을 입력해주세요"
+                className="w-full p-4 border-2 border-gray-300 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-500 transition-all duration-200 hover:border-gray-400"
+              />
+            </div>
+          )}
+
+          {/* 제로페이 선택 시 안내 메시지 */}
+          {paymentMethod === 'zeropay' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div className="flex items-center gap-2 text-blue-700 mb-2">
+                <i className="ri-information-line text-lg"></i>
+                <span className="font-semibold">제로페이 결제 안내</span>
+              </div>
+              <p className="text-sm text-blue-600">
+                주문 완료 후 제로페이 QR 코드를 통해 결제하실 수 있습니다.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* 주문 상품 및 결제 금액 */}

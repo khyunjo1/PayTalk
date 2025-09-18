@@ -19,6 +19,7 @@ interface OrderData {
   delivery_fee: number;
   total: number;
   delivery_area_id?: string;
+  payment_method: 'bank_transfer' | 'zeropay';
   stores: {
     name: string;
     phone: string;
@@ -79,6 +80,7 @@ export default function OrderComplete() {
             delivery_fee,
             total,
             delivery_area_id,
+            payment_method,
             stores (
               name,
               phone,
@@ -200,39 +202,61 @@ export default function OrderComplete() {
           </div>
         </div>
 
-        {/* 입금 정보 카드 */}
+        {/* 결제 정보 카드 */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
-          <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">입금 정보</h3>
+          <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">
+            {orderData.payment_method === 'bank_transfer' ? '입금 정보' : '제로페이 결제'}
+          </h3>
           
-          <div className="bg-gray-50 rounded-xl p-3 sm:p-4 mb-3 sm:mb-4">
-            <div className="text-lg sm:text-2xl font-bold text-gray-900 mb-1 font-mono break-all">
-              {orderData.stores.bank_account}
-            </div>
-            <div className="text-xs sm:text-sm text-gray-500">
-              예금주: {orderData.stores.account_holder}
-            </div>
-          </div>
+          {orderData.payment_method === 'bank_transfer' ? (
+            <>
+              <div className="bg-gray-50 rounded-xl p-3 sm:p-4 mb-3 sm:mb-4">
+                <div className="text-lg sm:text-2xl font-bold text-gray-900 mb-1 font-mono break-all">
+                  {orderData.stores.bank_account}
+                </div>
+                <div className="text-xs sm:text-sm text-gray-500">
+                  예금주: {orderData.stores.account_holder}
+                </div>
+              </div>
 
-          <button
-            onClick={copyAccountNumber}
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white px-4 py-3 sm:py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 shadow-sm hover:shadow-md text-sm sm:text-base min-h-[48px]"
-          >
-            <i className="ri-file-copy-line text-base"></i>
-            복사
-          </button>
+              <button
+                onClick={copyAccountNumber}
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white px-4 py-3 sm:py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 shadow-sm hover:shadow-md text-sm sm:text-base min-h-[48px]"
+              >
+                <i className="ri-file-copy-line text-base"></i>
+                복사
+              </button>
+            </>
+          ) : (
+            <div className="text-center">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 mb-4 border border-blue-200">
+                <div className="text-sm text-blue-700 font-semibold mb-4">제로페이 QR 코드입니다</div>
+                <div className="bg-white rounded-xl p-4 shadow-lg inline-block">
+                  <img 
+                    src="/zeropay-qr.JPG" 
+                    alt="제로페이 QR 코드" 
+                    className="w-48 h-48 mx-auto"
+                  />
+                </div>
+                <div className="text-xs text-blue-600 mt-3">
+                  QR 코드를 스캔하여 결제를 완료해주세요
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* 픽업 정보 카드 */}
-        <div className="bg-green-50 rounded-2xl shadow-sm border border-green-100 p-4 sm:p-6">
+        {/* 배달/픽업 정보 카드 */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
           <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
-            <i className="ri-calendar-line text-green-600 text-base sm:text-lg"></i>
-            픽업 시간
+            <i className={`${orderData.order_type === 'delivery' ? 'ri-truck-line' : 'ri-calendar-line'} text-orange-500 text-base sm:text-lg`}></i>
+            {orderData.order_type === 'delivery' ? '배달 정보' : '픽업 정보'}
           </h3>
           
           <div className="space-y-2 sm:space-y-3">
             {orderData.delivery_address && (
-              <div className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 bg-white rounded-xl">
-                <i className="ri-map-pin-line text-green-600 mt-1 text-sm sm:text-base"></i>
+              <div className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 bg-gray-50 rounded-xl">
+                <i className="ri-map-pin-line text-orange-500 mt-1 text-sm sm:text-base"></i>
                 <div className="min-w-0 flex-1">
                   <div className="text-xs sm:text-sm text-gray-600 font-medium">배달 주소</div>
                   <div className="text-sm sm:text-base text-gray-900 font-semibold break-words">{orderData.delivery_address}</div>
@@ -241,8 +265,8 @@ export default function OrderComplete() {
             )}
             
             {orderData.delivery_time && (
-              <div className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 bg-white rounded-xl">
-                <i className="ri-time-line text-green-600 mt-1 text-sm sm:text-base"></i>
+              <div className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 bg-gray-50 rounded-xl">
+                <i className="ri-time-line text-orange-500 mt-1 text-sm sm:text-base"></i>
                 <div className="min-w-0 flex-1">
                   <div className="text-xs sm:text-sm text-gray-600 font-medium">배달 시간</div>
                   <div className="text-sm sm:text-base text-gray-900 font-bold break-words">
@@ -294,8 +318,8 @@ export default function OrderComplete() {
             )}
             
             {orderData.pickup_time && (
-              <div className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 bg-white rounded-xl">
-                <i className="ri-time-line text-green-600 mt-1 text-sm sm:text-base"></i>
+              <div className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 bg-gray-50 rounded-xl">
+                <i className="ri-time-line text-orange-500 mt-1 text-sm sm:text-base"></i>
                 <div className="min-w-0 flex-1">
                   <div className="text-xs sm:text-sm text-gray-600 font-medium">픽업 시간</div>
                   <div className="text-sm sm:text-base text-gray-900 font-bold break-words">{orderData.pickup_time}</div>

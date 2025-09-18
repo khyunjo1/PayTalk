@@ -45,7 +45,7 @@ self.addEventListener('push', (event) => {
   console.log('Push event received:', event);
   
   let notificationData = {
-    title: 'PayTalk 알림',
+    title: '페이톡 알림',
     body: '새로운 알림이 있습니다.',
     icon: '/favicon.ico',
     badge: '/favicon.ico',

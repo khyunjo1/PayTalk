@@ -13,12 +13,13 @@ export const createOrder = async (orderData: {
   delivery_time?: string;
   pickup_time?: string;
   special_requests?: string;
-  depositor_name: string;
+  depositor_name?: string;
   customer_name: string;
   customer_phone: string;
   customer_address?: string;
   subtotal: number;
   total: number;
+  payment_method: 'bank_transfer' | 'zeropay';
   items: Array<{
     menu_id: string;
     quantity: number;
@@ -50,6 +51,7 @@ export const createOrder = async (orderData: {
       customer_address: orderData.customer_address,
       subtotal: orderData.subtotal,
       total: orderData.total,
+      payment_method: orderData.payment_method,
       status: '입금대기'
     })
     .select()

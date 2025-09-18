@@ -290,7 +290,7 @@ export const getOrderNotificationMessage = (status: string, orderId: string): { 
 // 사장님용 주문 접수 알림 메시지
 export const getStoreOrderNotificationMessage = (storeName: string, orderId: string): { title: string; body: string } => {
   return {
-    title: '새 주문 접수',
+    title: '새 주문이 요청되었습니다',
     body: `${storeName}에 새로운 주문이 들어왔습니다! (주문번호: ${orderId})`
   };
 };

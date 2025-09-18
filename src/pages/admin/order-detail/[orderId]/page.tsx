@@ -21,6 +21,7 @@ interface Order {
   subtotal: number;
   delivery_fee: number;
   total: number;
+  payment_method: 'bank_transfer' | 'zeropay';
   status: '입금대기' | '입금확인' | '배달완료' | '주문취소';
   read_at?: string;
   created_at: string;
@@ -341,25 +342,21 @@ export default function OrderDetail() {
             </div>
             
             <div className="space-y-3 sm:space-y-4">
-              {order.depositor_name && (
+              {/* 무통장입금일 때는 입금자명, 제로페이일 때는 고객명 표시 */}
+              {(order.payment_method === 'bank_transfer' ? order.depositor_name : order.customer_name) && (
                 <div className="flex items-start gap-3">
                   <span className="text-xl sm:text-2xl">👤</span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs sm:text-sm text-gray-500">입금자</p>
-                    <p className="font-semibold text-gray-900 text-sm sm:text-base break-words">{order.depositor_name}</p>
+                    <p className="text-xs sm:text-sm text-gray-500">
+                      {order.payment_method === 'bank_transfer' ? '입금자' : '고객명'}
+                    </p>
+                    <p className="font-semibold text-gray-900 text-sm sm:text-base break-words">
+                      {order.payment_method === 'bank_transfer' ? order.depositor_name : order.customer_name}
+                    </p>
                   </div>
                 </div>
               )}
               
-              {order.customer_name && (
-                <div className="flex items-start gap-3">
-                  <span className="text-xl sm:text-2xl">👤</span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs sm:text-sm text-gray-500">고객명</p>
-                    <p className="font-semibold text-gray-900 text-sm sm:text-base break-words">{order.customer_name}</p>
-                  </div>
-                </div>
-              )}
               
               {order.customer_phone && (
                 <div className="flex items-start gap-3">
@@ -380,6 +377,17 @@ export default function OrderDetail() {
                   </div>
                 </div>
               )}
+              
+              {/* 결제 방식 표시 */}
+              <div className="flex items-start gap-3">
+                <span className="text-xl sm:text-2xl">💳</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-gray-500">결제방식</p>
+                  <p className="font-semibold text-gray-900 text-sm sm:text-base">
+                    {order.payment_method === 'bank_transfer' ? '무통장입금' : '제로페이'}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 

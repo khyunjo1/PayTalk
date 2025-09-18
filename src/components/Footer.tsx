@@ -16,15 +16,11 @@ export default function Footer() {
             <div className="space-y-1 text-sm text-gray-600">
               <div className="flex items-center gap-2">
                 <i className="ri-phone-line text-orange-500"></i>
-                <span>02-1234-5678</span>
+                <span>010-3262-6543</span>
               </div>
               <div className="flex items-center gap-2">
                 <i className="ri-mail-line text-orange-500"></i>
                 <span>mnkijo424@gmail.com</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <i className="ri-time-line text-orange-500"></i>
-                <span>평일 09:00 - 18:00</span>
               </div>
             </div>
           </div>
