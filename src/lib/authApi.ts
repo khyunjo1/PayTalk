@@ -203,7 +203,7 @@ export const approveUser = async (userId: string, storeId: string) => {
     // 사용자 상태를 승인으로 변경
     const { error: userError } = await supabase
       .from('users')
-      .update({ 
+      .update({
         status: 'approved',
         updated_at: new Date().toISOString()
       })
@@ -211,6 +211,22 @@ export const approveUser = async (userId: string, storeId: string) => {
 
     if (userError) {
       throw userError;
+    }
+
+    // 매장의 owner_id를 설정 (푸시 알림을 위해 중요!)
+    const { error: storeOwnerError } = await supabase
+      .from('stores')
+      .update({
+        owner_id: userId,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', storeId);
+
+    if (storeOwnerError) {
+      console.error('매장 owner_id 설정 실패:', storeOwnerError);
+      // owner_id 설정 실패해도 승인은 계속 진행
+    } else {
+      console.log('✅ 매장 owner_id 설정 성공:', { storeId, userId });
     }
 
     // user_stores 테이블에 연결
