@@ -839,7 +839,10 @@ export default function AdminDailyMenu() {
                       선택된 메뉴 {selectedMenus.size}개
                     </h3>
                     <p className="text-sm text-gray-600">
-                      선택한 메뉴들을 일일 메뉴에 추가하시겠습니까?
+                      {dailyMenuItems.length === 0 
+                        ? '선택한 메뉴들을 일일 메뉴에 추가하시겠습니까?'
+                        : '선택한 메뉴들을 일일 메뉴에 추가하시겠습니까?'
+                      }
                     </p>
                   </div>
                   <button
