@@ -71,8 +71,9 @@ export const saveOneSignalPlayerId = async (playerId: string, userId: string): P
         user_id: userId,
         onesignal_player_id: playerId,
         is_active: true,
-        created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id'
       })
       .select();
 

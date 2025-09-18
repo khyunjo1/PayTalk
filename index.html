@@ -52,6 +52,17 @@
         console.log('OneSignal v16 초기화 완료');
         window.OneSignal = OneSignal;
         window.OneSignalInitialized = true;
+
+        // Service Worker 등록 강제 확인
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('/OneSignalSDKWorker.js', { scope: '/' })
+            .then(function(registration) {
+              console.log('OneSignal Service Worker 등록 성공:', registration);
+            })
+            .catch(function(error) {
+              console.log('OneSignal Service Worker 등록 실패:', error);
+            });
+        }
       });
     </script>
   </head>
