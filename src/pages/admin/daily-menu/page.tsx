@@ -612,7 +612,7 @@ export default function AdminDailyMenu() {
               <div className="mt-4">
                 <button
                   onClick={handleCopyLink}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
                 >
                   <i className="ri-link"></i>
                   주문서 링크 복사
@@ -701,9 +701,6 @@ export default function AdminDailyMenu() {
                       className="w-full flex items-center justify-between p-3 sm:p-4 text-left hover:bg-gray-50 transition-colors duration-200"
                     >
                   <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gradient-to-br from-orange-100 to-orange-200 rounded-lg flex items-center justify-center">
-                          <i className="ri-restaurant-line text-orange-600 text-sm"></i>
-                    </div>
                         <div>
                           <h3 className="font-semibold text-gray-900">{category}</h3>
                           <p className="text-sm text-gray-500">

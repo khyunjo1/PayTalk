@@ -60,7 +60,6 @@ export default function OwnerOrders() {
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<'all' | '입금대기' | '입금확인' | '배달완료'>('all');
 
   useEffect(() => {
     const loadOwnerData = async () => {
@@ -126,9 +125,7 @@ export default function OwnerOrders() {
     }
   };
 
-  const filteredOrders = orders.filter(order => 
-    statusFilter === 'all' || order.status === statusFilter
-  );
+  const filteredOrders = orders;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -216,25 +213,6 @@ export default function OwnerOrders() {
             </select>
           </div>
 
-          {/* 상태 필터 */}
-          <div>
-            <h2 className="text-lg font-bold text-gray-800 mb-3">주문 상태</h2>
-            <div className="flex gap-3">
-              {['all', '입금대기', '입금확인', '배달완료'].map(status => (
-                <button
-                  key={status}
-                  onClick={() => setStatusFilter(status as any)}
-                  className={`px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
-                    statusFilter === status
-                      ? 'bg-orange-100 text-orange-700 border border-orange-200'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {status === 'all' ? '전체' : status}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* 주문 목록 */}

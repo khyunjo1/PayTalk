@@ -50,8 +50,8 @@ export default function DailyMenuPage() {
   const [store, setStore] = useState<any>(null);
   const [cart, setCart] = useState<Record<string, number>>({});
   const [isOrderClosed, setIsOrderClosed] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string>('전체');
   const [categories, setCategories] = useState<string[]>([]);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!storeId) return;
@@ -262,12 +262,21 @@ export default function DailyMenuPage() {
     });
   };
 
+  const toggleCategory = (category: string) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(category)) {
+        newSet.delete(category);
+      } else {
+        newSet.add(category);
+      }
+      return newSet;
+    });
+  };
 
-  // 카테고리별 필터링된 메뉴 아이템
-  const filteredMenuItems = dailyMenuItems.filter(item => {
-    if (selectedCategory === '전체') return true;
-    return item.menu?.category === selectedCategory;
-  });
+
+  // 모든 메뉴 아이템 표시
+  const filteredMenuItems = dailyMenuItems;
 
   const getTotalPrice = () => {
     return dailyMenuItems.reduce((total, item) => {
@@ -345,295 +354,288 @@ export default function DailyMenuPage() {
   // 주문 마감 상태일 때의 UI
   if (isOrderClosed) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100">
+    <div className="min-h-screen bg-gray-50">
       <Header />
       
-      {/* 히어로 섹션 - 매장 정보와 메뉴 날짜 */}
-      <div className="relative overflow-hidden">
-        {/* 배경 그라데이션 */}
-        <div className="absolute inset-0 bg-gradient-to-r from-orange-200 via-orange-300 to-orange-400 opacity-60"></div>
-        <div className="absolute inset-0 bg-white opacity-40"></div>
-        
-        {/* 콘텐츠 */}
-        <div className="relative px-4 py-8 sm:py-12 text-center">
-          {/* 매장명 */}
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2 px-2">
-            {store?.name}
-          </h1>
-          
-          {/* 배달 지역 */}
-          <div className="flex items-center justify-center gap-2 mb-4 px-2">
-            <i className="ri-map-pin-line text-gray-600 text-base sm:text-lg"></i>
-            <span className="text-gray-700 font-medium text-sm sm:text-base">{store?.delivery_area}</span>
-          </div>
-          
-          {/* 메뉴 날짜와 상태 */}
-          <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6 max-w-md mx-auto">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <i className="ri-calendar-check-line text-gray-600 text-lg sm:text-xl"></i>
-              <span className="text-gray-800 font-semibold text-base sm:text-lg">
-                {dailyMenu?.title || `${date}의 반찬`}
-              </span>
+      {/* 모바일 최적화 헤더 */}
+      <div className="bg-white border-b border-gray-200 px-3 py-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-base font-bold text-gray-900 truncate leading-tight">
+                {store?.name}
+              </h1>
+              <div className="flex flex-col gap-1 mt-1.5">
+                <div className="flex items-center gap-1.5">
+                  <i className="ri-map-pin-line text-xs text-gray-500 flex-shrink-0"></i>
+                  <span className="text-xs text-gray-600 truncate">{store?.delivery_area}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <i className="ri-calendar-line text-xs text-gray-500 flex-shrink-0"></i>
+                  <span className="text-xs text-gray-600 truncate">{dailyMenu?.title || `${date}의 반찬`}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <i className="ri-truck-line text-xs text-gray-500 flex-shrink-0"></i>
+                  <span className="text-xs text-gray-600">최소주문 {store?.minimum_order_amount?.toLocaleString() || '0'}원</span>
+                </div>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <i className="ri-close-circle-line text-xs text-red-500 flex-shrink-0"></i>
+                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+                    주문마감
+                  </span>
+                </div>
+              </div>
             </div>
-            
-            {/* 주문 상태 */}
-            <div className={`inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full ${
-              isOrderClosed 
-                ? 'bg-red-500/80 text-white' 
-                : 'bg-green-500/80 text-white'
-            }`}>
-              <i className={`text-xs sm:text-sm ${
-                isOrderClosed 
-                  ? 'ri-close-circle-line' 
-                  : 'ri-check-circle-line'
-              }`}></i>
-              <span className="font-medium text-xs sm:text-sm">
-                {isOrderClosed ? '주문마감' : '주문접수중'}
-              </span>
-            </div>
-          </div>
-          
-          {/* 최소주문금액 */}
-          <div className="text-gray-700 text-xs sm:text-sm px-2">
-            최소주문 <span className="font-bold">{store?.minimum_order_amount?.toLocaleString() || '0'}원</span>
+            <button
+              onClick={() => navigate(`/menu/${storeId}`)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold transition-colors text-xs flex-shrink-0"
+            >
+              <i className="ri-restaurant-line text-xs"></i>
+              <span>일반 메뉴</span>
+            </button>
           </div>
         </div>
       </div>
 
-        {/* 주문 마감 안내 */}
-        <div className="px-4 py-8 sm:py-12">
-          <div className="max-w-md mx-auto">
-            <div className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 text-center border border-red-100">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-red-100 to-red-200 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
-                <i className="ri-time-line text-3xl sm:text-4xl text-red-500"></i>
-              </div>
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">주문이 마감되었습니다</h2>
-              <p className="text-gray-600 mb-4 text-sm sm:text-base">
-                {dailyMenu.menu_date}의 주문 마감시간이 지났습니다.
-              </p>
-              <div className="bg-red-50 rounded-xl p-3 sm:p-4 mb-4 sm:mb-6">
-                <p className="text-red-700 font-medium text-sm sm:text-base">
-                  주문 마감시간: {store?.order_cutoff_time || '15:00'}
-                </p>
-              </div>
-              <button
-                onClick={() => navigate(`/menu/${storeId}`)}
-                className="w-full px-6 py-3 sm:py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl text-sm sm:text-base"
-              >
-                일반 메뉴 보기
-              </button>
+      {/* 주문 마감 안내 */}
+      <div className="px-4 py-8">
+        <div className="max-w-md mx-auto">
+          <div className="bg-white rounded-2xl shadow-lg p-6 text-center border border-red-100">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <i className="ri-time-line text-2xl text-red-500"></i>
             </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">주문이 마감되었습니다</h2>
+            <p className="text-gray-600 mb-4 text-sm">
+              {dailyMenu.menu_date}의 주문 마감시간이 지났습니다.
+            </p>
+            <div className="bg-red-50 rounded-lg p-3 mb-4">
+              <p className="text-red-700 font-medium text-sm">
+                주문 마감시간: {store?.order_cutoff_time || '15:00'}
+              </p>
+            </div>
+            <button
+              onClick={() => navigate(`/menu/${storeId}`)}
+              className="w-full px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors text-sm"
+            >
+              일반 메뉴 보기
+            </button>
           </div>
         </div>
       </div>
-    );
+    </div>
+  );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100">
       <Header />
       
-      {/* 히어로 섹션 - 매장 정보와 메뉴 날짜 */}
-      <div className="relative overflow-hidden">
-        {/* 배경 그라데이션 */}
-        <div className="absolute inset-0 bg-gradient-to-r from-orange-200 via-orange-300 to-orange-400 opacity-60"></div>
-        <div className="absolute inset-0 bg-white opacity-40"></div>
-        
-        {/* 콘텐츠 */}
-        <div className="relative px-4 py-8 sm:py-12 text-center">
-          {/* 매장명 */}
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2 px-2">
-            {store?.name}
-          </h1>
-          
-          {/* 배달 지역 */}
-          <div className="flex items-center justify-center gap-2 mb-4 px-2">
-            <i className="ri-map-pin-line text-gray-600 text-base sm:text-lg"></i>
-            <span className="text-gray-700 font-medium text-sm sm:text-base">{store?.delivery_area}</span>
+      {/* 모바일 최적화 헤더 */}
+      <div className="bg-white border-b border-gray-200 px-3 py-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-base font-bold text-gray-900 truncate leading-tight">
+                {store?.name}
+              </h1>
+              <div className="flex flex-col gap-1 mt-1.5">
+                <div className="flex items-center gap-1.5">
+                  <i className="ri-map-pin-line text-xs text-gray-500 flex-shrink-0"></i>
+                  <span className="text-xs text-gray-600 truncate">{store?.delivery_area}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <i className="ri-calendar-line text-xs text-gray-500 flex-shrink-0"></i>
+                  <span className="text-xs text-gray-600 truncate">{dailyMenu?.title || `${date}의 반찬`}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <i className="ri-truck-line text-xs text-gray-500 flex-shrink-0"></i>
+                  <span className="text-xs text-gray-600">최소주문 {store?.minimum_order_amount?.toLocaleString() || '0'}원</span>
+                </div>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <i className={`text-xs flex-shrink-0 ${
+                    isOrderClosed ? 'ri-close-circle-line text-red-500' : 'ri-check-circle-line text-green-500'
+                  }`}></i>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                    isOrderClosed 
+                      ? 'bg-red-100 text-red-700' 
+                      : 'bg-green-100 text-green-700'
+                  }`}>
+                    {isOrderClosed ? '주문마감' : '주문접수중'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate(`/order-status/${storeId}`)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold transition-colors text-xs flex-shrink-0"
+            >
+              <i className="ri-shopping-bag-3-line text-xs"></i>
+              <span>내 주문</span>
+            </button>
           </div>
-          
-          {/* 메뉴 날짜와 상태 */}
-          <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6 max-w-md mx-auto">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <i className="ri-calendar-check-line text-gray-600 text-lg sm:text-xl"></i>
-              <span className="text-gray-800 font-semibold text-base sm:text-lg">
-                {dailyMenu?.title || `${date}의 반찬`}
-              </span>
-            </div>
-            
-            
-            {/* 주문 상태 */}
-            <div className={`inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full ${
-              isOrderClosed 
-                ? 'bg-red-500/80 text-white' 
-                : 'bg-green-500/80 text-white'
-            }`}>
-              <i className={`text-xs sm:text-sm ${
-                isOrderClosed 
-                  ? 'ri-close-circle-line' 
-                  : 'ri-check-circle-line'
-              }`}></i>
-              <span className="font-medium text-xs sm:text-sm">
-                {isOrderClosed ? '주문마감' : '주문접수중'}
-              </span>
-            </div>
-          </div>
-          
-          
-          {/* 내 주문 보러가기 버튼 */}
-          <button
-            onClick={() => navigate(`/order-status/${storeId}`)}
-            className="group inline-flex items-center gap-2 sm:gap-3 px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 ease-out text-sm sm:text-base"
-          >
-            <div className="w-5 h-5 sm:w-6 sm:h-6 bg-white/20 rounded-full flex items-center justify-center group-hover:bg-white/30 transition-all duration-300">
-              <i className="ri-shopping-bag-3-line text-xs sm:text-sm"></i>
-            </div>
-            <span>내 주문 보러가기</span>
-          </button>
         </div>
       </div>
 
       {/* 카테고리 필터 */}
-      {categories.length > 0 && (
-        <div className="px-4 py-4 sm:py-6">
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/50 p-4 sm:p-6">
-              <div className="mb-3 sm:mb-4">
-                <h3 className="text-lg sm:text-xl font-bold text-gray-800">카테고리</h3>
-              </div>
-              <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                {categories.map((category) => (
-                  <button
-                    key={category}
-                    onClick={() => setSelectedCategory(category)}
-                    className={`px-4 sm:px-6 py-2 sm:py-3 rounded-full text-xs sm:text-sm font-semibold transition-all duration-300 transform hover:scale-105 whitespace-nowrap flex-shrink-0 ${
-                      selectedCategory === category
-                        ? 'bg-gray-800 text-white shadow-lg'
-                        : 'bg-white text-gray-800 hover:bg-gray-50 border border-gray-200 shadow-sm hover:shadow-md'
-                    }`}
-                  >
-                    {category}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* 메뉴 목록 */}
-      <div className="px-4 pb-20">
+      {/* 메뉴 목록 - 아코디언 스타일 */}
+      <div className="px-3 pt-4 pb-20">
         <div className="max-w-4xl mx-auto">
           {filteredMenuItems.length === 0 ? (
-            <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/50 p-12 text-center">
-              <div className="w-24 h-24 bg-gradient-to-br from-orange-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <i className="ri-restaurant-line text-4xl text-orange-400"></i>
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 text-center">
+              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i className="ri-restaurant-line text-2xl text-orange-500"></i>
               </div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-3">메뉴가 없습니다</h3>
-              <p className="text-gray-600 text-lg">이 카테고리에 등록된 메뉴가 없습니다.</p>
+              <h3 className="text-lg font-bold text-gray-800 mb-2">메뉴가 없습니다</h3>
+              <p className="text-gray-600 text-sm">이 카테고리에 등록된 메뉴가 없습니다.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-              {filteredMenuItems.map((item) => (
-                <div key={item.id} className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl hover:scale-102 transition-all duration-300 group">
-                  {/* 메뉴 정보 */}
-                  <div className="p-4 sm:p-6">
-                    <div className="flex justify-between items-start mb-3">
-                      <h3 className="text-lg sm:text-xl font-bold text-gray-800 group-hover:text-orange-600 transition-colors flex-1 pr-2">
-                        {item.menu?.name || '메뉴 정보 없음'}
-                      </h3>
-                      <div className="text-right flex-shrink-0">
-                        <span className="text-xl sm:text-2xl font-bold text-gray-900">
-                          {(item.menu?.price || 0).toLocaleString()}원
-                        </span>
+            <div className="space-y-3">
+              {/* 카테고리별로 그룹화 */}
+              {categories.map((category) => {
+                const categoryItems = filteredMenuItems.filter(item =>
+                  item.menu?.category === category
+                );
+                
+                if (categoryItems.length === 0) return null;
+                
+                const isExpanded = expandedCategories.has(category);
+                
+                return (
+                  <div key={category} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    {/* 카테고리 헤더 */}
+                    <button
+                      onClick={() => toggleCategory(category)}
+                      className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors duration-200"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="text-left">
+                          <h3 className="text-base font-bold text-gray-900">{category}</h3>
+                          <p className="text-xs text-gray-500">{categoryItems.length}개 메뉴</p>
+                        </div>
                       </div>
-                    </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-gray-500">
+                          {isExpanded ? '접기' : '펼치기'}
+                        </span>
+                        <i className={`ri-arrow-down-s-line text-lg text-gray-400 transition-transform duration-300 ${
+                          isExpanded ? 'rotate-180' : ''
+                        }`}></i>
+                      </div>
+                    </button>
                     
-                    {item.menu?.description && (
-                      <p className="text-gray-600 mb-4 line-clamp-2 leading-relaxed text-sm sm:text-base">
-                        {item.menu.description}
-                      </p>
-                    )}
-                    
-                    {/* 상태와 수량 정보 */}
-                    <div className="flex flex-wrap items-center gap-2 mb-4">
-                      <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-semibold flex items-center gap-1 ${
-                        item.is_available 
-                          ? 'bg-green-100 text-green-700 border border-green-200' 
-                          : 'bg-red-100 text-red-700 border border-red-200'
-                      }`}>
-                        <i className={`ri-${item.is_available ? 'check' : 'close'}-line text-xs`}></i>
-                        {item.is_available ? '주문가능' : '품절'}
-                      </span>
-                      <span className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
-                        남은 수량: {item.current_quantity}개
-                      </span>
-                    </div>
-                    
-                    {/* 장바구니 수량 조절 UI */}
-                    <div className="flex items-center justify-end">
-                      {(() => {
-                        const cartItem = cart[item.menu_id];
-                        
-                        if (!cartItem) {
-                          // 장바구니에 없는 경우 - 담기 버튼
-                          return (
-                            <button
-                              onClick={() => handleAddToCart(item.menu_id)}
-                              disabled={!item.is_available || isOrderClosed}
-                              className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 text-xs sm:text-sm ${
-                                item.is_available && !isOrderClosed
-                                  ? 'bg-white text-gray-900 hover:bg-gray-900 hover:text-white border border-gray-300 hover:border-gray-900 shadow-sm hover:shadow-lg'
-                                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                              }`}
-                            >
-                              <i className="ri-add-line mr-1"></i>
-                              담기
-                            </button>
-                          );
-                        } else {
-                          // 장바구니에 있는 경우 - 수량 조절 UI
-                          return (
-                            <div className="flex items-center gap-2 sm:gap-3 justify-end">
-                              {/* 수량 조절 버튼들 */}
-                              <div className="flex items-center rounded-xl overflow-hidden">
-                                <button
-                                  onClick={() => handleRemoveFromCart(item.menu_id)}
-                                  disabled={!item.is_available || isOrderClosed}
-                                  className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-orange-600 hover:bg-orange-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                  <i className="ri-subtract-line text-sm sm:text-lg"></i>
-                                </button>
-                                <span className="px-3 sm:px-4 py-2 text-orange-700 font-bold text-base sm:text-lg min-w-[2.5rem] sm:min-w-[3rem] text-center bg-white">
-                                  {cartItem}
-                                </span>
-                                <button
-                                  onClick={() => handleAddToCart(item.menu_id)}
-                                  disabled={!item.is_available || isOrderClosed || item.current_quantity <= cartItem}
-                                  className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-orange-600 hover:bg-orange-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                                  title={item.current_quantity <= cartItem ? '남은 수량을 초과할 수 없습니다' : '수량 추가'}
-                                >
-                                  <i className="ri-add-line text-sm sm:text-lg"></i>
-                                </button>
+                    {/* 카테고리 메뉴 목록 */}
+                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                      isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
+                    }`}>
+                      <div className="px-4 pb-4">
+                        <div className="space-y-3">
+                          {categoryItems.map((item) => (
+                            <div key={item.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200 group">
+                              {/* 메뉴 정보 */}
+                              <div className="p-4">
+                                <div className="flex justify-between items-start mb-2">
+                                  <h3 className="text-base font-bold text-gray-900 group-hover:text-orange-600 transition-colors flex-1 pr-2">
+                                    {item.menu?.name || '메뉴 정보 없음'}
+                                  </h3>
+                                  <div className="text-right flex-shrink-0">
+                                    <span className="text-lg font-bold text-gray-900">
+                                      {(item.menu?.price || 0).toLocaleString()}원
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {item.menu?.description && (
+                                  <p className="text-gray-600 mb-3 line-clamp-2 leading-relaxed text-sm">
+                                    {item.menu.description}
+                                  </p>
+                                )}
+
+                                {/* 상태와 수량 정보 */}
+                                <div className="flex flex-wrap items-center gap-2 mb-3">
+                                  <span className={`px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${
+                                    item.is_available
+                                      ? 'bg-green-100 text-green-700'
+                                      : 'bg-red-100 text-red-700'
+                                  }`}>
+                                    <i className={`ri-${item.is_available ? 'check' : 'close'}-line text-xs`}></i>
+                                    {item.is_available ? '주문가능' : '품절'}
+                                  </span>
+                                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                                    남은 수량: {item.current_quantity}개
+                                  </span>
+                                </div>
+
+                                {/* 장바구니 수량 조절 UI */}
+                                <div className="flex items-center justify-end">
+                                  {(() => {
+                                    const cartItem = cart[item.menu_id];
+
+                                    if (!cartItem) {
+                                      // 장바구니에 없는 경우 - 담기 버튼
+                                      return (
+                                        <button
+                                          onClick={() => handleAddToCart(item.menu_id)}
+                                          disabled={!item.is_available || isOrderClosed}
+                                          className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 text-xs sm:text-sm ${
+                                            item.is_available && !isOrderClosed
+                                              ? 'bg-white text-gray-900 hover:bg-gray-900 hover:text-white border border-gray-300 hover:border-gray-900 shadow-sm hover:shadow-lg'
+                                              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                          }`}
+                                        >
+                                          <i className="ri-add-line mr-1"></i>
+                                          담기
+                                        </button>
+                                      );
+                                    } else {
+                                      // 장바구니에 있는 경우 - 수량 조절 UI
+                                      return (
+                                        <div className="flex items-center gap-2 sm:gap-3 justify-end">
+                                          {/* 수량 조절 버튼들 */}
+                                          <div className="flex items-center rounded-xl overflow-hidden">
+                                            <button
+                                              onClick={() => handleRemoveFromCart(item.menu_id)}
+                                              disabled={!item.is_available || isOrderClosed}
+                                              className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-orange-600 hover:bg-orange-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                              <i className="ri-subtract-line text-sm sm:text-lg"></i>
+                                            </button>
+                                            <span className="px-3 sm:px-4 py-2 text-orange-700 font-bold text-base sm:text-lg min-w-[2.5rem] sm:min-w-[3rem] text-center bg-white">
+                                              {cartItem}
+                                            </span>
+                                            <button
+                                              onClick={() => handleAddToCart(item.menu_id)}
+                                              disabled={!item.is_available || isOrderClosed || item.current_quantity <= cartItem}
+                                              className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-orange-600 hover:bg-orange-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                              title={item.current_quantity <= cartItem ? '남은 수량을 초과할 수 없습니다' : '수량 추가'}
+                                            >
+                                              <i className="ri-add-line text-sm sm:text-lg"></i>
+                                            </button>
+                                          </div>
+
+                                          {/* 삭제 버튼 */}
+                                          <button
+                                            onClick={() => handleRemoveFromCart(item.menu_id)}
+                                            disabled={!item.is_available || isOrderClosed}
+                                            className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl text-sm font-medium transition-all duration-200 flex items-center justify-center bg-red-100 text-red-600 hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                                            title="메뉴 삭제"
+                                          >
+                                            <i className="ri-delete-bin-line text-sm sm:text-lg"></i>
+                                          </button>
+                                        </div>
+                                      );
+                                    }
+                                  })()}
+                                </div>
                               </div>
-                              
-                              {/* 삭제 버튼 */}
-                              <button
-                                onClick={() => handleRemoveFromCart(item.menu_id)}
-                                disabled={!item.is_available || isOrderClosed}
-                                className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl text-sm font-medium transition-all duration-200 flex items-center justify-center bg-red-100 text-red-600 hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-                                title="메뉴 삭제"
-                              >
-                                <i className="ri-delete-bin-line text-sm sm:text-lg"></i>
-                              </button>
                             </div>
-                          );
-                        }
-                      })()}
+                          ))}
+                      </div>
                     </div>
                   </div>
                 </div>
-              ))}
+              );
+            })}
             </div>
           )}
         </div>
@@ -644,34 +646,30 @@ export default function DailyMenuPage() {
 
       {/* 장바구니 버튼 */}
       {getCartItemCount() > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-orange-200 shadow-2xl z-50">
-          <div className="flex items-center justify-between p-4 sm:p-6 max-w-4xl mx-auto">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
+          <div className="flex items-center justify-between p-3 max-w-4xl mx-auto">
             {/* 왼쪽: 가격 정보 */}
             <div className="flex-1 min-w-0">
-              <div className="text-lg sm:text-2xl font-bold text-gray-800">
+              <div className="text-base font-bold text-gray-900">
                 {getTotalPrice().toLocaleString()}원
               </div>
-              <div className="text-xs sm:text-sm text-orange-600 font-medium">
-                배달주문 최소주문금액 {store?.minimum_order_amount?.toLocaleString() || '0'}원
+              <div className="text-xs text-orange-600 font-medium">
+                최소주문 {store?.minimum_order_amount?.toLocaleString() || '0'}원
               </div>
             </div>
-            
 
             {/* 오른쪽: 장바구니 버튼 */}
             <button
               onClick={handleGoToCart}
               disabled={isOrderClosed}
-              className={`px-4 sm:px-8 py-3 sm:py-4 rounded-2xl font-bold flex items-center gap-2 sm:gap-3 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:scale-105 text-sm sm:text-base ${
+              className={`px-4 py-2.5 rounded-lg font-bold flex items-center gap-2 transition-all duration-200 text-sm ${
                 isOrderClosed
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 text-white'
+                  : 'bg-orange-500 hover:bg-orange-600 text-white shadow-md hover:shadow-lg'
               }`}
             >
-              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-white/20 rounded-full flex items-center justify-center">
-                <i className="ri-shopping-cart-line text-sm sm:text-lg"></i>
-              </div>
-              <span className="hidden sm:inline">{getCartItemCount()}개 장바구니 보기</span>
-              <span className="sm:hidden">{getCartItemCount()}개</span>
+              <i className="ri-shopping-cart-line text-sm"></i>
+              <span>{getCartItemCount()}개 주문</span>
             </button>
           </div>
         </div>

@@ -90,6 +90,7 @@ export default function Admin() {
   const [showMenuModal, setShowMenuModal] = useState(false);
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
   const [selectedMenuCategory, setSelectedMenuCategory] = useState<string>('메인요리');
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [menuForm, setMenuForm] = useState({
     name: '',
     description: '',
@@ -936,6 +937,18 @@ export default function Admin() {
     }
   };
 
+  const toggleCategory = (category: string) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(category)) {
+        newSet.delete(category);
+      } else {
+        newSet.add(category);
+      }
+      return newSet;
+    });
+  };
+
   const handleToggleMenuAvailability = async (menu: Menu) => {
     try {
       await updateMenu(menu.id, { is_available: !menu.is_available });
@@ -1601,7 +1614,7 @@ export default function Admin() {
                             {order.order_type === 'delivery' && (
                           <button
                             onClick={() => handleStatusChange(order.id, '배달완료')}
-                            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                            className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer shadow-md hover:shadow-lg transition-all duration-200"
                           >
                             배달완료
                           </button>
@@ -2134,15 +2147,57 @@ export default function Admin() {
               </div>
             )}
 
-            {/* 메뉴 목록 */}
+            {/* 메뉴 목록 - 아코디언 스타일 */}
             {loadingMenus ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
                 <p className="text-gray-600">메뉴를 불러오는 중...</p>
               </div>
             ) : filteredMenus.length > 0 ? (
-              <div className="bg-white">
-                {filteredMenus.map((menu, index) => (
+              <div className="space-y-4">
+                {/* 카테고리별로 그룹화 */}
+                {STANDARD_CATEGORIES.map((category) => {
+                  const categoryMenus = filteredMenus.filter(menu => 
+                    selectedMenuCategory === 'all' ? menu.category === category : true
+                  );
+                  
+                  if (categoryMenus.length === 0) return null;
+                  
+                  const isExpanded = expandedCategories.has(category);
+                  
+                  return (
+                    <div key={category} className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+                      {/* 카테고리 헤더 */}
+                      <button
+                        onClick={() => toggleCategory(category)}
+                        className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors duration-200"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gradient-to-r from-orange-400 to-orange-500 rounded-xl flex items-center justify-center">
+                            <i className="ri-restaurant-line text-white text-lg"></i>
+                          </div>
+                          <div className="text-left">
+                            <h3 className="text-lg font-bold text-gray-800">{category}</h3>
+                            <p className="text-sm text-gray-500">{categoryMenus.length}개 메뉴</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-500">
+                            {isExpanded ? '접기' : '펼치기'}
+                          </span>
+                          <i className={`ri-arrow-down-s-line text-xl text-gray-400 transition-transform duration-300 ${
+                            isExpanded ? 'rotate-180' : ''
+                          }`}></i>
+                        </div>
+                      </button>
+                      
+                      {/* 카테고리 메뉴 목록 */}
+                      <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                        isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
+                      }`}>
+                        <div className="px-6 pb-6">
+                          <div className="space-y-2">
+                            {categoryMenus.map((menu, index) => (
                   <div key={menu.id} className={`px-4 py-4 hover:bg-gray-50 transition-colors duration-200 ${index !== filteredMenus.length - 1 ? 'border-b border-gray-100' : ''}`}>
                     <div className="flex gap-4">
                       <div className="flex-1 min-w-0">
@@ -2208,7 +2263,13 @@ export default function Admin() {
                       </div>
                     </div>
                   </div>
-                ))}
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-12">

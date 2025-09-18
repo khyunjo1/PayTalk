@@ -450,3 +450,23 @@ export const getOrderById = async (orderId: string) => {
 
   return data;
 };
+
+// 주문 읽음 처리
+export const markOrderAsRead = async (orderId: string) => {
+  const { data, error } = await supabase
+    .from('orders')
+    .update({
+      read_at: new Date().toISOString()
+    })
+    .eq('id', orderId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('주문 읽음 처리 오류:', error);
+    throw error;
+  }
+
+  console.log('주문 읽음 처리 완료:', orderId);
+  return data;
+};

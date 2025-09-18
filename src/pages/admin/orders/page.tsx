@@ -23,6 +23,7 @@ interface Order {
   total: number;
   delivery_area_id?: string;
   status: '입금대기' | '입금확인' | '배달완료' | '주문취소';
+  read_at?: string;
   created_at: string;
   updated_at: string;
   order_items?: Array<{
@@ -61,11 +62,9 @@ export default function AdminOrders() {
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [storeName, setStoreName] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedPeriod, setSelectedPeriod] = useState<'today' | 'yesterday' | 'tomorrow' | 'custom'>('today');
   const [selectedDate, setSelectedDate] = useState('');
   const [showPeriodDropdown, setShowPeriodDropdown] = useState(false);
-  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 7;
 
@@ -90,10 +89,8 @@ export default function AdminOrders() {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
-      if (!target.closest('.period-dropdown-container') && 
-          !target.closest('.status-dropdown-container')) {
+      if (!target.closest('.period-dropdown-container')) {
         setShowPeriodDropdown(false);
-        setShowStatusDropdown(false);
       }
     };
 
@@ -123,6 +120,20 @@ export default function AdminOrders() {
     try {
       setOrdersLoading(true);
       const ordersData = await getStoreOrders(storeId);
+      console.log('🔍 로드된 주문 데이터:', ordersData);
+      console.log('📊 주문 수:', ordersData.length);
+      
+      // 각 주문의 메뉴 정보 확인
+      ordersData.forEach((order, index) => {
+        console.log(`주문 ${index + 1}:`, {
+          id: order.id,
+          order_items: order.order_items?.length || 0,
+          daily_menu_orders: order.daily_menu_orders?.length || 0,
+          subtotal: order.subtotal,
+          total: order.total
+        });
+      });
+      
       setOrders(ordersData);
     } catch (error) {
       console.error('주문 로드 실패:', error);
@@ -294,12 +305,16 @@ export default function AdminOrders() {
         order.depositor_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         order.id.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const matchesStatus = selectedStatus === 'all' || order.status === selectedStatus;
-      
-      return matchesSearch && matchesStatus;
+      return matchesSearch;
     });
-  }, [filteredOrdersByPeriod, searchTerm, selectedStatus]);
+  }, [filteredOrdersByPeriod, searchTerm]);
 
+  // 입금대기 주문 수 계산 (새로운 주문)
+  const unreadOrdersCount = React.useMemo(() => {
+    return finalFilteredOrders.filter(order =>
+      order.status === '입금대기'
+    ).length;
+  }, [finalFilteredOrders]);
 
   // 페이지네이션 계산
   const totalPages = Math.ceil(finalFilteredOrders.length / ordersPerPage);
@@ -315,7 +330,7 @@ export default function AdminOrders() {
   // 필터 변경 시 첫 페이지로 이동
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedStatus, selectedPeriod, selectedDate, searchTerm]);
+  }, [selectedPeriod, selectedDate, searchTerm]);
 
   // 프린트 기능
   const handlePrint = () => {
@@ -326,7 +341,7 @@ export default function AdminOrders() {
                        selectedPeriod === 'yesterday' ? '어제' : 
                        selectedPeriod === 'custom' ? (selectedDate ? new Date(selectedDate).toLocaleDateString('ko-KR') : '날짜 선택') : '오늘';
 
-    const statusTitle = selectedStatus === 'all' ? '전체' : selectedStatus;
+    const statusTitle = '전체';
     
     const printContent = `
       <!DOCTYPE html>
@@ -524,7 +539,7 @@ export default function AdminOrders() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       <Header />
       <div className="flex flex-col">
         {/* 헤더 */}
@@ -574,6 +589,16 @@ export default function AdminOrders() {
                     주문 건수
                   </div>
                 </div>
+                {unreadOrdersCount > 0 && (
+                  <div className="text-center sm:text-right">
+                    <div className="text-2xl sm:text-3xl font-bold text-red-600 mb-1 animate-pulse">
+                      {unreadOrdersCount}
+                    </div>
+                    <div className="text-red-500 text-xs sm:text-sm font-medium">
+                      새로운 주문
+                    </div>
+                  </div>
+                )}
                 <div className="text-center sm:text-right">
                   <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">
                     {formatKoreanCurrency(finalFilteredOrders.reduce((sum, order) => sum + (order.total || 0), 0))}
@@ -684,91 +709,25 @@ export default function AdminOrders() {
               )}
             </div>
 
-            {/* 상태 필터 */}
-            <div className="mt-4">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <i className="ri-filter-line text-gray-600 text-lg"></i>
-                  <span className="text-base font-bold text-gray-800 whitespace-nowrap">상태:</span>
-                </div>
-
-                <div className="flex-1">
-                  <div className="relative status-dropdown-container">
-                    <button
-                      onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-                      className="w-full px-5 py-4 bg-white border-2 border-gray-200 rounded-2xl text-base font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 cursor-pointer transition-all duration-200 hover:border-orange-300 hover:shadow-md flex items-center justify-between"
-                    >
-                      <span>
-                        {selectedStatus === 'all' ? '전체' : 
-                         selectedStatus === '입금대기' ? '입금대기' :
-                         selectedStatus === '입금확인' ? '입금확인' :
-                         selectedStatus === '배달완료' ? '배달완료' :
-                         selectedStatus === '주문취소' ? '주문취소' : '전체'}
-                      </span>
-                      <i className={`ri-arrow-down-s-line text-gray-400 text-sm transition-transform duration-200 ${showStatusDropdown ? 'rotate-180' : ''}`}></i>
-                    </button>
-                    
-                    {showStatusDropdown && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-xl shadow-lg z-20 overflow-hidden">
-                        {[
-                          { key: 'all', label: '전체' },
-                          { key: '입금대기', label: '입금대기' },
-                          { key: '입금확인', label: '입금확인' },
-                          { key: '배달완료', label: '배달완료' },
-                          { key: '주문취소', label: '주문취소' }
-                        ].map((status) => (
-                          <button
-                            key={status.key}
-                            onClick={() => {
-                              setSelectedStatus(status.key);
-                              setShowStatusDropdown(false);
-                            }}
-                            className={`w-full px-4 py-3 text-left text-base font-semibold transition-colors duration-200 hover:bg-gray-50 ${
-                              selectedStatus === status.key ? 'bg-orange-50 text-orange-600' : 'text-gray-800'
-                            }`}
-                          >
-                            {status.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
 
             {/* 선택된 필터 칩 요약 */}
-            {(selectedPeriod !== 'today' || selectedStatus !== 'all') && (
+            {selectedPeriod !== 'today' && (
               <div className="pt-4 border-t border-gray-100">
                 <div className="flex flex-wrap gap-2">
-                  {selectedPeriod !== 'today' && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">
-                      <i className="ri-calendar-line text-xs"></i>
-                      <span>
-                        {selectedPeriod === 'yesterday' ? '어제' :
-                         selectedPeriod === 'tomorrow' ? '내일' :
-                         selectedPeriod === 'custom' ? '날짜 선택' : '오늘'}
-                      </span>
-                      <button
-                        onClick={() => handlePeriodSelect('today')}
-                        className="ml-1 hover:bg-orange-200 rounded-full p-0.5"
-                      >
-                        <i className="ri-close-line text-xs"></i>
-                      </button>
-                    </div>
-                  )}
-                  {selectedStatus !== 'all' && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">
-                      <i className="ri-filter-line text-xs"></i>
-                      <span>{selectedStatus}</span>
-                      <button
-                        onClick={() => setSelectedStatus('all')}
-                        className="ml-1 hover:bg-orange-200 rounded-full p-0.5"
-                      >
-                        <i className="ri-close-line text-xs"></i>
-                      </button>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">
+                    <i className="ri-calendar-line text-xs"></i>
+                    <span>
+                      {selectedPeriod === 'yesterday' ? '어제' :
+                       selectedPeriod === 'tomorrow' ? '내일' :
+                       selectedPeriod === 'custom' ? '날짜 선택' : '오늘'}
+                    </span>
+                    <button
+                      onClick={() => handlePeriodSelect('today')}
+                      className="ml-1 hover:bg-orange-200 rounded-full p-0.5"
+                    >
+                      <i className="ri-close-line text-xs"></i>
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -787,7 +746,7 @@ export default function AdminOrders() {
                   placeholder="입금자명, 배달주소, 고객명 등으로 검색"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  className="w-full px-4 py-3 border-2 border-gray-400 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 hover:border-gray-500 transition-colors"
                 />
               </div>
               <div className="flex justify-end">
@@ -826,14 +785,14 @@ export default function AdminOrders() {
               return (
                 <div 
                   key={order.id} 
-                  className="bg-white rounded-2xl border-2 border-gray-300 shadow-lg hover:shadow-xl hover:border-orange-400 transition-all duration-300 cursor-pointer group mb-4"
+                  className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-orange-300 transition-all duration-300 cursor-pointer group mb-6"
                   onClick={() => navigate(`/admin/${storeId}/order-detail/${order.id}`)}
                 >
                   <div className="p-4 sm:p-6">
                     {/* 1. 정보 계층 구조 명확화 - 주문번호와 상태를 상단에 강조 */}
                     <div className="flex items-start justify-between mb-4 sm:mb-6">
                       <div className="flex flex-col gap-2">
-                        <h3 className="text-lg sm:text-2xl font-bold text-gray-900">주문 #{getOrderNumber(order, finalFilteredOrders)}</h3>
+                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900 leading-tight">주문 #{getOrderNumber(order, finalFilteredOrders)}</h3>
                         <div className="flex items-center gap-2 flex-wrap">
                           <div className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold shadow-sm ${
                             order.status === '입금대기' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' :
@@ -843,6 +802,13 @@ export default function AdminOrders() {
                           }`}>
                             {order.status}
                           </div>
+                          {/* 새로운 주문 태그 */}
+                          {order.status === '입금대기' && (
+                            <div className="px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold shadow-sm bg-red-500 text-white border border-red-600 animate-pulse">
+                              <i className="ri-notification-3-line mr-1"></i>
+                              새로운 주문
+                            </div>
+                          )}
                           <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full text-xs sm:text-sm text-gray-600">
                             <i className={`${order.order_type === 'delivery' ? 'ri-truck-line' : 'ri-walk-line'} text-xs sm:text-sm`}></i>
                             <span className="font-medium">{order.order_type === 'delivery' ? '배달' : '픽업'}</span>
@@ -864,18 +830,18 @@ export default function AdminOrders() {
                     </div>
 
                     {/* 2. 고객 정보 미리보기 - 모바일 최적화 */}
-                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm sm:text-base text-gray-700">
+                    <div className="mb-5 p-4 bg-gray-50 rounded-xl">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 text-sm sm:text-base text-gray-700">
                         {order.depositor_name && (
                           <div className="flex items-center gap-2">
-                            <i className="ri-user-line text-sm sm:text-base text-gray-500"></i>
-                            <span className="font-semibold text-gray-900">{order.depositor_name}</span>
+                            <i className="ri-user-line text-base text-gray-500"></i>
+                            <span className="font-bold text-gray-900 text-base">{order.depositor_name}</span>
                           </div>
                         )}
                         {order.delivery_address && (
                           <div className="flex items-start gap-2">
-                            <i className="ri-map-pin-line text-sm sm:text-base text-gray-500 mt-0.5"></i>
-                            <span className="font-medium text-gray-800 break-words leading-relaxed">{order.delivery_address}</span>
+                            <i className="ri-map-pin-line text-base text-gray-500 mt-0.5"></i>
+                            <span className="font-semibold text-gray-800 break-words leading-relaxed text-base">{order.delivery_address}</span>
                           </div>
                         )}
                       </div>
@@ -886,34 +852,55 @@ export default function AdminOrders() {
                       <div className="space-y-2 sm:space-y-3">
                         {/* 상품 정보 간소화 */}
                         <div className="space-y-2">
-                          {order.daily_menu_orders?.map((item, index) => (
-                            <div key={`daily-${index}`} className="flex justify-between items-center">
-                              <div className="flex items-center gap-2 min-w-0 flex-1">
-                                <span className="font-medium text-gray-900 text-sm sm:text-base truncate">{item.menus.name}</span>
-                                <span className="text-xs sm:text-sm text-gray-500 flex-shrink-0">({item.quantity}개)</span>
+                          {/* 일일 메뉴 주문만 표시 */}
+                          {order.daily_menu_orders && order.daily_menu_orders.length > 0 && order.daily_menu_orders.map((item, index) => (
+                            <div key={`daily-${index}`} className="flex justify-between items-center py-2">
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <span className="font-bold text-gray-900 text-base sm:text-lg truncate">{item.menus?.name || '메뉴'}</span>
+                                <span className="text-sm text-gray-600 flex-shrink-0 font-medium">({item.quantity}개)</span>
                               </div>
-                              <span className="font-semibold text-gray-700 text-sm sm:text-base ml-2">{((item.menus.price || 0) * (item.quantity || 0)).toLocaleString()}원</span>
+                              <span className="font-bold text-gray-900 text-base sm:text-lg ml-2">{((item.menus?.price || 0) * (item.quantity || 0)).toLocaleString()}원</span>
                             </div>
                           ))}
+                          
+                          {/* 일일 메뉴가 없는 경우에만 일반 주문 메뉴 표시 */}
+                          {(!order.daily_menu_orders || order.daily_menu_orders.length === 0) && order.order_items && order.order_items.length > 0 && order.order_items.map((item, index) => (
+                            <div key={`order-${index}`} className="flex justify-between items-center py-2">
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <span className="font-bold text-gray-900 text-base sm:text-lg truncate">{item.menus?.name || '메뉴'}</span>
+                                <span className="text-sm text-gray-600 flex-shrink-0 font-medium">({item.quantity}개)</span>
+                              </div>
+                              <span className="font-bold text-gray-900 text-base sm:text-lg ml-2">{(item.price * item.quantity).toLocaleString()}원</span>
+                            </div>
+                          ))}
+                          
+                          {/* 메뉴가 없는 경우 */}
+                          {(!order.daily_menu_orders || order.daily_menu_orders.length === 0) && 
+                           (!order.order_items || order.order_items.length === 0) && (
+                            <div className="text-center py-4 text-gray-500 text-sm">
+                              <i className="ri-shopping-cart-line text-2xl mb-2 block"></i>
+                              <p>주문 메뉴 정보를 불러올 수 없습니다</p>
+                            </div>
+                          )}
                         </div>
                         
                         {/* 주문 요약 */}
-                        <div className="space-y-2 pt-2 border-t border-gray-200">
+                        <div className="space-y-3 pt-3 border-t border-gray-300">
                           <div className="flex justify-between items-center">
-                            <span className="text-gray-600 text-sm">상품 금액</span>
-                            <span className="text-gray-800 text-sm">{(order.subtotal || 0).toLocaleString()}원</span>
+                            <span className="text-gray-700 text-base font-semibold">상품 금액</span>
+                            <span className="text-gray-900 text-base font-bold">{(order.subtotal || 0).toLocaleString()}원</span>
                           </div>
                           {order.order_type === 'delivery' && (
                             <div className="flex justify-between items-center">
-                              <span className="text-gray-600 text-sm">배달비</span>
-                              <span className="text-gray-800 text-sm">
+                              <span className="text-gray-700 text-base font-semibold">배달비</span>
+                              <span className="text-gray-900 text-base font-bold">
                                 {(order.delivery_fee || (order.total - order.subtotal) || 0).toLocaleString()}원
                               </span>
                             </div>
                           )}
-                          <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                            <span className="font-semibold text-gray-800 text-sm sm:text-base">총 결제금액</span>
-                            <span className="text-lg sm:text-2xl font-bold text-orange-600">
+                          <div className="flex justify-between items-center pt-3 border-t border-gray-300">
+                            <span className="font-bold text-gray-900 text-lg">총 결제금액</span>
+                            <span className="text-xl sm:text-2xl font-bold text-orange-600">
                               {formatKoreanCurrency(order.total || 0)}
                             </span>
                           </div>

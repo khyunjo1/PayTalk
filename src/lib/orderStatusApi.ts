@@ -116,7 +116,7 @@ export const getOrderStatusColor = (status: string): string => {
     case '입금확인':
       return 'text-blue-600 bg-blue-50 border-blue-200';
     case '배달완료':
-      return 'text-green-600 bg-green-50 border-green-200';
+      return 'text-teal-600 bg-teal-50 border-teal-200';
     case '주문취소':
       return 'text-red-600 bg-red-50 border-red-200';
     default:

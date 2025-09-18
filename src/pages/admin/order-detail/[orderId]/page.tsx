@@ -22,6 +22,7 @@ interface Order {
   delivery_fee: number;
   total: number;
   status: '입금대기' | '입금확인' | '배달완료' | '주문취소';
+  read_at?: string;
   created_at: string;
   updated_at: string;
   order_items?: Array<{
@@ -284,6 +285,50 @@ export default function OrderDetail() {
                 <p className="text-sm text-gray-500">{time}</p>
               </div>
             </div>
+            
+            {/* 상태 변경 버튼들 - 날짜 바로 밑에 배치 */}
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <div className="flex flex-col sm:flex-row gap-3">
+                {(() => {
+                  const getAvailableStatuses = () => {
+                    switch (order.status) {
+                      case '입금대기':
+                        return ['입금확인', '주문취소'];
+                      case '입금확인':
+                        // 픽업은 입금확인이 최종 상태, 배달만 배달완료 가능
+                        return order.order_type === 'delivery' ? ['배달완료', '주문취소'] : ['주문취소'];
+                      case '배달완료':
+                        return []; // 완료된 상태는 변경 불가
+                      case '주문취소':
+                        return []; // 취소된 상태는 변경 불가
+                      default:
+                        return [];
+                    }
+                  };
+
+                  return getAvailableStatuses().map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => handleStatusChange(order.id, status)}
+                      className={`flex-1 px-4 sm:px-6 py-3 rounded-xl text-sm sm:text-base font-bold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl ${
+                        status === '입금확인' 
+                          ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border border-blue-400'
+                          :                         status === '배달완료' 
+                          ? 'bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white border border-teal-400'
+                          : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white border border-red-400'
+                      }`}
+                    >
+                      <i className={`mr-2 ${
+                        status === '입금확인' ? 'ri-check-line' :
+                        status === '배달완료' ? 'ri-truck-line' :
+                        'ri-close-line'
+                      }`}></i>
+                      {status}
+                    </button>
+                  ));
+                })()}
+              </div>
+            </div>
           </div>
 
           {/* 주문자 정보 영역 */}
@@ -348,14 +393,14 @@ export default function OrderDetail() {
                 <h2 className="text-lg sm:text-xl font-bold text-gray-900">배달 정보</h2>
               </div>
               
-              <div className="p-3 sm:p-4 rounded-xl" style={{ backgroundColor: '#FFF4E6' }}>
+              <div className="p-3 sm:p-4 rounded-xl bg-gray-50">
                 <div className="flex items-center gap-3">
-                  <i className="ri-time-line text-xl sm:text-2xl" style={{ color: '#FF6B00' }}></i>
+                  <i className="ri-time-line text-xl sm:text-2xl text-gray-600"></i>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs sm:text-sm font-medium" style={{ color: '#FF6B00' }}>
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">
                       {order.order_type === 'delivery' ? '배달 시간' : '픽업 시간'}
                     </p>
-                    <p className="text-base sm:text-lg font-bold break-words" style={{ color: '#FF6B00' }}>
+                    <p className="text-base sm:text-lg font-bold break-words text-gray-900">
                       {order.delivery_time || order.pickup_time}
                     </p>
                   </div>
@@ -440,68 +485,6 @@ export default function OrderDetail() {
             </div>
           </div>
 
-          {/* 상태 변경 영역 */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
-            <div className="flex items-center gap-3 mb-4 sm:mb-6">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                <i className="ri-settings-3-line text-gray-600 text-sm sm:text-lg"></i>
-              </div>
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900">상태 변경</h2>
-            </div>
-            
-            <div className="space-y-4">
-              {/* 상태 변경 버튼들 */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                {(() => {
-                  const getAvailableStatuses = () => {
-                    switch (order.status) {
-                      case '입금대기':
-                        return ['입금확인', '주문취소'];
-                      case '입금확인':
-                        // 픽업은 입금확인이 최종 상태, 배달만 배달완료 가능
-                        return order.order_type === 'delivery' ? ['배달완료', '주문취소'] : ['주문취소'];
-                      case '배달완료':
-                        return []; // 완료된 상태는 변경 불가
-                      case '주문취소':
-                        return []; // 취소된 상태는 변경 불가
-                      default:
-                        return [];
-                    }
-                  };
-
-                  return getAvailableStatuses().map((status) => (
-                    <button
-                      key={status}
-                      onClick={() => handleStatusChange(order.id, status)}
-                      className={`flex-1 px-4 sm:px-6 py-3 rounded-xl text-sm sm:text-base font-semibold transition-all duration-200 ${
-                        status === '입금확인' 
-                          ? 'bg-blue-500 hover:bg-blue-600 text-white'
-                          : status === '배달완료' 
-                          ? 'bg-green-500 hover:bg-green-600 text-white' 
-                          : 'bg-red-500 hover:bg-red-600 text-white'
-                      }`}
-                    >
-                      {status}
-                    </button>
-                  ));
-                })()}
-              </div>
-
-              {/* 현재 상태 표시 */}
-              <div className="pt-4 border-t border-gray-200">
-                <div className="flex items-center gap-3">
-                  <div className={`w-3 h-3 rounded-full ${
-                    order.status === '입금대기' ? 'bg-yellow-500' :
-                    order.status === '입금확인' ? 'bg-blue-500' :
-                    order.status === '배달중' ? 'bg-orange-500' :
-                    order.status === '배달완료' ? 'bg-green-500' :
-                    order.status === '주문취소' ? 'bg-red-500' : 'bg-gray-500'
-                  }`}></div>
-                  <span className="text-xs sm:text-sm text-gray-600">현재 상태: <span className="font-semibold">{order.status}</span></span>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 

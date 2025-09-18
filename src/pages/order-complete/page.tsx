@@ -247,19 +247,46 @@ export default function OrderComplete() {
                   <div className="text-xs sm:text-sm text-gray-600 font-medium">배달 시간</div>
                   <div className="text-sm sm:text-base text-gray-900 font-bold break-words">
                     {(() => {
-                      const parts = orderData.delivery_time.split(' ');
-                      if (parts.length >= 3) {
-                        const dateStr = parts[0];
-                        const timeSlot = parts.slice(1).join(' ');
-                        const [year, month, day] = dateStr.split('-').map(Number);
-                        const date = new Date(year, month - 1, day);
-                        const formattedDate = date.toLocaleDateString('ko-KR', {
-                          month: 'long',
-                          day: 'numeric'
-                        });
-                        return `${formattedDate} ${timeSlot}`;
+                      try {
+                        const parts = orderData.delivery_time.split(' ');
+                        if (parts.length >= 3) {
+                          const dateStr = parts[0];
+                          const timeSlot = parts.slice(1).join(' ');
+                          
+                          // 날짜 형식 검증 및 파싱
+                          const dateMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                          if (dateMatch) {
+                            const [, year, month, day] = dateMatch;
+                            const yearNum = parseInt(year);
+                            const monthNum = parseInt(month);
+                            const dayNum = parseInt(day);
+                            
+                            // 유효한 날짜인지 확인
+                            if (yearNum >= 2020 && yearNum <= 2030 && 
+                                monthNum >= 1 && monthNum <= 12 && 
+                                dayNum >= 1 && dayNum <= 31) {
+                              const date = new Date(yearNum, monthNum - 1, dayNum);
+                              
+                              // 생성된 날짜가 유효한지 확인
+                              if (!isNaN(date.getTime()) && 
+                                  date.getFullYear() === yearNum && 
+                                  date.getMonth() === monthNum - 1 && 
+                                  date.getDate() === dayNum) {
+                                const formattedDate = date.toLocaleDateString('ko-KR', {
+                                  month: 'long',
+                                  day: 'numeric'
+                                });
+                                return `${formattedDate} ${timeSlot}`;
+                              }
+                            }
+                          }
+                        }
+                        // 파싱 실패 시 원본 문자열 반환
+                        return orderData.delivery_time;
+                      } catch (error) {
+                        console.error('날짜 파싱 오류:', error);
+                        return orderData.delivery_time;
                       }
-                      return orderData.delivery_time;
                     })()}
                   </div>
                 </div>

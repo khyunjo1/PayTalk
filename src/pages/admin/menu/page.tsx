@@ -37,7 +37,7 @@ export default function AdminMenu() {
   const [menusLoading, setMenusLoading] = useState(true);
   const [showMenuModal, setShowMenuModal] = useState(false);
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
-  const [selectedMenuCategory, setSelectedMenuCategory] = useState('all');
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [menuForm, setMenuForm] = useState({
     name: '',
     description: '',
@@ -131,16 +131,19 @@ export default function AdminMenu() {
     }
   };
 
-  const filteredMenus = menus.filter(menu => 
-    selectedMenuCategory === 'all' || menu.category === selectedMenuCategory
-  );
-  
-  console.log('🔍 카테고리 필터링:', {
-    selectedCategory: selectedMenuCategory,
-    totalMenus: menus.length,
-    filteredMenus: filteredMenus.length,
-    categories: [...new Set(menus.map(m => m.category))]
-  });
+  const toggleCategory = (category: string) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(category)) {
+        newSet.delete(category);
+      } else {
+        newSet.add(category);
+      }
+      return newSet;
+    });
+  };
+
+  const filteredMenus = menus;
 
 
   if (loading || menusLoading) {
@@ -201,138 +204,137 @@ export default function AdminMenu() {
 
       <div className="max-w-4xl mx-auto p-4">
 
-        {/* 카테고리 필터 */}
-        {menus.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-            <div className="overflow-x-auto">
-              <div className="flex gap-2 pb-2 min-w-max">
-                <button
-                  onClick={() => setSelectedMenuCategory('all')}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
-                    selectedMenuCategory === 'all'
-                      ? 'bg-gray-800 text-white'
-                      : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50'
-                  }`}
-                >
-                  <i className={`ri-restaurant-line mr-1.5 ${selectedMenuCategory === 'all' ? 'text-white' : 'text-gray-600'}`}></i>
-                  전체
-                </button>
-                {STANDARD_CATEGORIES.map(category => {
-                  const count = menus.filter(menu => menu.category === category).length;
-                  if (count === 0) return null;
-                  return (
-                    <button
-                      key={category}
-                      onClick={() => setSelectedMenuCategory(category)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
-                        selectedMenuCategory === category
-                          ? 'bg-gray-800 text-white'
-                          : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-50'
-                      }`}
-                    >
-                      <i className={`ri-restaurant-line mr-1.5 ${selectedMenuCategory === category ? 'text-white' : 'text-gray-600'}`}></i>
-                      {category}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
 
-        {/* 메뉴 목록 */}
+        {/* 메뉴 목록 - 아코디언 스타일 */}
         {menusLoading ? (
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
             <p className="text-gray-600">메뉴를 불러오는 중...</p>
           </div>
         ) : filteredMenus.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-            {filteredMenus.map((menu) => (
-              <div key={menu.id} className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl hover:scale-102 transition-all duration-300 group">
-                {/* 메뉴 정보 */}
-                <div className="p-4 sm:p-6">
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className="text-lg sm:text-xl font-bold text-gray-800 group-hover:text-orange-600 transition-colors flex-1 pr-2">
-                      {menu.name}
-                    </h3>
-                    <div className="text-right flex-shrink-0">
-                      <span className="text-xl sm:text-2xl font-bold text-gray-900">
-                        {(menu.price || 0).toLocaleString()}원
+          <div className="space-y-4">
+            {/* 카테고리별로 그룹화 */}
+            {STANDARD_CATEGORIES.map((category) => {
+              const categoryMenus = filteredMenus.filter(menu =>
+                menu.category === category
+              );
+              
+              if (categoryMenus.length === 0) return null;
+              
+              const isExpanded = expandedCategories.has(category);
+              
+              return (
+                <div key={category} className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+                  {/* 카테고리 헤더 */}
+                  <button
+                    onClick={() => toggleCategory(category)}
+                    className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors duration-200"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="text-left">
+                        <h3 className="text-lg font-bold text-gray-800">{category}</h3>
+                        <p className="text-sm text-gray-500">{categoryMenus.length}개 메뉴</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-500">
+                        {isExpanded ? '접기' : '펼치기'}
                       </span>
+                      <i className={`ri-arrow-down-s-line text-xl text-gray-400 transition-transform duration-300 ${
+                        isExpanded ? 'rotate-180' : ''
+                      }`}></i>
+                    </div>
+                  </button>
+                  
+                  {/* 카테고리 메뉴 목록 */}
+                  <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                    isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
+                  }`}>
+                    <div className="px-6 pb-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {categoryMenus.map((menu) => (
+                          <div key={menu.id} className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl hover:scale-102 transition-all duration-300 group">
+                            {/* 메뉴 정보 */}
+                            <div className="p-4 sm:p-6">
+                              <div className="flex justify-between items-start mb-3">
+                                <h3 className="text-lg sm:text-xl font-bold text-gray-800 group-hover:text-orange-600 transition-colors flex-1 pr-2">
+                                  {menu.name}
+                                </h3>
+                                <div className="text-right flex-shrink-0">
+                                  <span className="text-xl sm:text-2xl font-bold text-gray-900">
+                                    {(menu.price || 0).toLocaleString()}원
+                                  </span>
+                                </div>
+                              </div>
+
+                              {menu.description && (
+                                <p className="text-gray-600 mb-4 line-clamp-2 leading-relaxed text-sm sm:text-base">
+                                  {menu.description}
+                                </p>
+                              )}
+
+                              {/* 상태와 카테고리 정보 */}
+                              <div className="flex flex-wrap items-center gap-2 mb-4">
+                                <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-semibold flex items-center gap-1 ${
+                                  menu.is_available
+                                    ? 'bg-green-100 text-green-700 border border-green-200'
+                                    : 'bg-red-100 text-red-700 border border-red-200'
+                                }`}>
+                                  <i className={`ri-${menu.is_available ? 'check' : 'close'}-line text-xs`}></i>
+                                  {menu.is_available ? '판매중' : '판매중지'}
+                                </span>
+                                <span className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
+                                  {menu.category}
+                                </span>
+                              </div>
+
+                              {/* 관리 버튼들 */}
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => {
+                                    setEditingMenu(menu);
+                                    setMenuForm({
+                                      name: menu.name,
+                                      description: menu.description || '',
+                                      price: menu.price.toString(),
+                                      category: menu.category
+                                    });
+                                    setShowMenuModal(true);
+                                  }}
+                                  className="px-4 py-2 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 text-xs sm:text-sm bg-white text-gray-900 hover:bg-gray-900 hover:text-white border border-gray-300 hover:border-gray-900 shadow-sm hover:shadow-lg"
+                                >
+                                  <i className="ri-edit-line mr-1"></i>
+                                  수정
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    if (confirm('정말로 이 메뉴를 삭제하시겠습니까?')) {
+                                      handleDeleteMenu(menu.id);
+                                    }
+                                  }}
+                                  className="px-4 py-2 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 text-xs sm:text-sm bg-white text-red-600 hover:bg-red-600 hover:text-white border border-red-300 hover:border-red-600 shadow-sm hover:shadow-lg"
+                                >
+                                  <i className="ri-delete-bin-line mr-1"></i>
+                                  삭제
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                  
-                  {menu.description && (
-                    <p className="text-gray-600 mb-4 line-clamp-2 leading-relaxed text-sm sm:text-base">
-                      {menu.description}
-                    </p>
-                  )}
-                  
-                  {/* 상태와 카테고리 정보 */}
-                  <div className="flex flex-wrap items-center gap-2 mb-4">
-                    <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-semibold flex items-center gap-1 ${
-                      menu.is_available 
-                        ? 'bg-green-100 text-green-700 border border-green-200' 
-                        : 'bg-red-100 text-red-700 border border-red-200'
-                    }`}>
-                      <i className={`ri-${menu.is_available ? 'check' : 'close'}-line text-xs`}></i>
-                      {menu.is_available ? '판매중' : '판매중지'}
-                    </span>
-                    <span className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
-                      {menu.category}
-                    </span>
-                  </div>
-                  
-                  {/* 관리 버튼들 */}
-                  <div className="flex items-center justify-end gap-2">
-                    <button
-                      onClick={() => {
-                        setEditingMenu(menu);
-                        setMenuForm({
-                          name: menu.name,
-                          description: menu.description || '',
-                          price: menu.price.toString(),
-                          category: menu.category
-                        });
-                        setShowMenuModal(true);
-                      }}
-                      className="px-4 py-2 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 text-xs sm:text-sm bg-white text-gray-900 hover:bg-gray-900 hover:text-white border border-gray-300 hover:border-gray-900 shadow-sm hover:shadow-lg"
-                    >
-                      <i className="ri-edit-line mr-1"></i>
-                      수정
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (confirm('정말로 이 메뉴를 삭제하시겠습니까?')) {
-                          handleDeleteMenu(menu.id);
-                        }
-                      }}
-                      className="px-4 py-2 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 text-xs sm:text-sm bg-white text-red-600 hover:bg-red-600 hover:text-white border border-red-300 hover:border-red-600 shadow-sm hover:shadow-lg"
-                    >
-                      <i className="ri-delete-bin-line mr-1"></i>
-                      삭제
-                    </button>
-                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        ) : selectedMenuCategory === 'all' ? (
+              );
+            })}
+            </div>
+          ) : (
           <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/50 p-12 text-center">
             <div className="w-24 h-24 bg-gradient-to-br from-orange-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <i className="ri-restaurant-line text-4xl text-orange-400"></i>
             </div>
             <h3 className="text-2xl font-bold text-gray-800 mb-3">메뉴가 없습니다</h3>
             <p className="text-gray-600 text-lg">위의 "메뉴 추가" 버튼을 눌러<br />새로운 메뉴를 추가해보세요!</p>
-          </div>
-        ) : (
-          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/50 p-12 text-center">
-            <div className="w-24 h-24 bg-gradient-to-br from-orange-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <i className="ri-restaurant-line text-4xl text-orange-400"></i>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-800 mb-3">메뉴가 없습니다</h3>
-            <p className="text-gray-600 text-lg">이 카테고리에 등록된 메뉴가 없습니다.</p>
           </div>
         )}
       </div>

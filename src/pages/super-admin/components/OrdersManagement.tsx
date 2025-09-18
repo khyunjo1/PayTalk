@@ -795,7 +795,7 @@ export default function OrdersManagement({ showToast }: OrdersManagementProps) {
                           {order.order_type === 'delivery' && (
                             <button
                               onClick={() => handleStatusChange(order.id, '배달완료')}
-                              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer"
+                              className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white px-4 py-2 rounded-lg text-sm whitespace-nowrap cursor-pointer shadow-md hover:shadow-lg transition-all duration-200"
                             >
                               배달완료
                             </button>
