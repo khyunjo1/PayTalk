@@ -46,7 +46,7 @@ self.addEventListener('push', (event) => {
   
   let notificationData = {
     title: '페이톡 알림',
-    body: '새로운 알림이 있습니다.',
+    body: '새로운 주문이 요청되었습니다',
     icon: '/favicon.ico',
     badge: '/favicon.ico',
     data: {}
