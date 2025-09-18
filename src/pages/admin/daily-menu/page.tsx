@@ -830,7 +830,29 @@ export default function AdminDailyMenu() {
               ))}
             </div>
             
-            {/* 전체 저장 버튼은 제거 - 각 카드마다 개별 저장 가능 */}
+            {/* 선택된 메뉴 저장 버튼 */}
+            {selectedMenus.size > 0 && (
+              <div className="mt-8 pt-6 border-t border-gray-200">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="text-center sm:text-left">
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">
+                      선택된 메뉴 {selectedMenus.size}개
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      선택한 메뉴들을 일일 메뉴에 추가하시겠습니까?
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleSaveItems}
+                    disabled={saving}
+                    className="px-8 py-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px]"
+                  >
+                    <i className="ri-save-line mr-2"></i>
+                    {saving ? '저장 중...' : '선택한 메뉴 저장하기'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
