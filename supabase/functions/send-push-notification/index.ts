@@ -20,12 +20,6 @@ serve(async (req) => {
     const { userId, title, body, data, subscription } = await req.json()
     console.log('받은 데이터:', { userId, title, body, data })
 
-    // 매장별 주문내역 페이지 URL 생성
-    const storeId = data?.storeId
-    const targetUrl = storeId
-      ? `https://pay-talk.vercel.app/admin/${storeId}/orders`
-      : 'https://pay-talk.vercel.app/admin-dashboard'
-
     // Supabase 클라이언트 생성
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -87,8 +81,7 @@ serve(async (req) => {
         playerId: playerId,
         title,
         body,
-        data: data || {},
-        targetUrl: targetUrl
+        data: data || {}
       })
 
       console.log('OneSignal 푸시 알림 발송 성공:', pushResult)
@@ -135,9 +128,8 @@ async function sendOneSignalNotification(params: {
   title: string;
   body: string;
   data?: any;
-  targetUrl: string;
 }) {
-  const { appId, apiKey, playerId, title, body, data, targetUrl } = params;
+  const { appId, apiKey, playerId, title, body, data } = params;
 
   const notification = {
     app_id: appId,
@@ -151,8 +143,7 @@ async function sendOneSignalNotification(params: {
       en: body
     },
     data: data || {},
-    web_url: targetUrl,
-    url: targetUrl,
+    web_url: 'https://pay-talk.vercel.app',
     chrome_web_icon: '/favicon.ico',
     chrome_web_badge: '/favicon.ico'
   };
