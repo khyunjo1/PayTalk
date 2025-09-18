@@ -64,17 +64,41 @@ export const saveOneSignalPlayerId = async (playerId: string, userId: string): P
   try {
     console.log('OneSignal Player ID 저장 시작:', { userId, playerId });
 
-    // 원래 작동했던 upsert 방식 사용
-    const { data, error } = await supabase
+    // 먼저 기존 데이터 확인 후 업데이트 또는 삽입
+    const { data: existingData, error: selectError } = await supabase
       .from('push_subscriptions')
-      .upsert({
-        user_id: userId,
-        onesignal_player_id: playerId,
-        is_active: true
-      }, {
-        onConflict: 'user_id'
-      })
-      .select();
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    let data, error;
+
+    if (existingData) {
+      // 기존 데이터가 있으면 업데이트
+      const result = await supabase
+        .from('push_subscriptions')
+        .update({
+          onesignal_player_id: playerId,
+          is_active: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId)
+        .select();
+      data = result.data;
+      error = result.error;
+    } else {
+      // 기존 데이터가 없으면 삽입
+      const result = await supabase
+        .from('push_subscriptions')
+        .insert({
+          user_id: userId,
+          onesignal_player_id: playerId,
+          is_active: true
+        })
+        .select();
+      data = result.data;
+      error = result.error;
+    }
 
     console.log('OneSignal Player ID 저장 응답:', { data, error });
 
