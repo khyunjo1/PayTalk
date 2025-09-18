@@ -328,8 +328,7 @@ export default function OrderStatus() {
                         <div className="p-6 border-b-2 border-gray-200">
                           <div className="flex items-center justify-between mb-4">
                             <div>
-                              <h3 className="text-xl font-bold text-gray-900">주문 #{order.id.slice(-8)}</h3>
-                              <p className="text-base text-gray-600 font-medium">{formatDate(order.created_at)}</p>
+                              <p className="text-xl font-bold text-gray-900">{formatDate(order.created_at)}</p>
                             </div>
                             <div className={`px-5 py-3 rounded-full ${statusInfo.bgColor} border-2 ${
                               statusInfo.color === 'text-orange-600' ? 'border-orange-200' :

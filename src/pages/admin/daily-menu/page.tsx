@@ -119,7 +119,7 @@ export default function AdminDailyMenu() {
       const newDailyMenu = await createDailyMenu({
         store_id: storeId,
         menu_date: selectedDate,
-        title: `${selectedDate}의 반찬`,
+        title: `${selectedDate}의 반찬 주문서`,
         description: '맛있는 반찬을 주문해보세요!'
       });
       
@@ -503,7 +503,7 @@ export default function AdminDailyMenu() {
               >
                 <i className="ri-arrow-left-line text-xl text-gray-600"></i>
               </button>
-              <h1 className="text-lg font-semibold text-gray-800">일일메뉴</h1>
+              <h1 className="text-lg font-semibold text-gray-800">주문서 만들기</h1>
             </div>
           </div>
         </div>
@@ -513,10 +513,10 @@ export default function AdminDailyMenu() {
         {/* 날짜 선택 */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sm:p-8 mb-6 sm:mb-8">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-gradient-to-br from-gray-500 to-gray-600 rounded-xl flex items-center justify-center">
-              <i className="ri-calendar-line text-white text-lg"></i>
+            <div className="w-10 h-10 flex items-center justify-center">
+              <i className="ri-calendar-line text-orange-500 text-lg"></i>
             </div>
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">메뉴 날짜 선택</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">주문서 날짜 선택</h2>
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
             <label className="text-sm sm:text-base font-semibold text-gray-700 sm:min-w-0">날짜:</label>
@@ -551,7 +551,12 @@ export default function AdminDailyMenu() {
           ) : (
             <div className="space-y-4 sm:space-y-5">
               <div>
-                <h3 className="text-lg sm:text-xl font-bold text-gray-900 break-words mb-2">{dailyMenu.title}</h3>
+                <h3 className="text-lg sm:text-xl font-bold text-gray-900 break-words mb-2">
+                  {dailyMenu.title.includes('의 반찬') && !dailyMenu.title.includes('주문서') 
+                    ? dailyMenu.title.replace('의 반찬', '의 반찬 주문서')
+                    : dailyMenu.title
+                  }
+                </h3>
                 <p className="text-sm sm:text-base text-gray-700 font-medium mb-2">날짜: {dailyMenu.menu_date}</p>
                 <div className="flex items-center gap-2">
                   <span className="text-sm sm:text-base text-gray-700 font-semibold">상태:</span>
@@ -569,7 +574,7 @@ export default function AdminDailyMenu() {
               {/* 링크 표시 */}
               <div className="bg-gray-50 border-2 border-gray-200 p-4 rounded-xl">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm text-gray-700 font-semibold">공유 링크:</p>
+                  <p className="text-sm text-gray-700 font-semibold">주문서 링크:</p>
                   <button
                     onClick={handleCopyLink}
                     className="px-3 py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-xs font-medium"
@@ -587,8 +592,8 @@ export default function AdminDailyMenu() {
         {dailyMenu && (
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sm:p-8 mb-6 sm:mb-8">
             <div className="flex items-center gap-4 mb-8">
-              <div className="w-12 h-12 bg-gradient-to-br from-gray-500 to-gray-600 rounded-2xl flex items-center justify-center">
-                <i className="ri-restaurant-line text-white text-xl"></i>
+              <div className="w-12 h-12 flex items-center justify-center">
+                <i className="ri-restaurant-line text-orange-500 text-xl"></i>
               </div>
               <div>
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-900">메뉴 선택 및 수량 설정</h2>
