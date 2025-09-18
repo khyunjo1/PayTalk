@@ -151,19 +151,19 @@ export default function OrderStatus() {
       <Header />
       
 
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="container mx-auto px-3 py-4 sm:px-4 sm:py-8 max-w-md sm:max-w-4xl">
         {/* 전화번호 입력 폼 */}
-        <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/50 p-8 mb-8">
-          <div className="text-center mb-6">
-            <div className="w-16 h-16 bg-gradient-to-r from-orange-400 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <i className="ri-search-line text-2xl text-white"></i>
+        <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/50 p-4 sm:p-8 mb-6 sm:mb-8">
+          <div className="text-center mb-4 sm:mb-6">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-orange-400 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
+              <i className="ri-search-line text-xl sm:text-2xl text-white"></i>
             </div>
-            <h2 className="text-2xl font-bold text-gray-800">전화번호로 주문 조회</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800">전화번호로 주문 조회</h2>
           </div>
           
-          <form onSubmit={handleSearch} className="space-y-6">
+          <form onSubmit={handleSearch} className="space-y-4 sm:space-y-6">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">
+              <label className="block text-sm font-semibold text-gray-700 mb-2 sm:mb-3">
                 전화번호
               </label>
               <input
@@ -175,17 +175,17 @@ export default function OrderStatus() {
                   setPhone(limited);
                 }}
                 placeholder="01023432321"
-                className="w-full px-6 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-lg transition-all duration-200 hover:border-orange-300 outline-none"
+                className="w-full px-4 sm:px-6 py-3 sm:py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-base sm:text-lg transition-all duration-200 hover:border-orange-300 outline-none"
                 required
               />
-              <div className="text-sm text-gray-500 mt-2">
+              <div className="text-xs sm:text-sm text-gray-500 mt-2">
                 숫자만 입력하세요 (예: 01023432321)
               </div>
             </div>
             <button
               type="submit"
               disabled={loading || !phone.trim()}
-              className="w-full px-8 py-4 bg-gradient-to-r from-orange-400 to-orange-500 text-white rounded-2xl hover:from-orange-500 hover:to-orange-600 transition-all duration-300 font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="w-full px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-orange-400 to-orange-500 text-white rounded-2xl hover:from-orange-500 hover:to-orange-600 transition-all duration-300 font-bold text-base sm:text-lg shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none min-h-[48px]"
             >
               {loading ? (
                 <div className="flex items-center justify-center gap-3">
@@ -278,7 +278,7 @@ export default function OrderStatus() {
                       switch (status) {
                         case '입금대기':
                           return {
-                            text: '입금 대기중',
+                            text: '입금대기',
                             color: 'text-orange-600',
                             bgColor: 'bg-orange-50',
                             icon: '💳',
@@ -286,7 +286,7 @@ export default function OrderStatus() {
                           };
                         case '입금확인':
                           return {
-                            text: '입금 확인',
+                            text: '입금완료',
                             color: 'text-blue-600',
                             bgColor: 'bg-blue-50',
                             icon: '👨‍🍳',
@@ -294,7 +294,7 @@ export default function OrderStatus() {
                           };
                         case '배달완료':
                           return {
-                            text: '배달 완료',
+                            text: '완료',
                             color: 'text-green-600',
                             bgColor: 'bg-green-50',
                             icon: '🎉',
@@ -302,7 +302,7 @@ export default function OrderStatus() {
                           };
                         case '주문취소':
                           return {
-                            text: '주문 취소',
+                            text: '취소',
                             color: 'text-red-600',
                             bgColor: 'bg-red-50',
                             icon: '😢',
@@ -323,31 +323,31 @@ export default function OrderStatus() {
                     const formatPrice = (price: number) => (price || 0).toLocaleString('ko-KR');
 
                     return (
-                      <div key={order.id} className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                      <div key={order.id} className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 overflow-hidden hover:shadow-xl transition-shadow duration-300 mb-4">
                         {/* 주문 상태 카드 */}
-                        <div className="p-6 border-b-2 border-gray-200">
-                          <div className="flex items-center justify-between mb-4">
-                            <div>
-                              <p className="text-xl font-bold text-gray-900">{formatDate(order.created_at)}</p>
+                        <div className="p-4 sm:p-6 border-b-2 border-gray-200">
+                          <div className="mb-3 sm:mb-4">
+                            <div className="flex items-center gap-3 mb-2">
+                              <p className="text-lg sm:text-xl font-bold text-gray-900 break-words">{formatDate(order.created_at)}</p>
+                              <div className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full ${statusInfo.bgColor} border-2 ${
+                                statusInfo.color === 'text-orange-600' ? 'border-orange-200' :
+                                statusInfo.color === 'text-blue-600' ? 'border-blue-200' :
+                                statusInfo.color === 'text-green-600' ? 'border-green-200' :
+                                statusInfo.color === 'text-red-600' ? 'border-red-200' :
+                                'border-gray-200'
+                              }`}>
+                                <span className={`text-xs sm:text-sm font-bold ${statusInfo.color}`}>
+                                  {statusInfo.text}
+                                </span>
+                              </div>
                             </div>
-                            <div className={`px-5 py-3 rounded-full ${statusInfo.bgColor} border-2 ${
-                              statusInfo.color === 'text-orange-600' ? 'border-orange-200' :
-                              statusInfo.color === 'text-blue-600' ? 'border-blue-200' :
-                              statusInfo.color === 'text-green-600' ? 'border-green-200' :
-                              statusInfo.color === 'text-red-600' ? 'border-red-200' :
-                              'border-gray-200'
-                            }`}>
-                              <span className={`text-base font-bold ${statusInfo.color}`}>
-                                {statusInfo.text}
-                              </span>
-                        </div>
-                      </div>
-
-                          <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-xl border border-gray-200">
-                            <span className="text-4xl">{statusInfo.icon}</span>
-                            <div>
-                              <p className="font-bold text-gray-900 text-lg">{statusInfo.description}</p>
-                              <p className="text-base text-gray-700 font-medium">
+                          </div>
+                        
+                          <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-5 bg-gray-50 rounded-xl border border-gray-200">
+                            <span className="text-2xl sm:text-4xl">{statusInfo.icon}</span>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-bold text-gray-900 text-base sm:text-lg break-words">{statusInfo.description}</p>
+                              <p className="text-sm sm:text-base text-gray-700 font-medium break-words">
                                 {order.customer_name}님의 주문
                               </p>
                             </div>
@@ -355,84 +355,84 @@ export default function OrderStatus() {
                         </div>
 
                         {/* 매장 정보 */}
-                        <div className="p-6 border-b-2 border-gray-200">
-                          <h4 className="text-xl font-bold text-gray-900 mb-4">매장 정보</h4>
-                          <div className="flex items-start gap-4">
-                            <div className="w-16 h-16 bg-orange-100 rounded-xl flex items-center justify-center border-2 border-orange-200">
-                              <i className="ri-store-3-line text-2xl text-orange-600"></i>
+                        <div className="p-4 sm:p-6 border-b-2 border-gray-200">
+                          <h4 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">매장 정보</h4>
+                          <div className="flex items-start gap-3 sm:gap-4">
+                            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-orange-100 rounded-xl flex items-center justify-center border-2 border-orange-200 flex-shrink-0">
+                              <i className="ri-store-3-line text-xl sm:text-2xl text-orange-600"></i>
                             </div>
-                            <div className="flex-1">
-                              <h5 className="font-bold text-gray-900 text-lg mb-2">{order.stores.name}</h5>
-                              <p className="text-base text-gray-700 font-medium">{order.stores.phone}</p>
+                            <div className="flex-1 min-w-0">
+                              <h5 className="font-bold text-gray-900 text-base sm:text-lg mb-1 sm:mb-2 break-words">{order.stores.name}</h5>
+                              <p className="text-sm sm:text-base text-gray-700 font-medium break-words">{order.stores.phone}</p>
                             </div>
                           </div>
-                        </div>
+                            </div>
 
                         {/* 주문 정보 */}
-                        <div className="p-6 border-b-2 border-gray-200">
-                          <h4 className="text-xl font-bold text-gray-900 mb-4">주문 정보</h4>
-                          <div className="space-y-4">
-                          <div className="flex items-center gap-3">
-                              <i className="ri-user-line text-gray-600 w-6 text-xl"></i>
-                              <span className="text-base text-gray-800 font-medium">{order.customer_name}</span>
-                              <span className="text-base text-gray-600">({order.customer_phone})</span>
+                        <div className="p-4 sm:p-6 border-b-2 border-gray-200">
+                          <h4 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">주문 정보</h4>
+                          <div className="space-y-3 sm:space-y-4">
+                          <div className="flex items-center gap-2 sm:gap-3">
+                              <i className="ri-user-line text-gray-600 w-5 sm:w-6 text-lg sm:text-xl flex-shrink-0"></i>
+                              <span className="text-sm sm:text-base text-gray-800 font-medium break-words">{order.customer_name}</span>
+                              <span className="text-sm sm:text-base text-gray-600 break-words">({order.customer_phone})</span>
                       </div>
 
-                            <div className="flex items-center gap-3">
-                              <i className="ri-truck-line text-gray-600 w-6 text-xl"></i>
-                              <span className="text-base text-gray-800 font-medium">
+                            <div className="flex items-center gap-2 sm:gap-3">
+                              <i className="ri-truck-line text-gray-600 w-5 sm:w-6 text-lg sm:text-xl flex-shrink-0"></i>
+                              <span className="text-sm sm:text-base text-gray-800 font-medium">
                                 {order.order_type === 'delivery' ? '배달' : '픽업'}
                           </span>
                         </div>
 
                             {order.delivery_address && (
-                              <div className="flex items-start gap-3">
-                                <i className="ri-map-pin-line text-gray-600 w-6 mt-1 text-xl"></i>
-                                <span className="text-base text-gray-800 font-medium">{order.delivery_address}</span>
+                              <div className="flex items-start gap-2 sm:gap-3">
+                                <i className="ri-map-pin-line text-gray-600 w-5 sm:w-6 mt-1 text-lg sm:text-xl flex-shrink-0"></i>
+                                <span className="text-sm sm:text-base text-gray-800 font-medium break-words">{order.delivery_address}</span>
                             </div>
                           )}
                           
                             {(order.delivery_time || order.pickup_time) && (
-                              <div className="flex items-center gap-3">
-                                <i className="ri-time-line text-gray-600 w-6 text-xl"></i>
-                                <span className="text-base text-gray-800 font-medium">
+                              <div className="flex items-center gap-2 sm:gap-3">
+                                <i className="ri-time-line text-gray-600 w-5 sm:w-6 text-lg sm:text-xl flex-shrink-0"></i>
+                                <span className="text-sm sm:text-base text-gray-800 font-medium break-words">
                                   {order.delivery_time || order.pickup_time}
                                 </span>
                             </div>
                           )}
                           
-                            <div className="flex items-center gap-3">
-                              <i className="ri-bank-card-line text-gray-600 w-6 text-xl"></i>
-                              <span className="text-base text-gray-800 font-medium">입금자: {order.depositor_name}</span>
+                            <div className="flex items-center gap-2 sm:gap-3">
+                              <i className="ri-bank-card-line text-gray-600 w-5 sm:w-6 text-lg sm:text-xl flex-shrink-0"></i>
+                              <span className="text-sm sm:text-base text-gray-800 font-medium break-words">입금자: {order.depositor_name}</span>
                             </div>
 
                             {order.special_requests && (
-                              <div className="flex items-start gap-3">
-                                <i className="ri-message-3-line text-gray-600 w-6 mt-1 text-xl"></i>
-                              <div>
-                                  <p className="text-base font-bold text-gray-800">특별 요청사항</p>
-                                  <p className="text-base text-gray-700 mt-1">{order.special_requests}</p>
-                                </div>
+                              <div className="flex items-start gap-2 sm:gap-3">
+                                <i className="ri-message-3-line text-gray-600 w-5 sm:w-6 mt-1 text-lg sm:text-xl flex-shrink-0"></i>
+                              <div className="min-w-0 flex-1">
+                                  <p className="text-sm sm:text-base font-bold text-gray-800">특별 요청사항</p>
+                                  <p className="text-sm sm:text-base text-gray-700 mt-1 break-words">{order.special_requests}</p>
+                              </div>
                             </div>
                           )}
-                          </div>
                         </div>
+                      </div>
 
                       {/* 주문 메뉴 */}
-                        <div className="p-6 border-b-2 border-gray-200">
-                          <h4 className="text-xl font-bold text-gray-900 mb-4">주문 메뉴</h4>
-                          <div className="space-y-3">
+                        <div className="p-4 sm:p-6 border-b-2 border-gray-200">
+                          <h4 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">주문 메뉴</h4>
+                          <div className="space-y-2 sm:space-y-3">
                             {order.order_items?.map((item, index) => (
-                              <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
-                                <div className="flex-1">
-                                  <h5 className="font-bold text-gray-900 text-lg">{item.menus?.name || '메뉴'}</h5>
-                                  <p className="text-base text-gray-600 mt-1 font-medium">수량: {item.quantity}개</p>
+                              <div key={index} className="flex items-start justify-between p-3 sm:p-4 bg-gray-50 rounded-xl border border-gray-200">
+                                <div className="flex-1 min-w-0 pr-2">
+                                  <h5 className="font-bold text-gray-900 text-base sm:text-lg break-words">{item.menus?.name || '메뉴'}</h5>
+                                  <p className="text-sm sm:text-base text-gray-600 mt-1 font-medium">수량: {item.quantity}개</p>
                         </div>
-                                <div className="text-right">
-                                  <p className="font-bold text-gray-900 text-lg">
+                                <div className="text-right flex-shrink-0">
+                                  <p className="font-bold text-gray-900 text-base sm:text-lg">
                                     {formatPrice((item.price || 0) * item.quantity)}원
                                   </p>
-                                  <p className="text-base text-gray-600">
+                                  <p className="text-xs sm:text-base text-gray-600">
                                     {formatPrice(item.price || 0)}원 × {item.quantity}
                                   </p>
                                 </div>
@@ -442,23 +442,23 @@ export default function OrderStatus() {
                         </div>
                         
                         {/* 결제 정보 */}
-                        <div className="p-6">
-                          <h4 className="text-xl font-bold text-gray-900 mb-4">결제 정보</h4>
-                          <div className="space-y-3">
+                        <div className="p-4 sm:p-6">
+                          <h4 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">결제 정보</h4>
+                          <div className="space-y-2 sm:space-y-3">
+                          <div className="flex justify-between items-center">
+                              <span className="text-sm sm:text-base text-gray-700 font-medium">상품 금액</span>
+                              <span className="text-sm sm:text-base text-gray-900 font-bold">{formatPrice(order.subtotal || 0)}원</span>
+                          </div>
+                          {order.order_type === 'delivery' && (
                             <div className="flex justify-between items-center">
-                              <span className="text-base text-gray-700 font-medium">상품 금액</span>
-                              <span className="text-base text-gray-900 font-bold">{formatPrice(order.subtotal || 0)}원</span>
-                            </div>
-                            {order.order_type === 'delivery' && (
-                              <div className="flex justify-between items-center">
-                                <span className="text-base text-gray-700 font-medium">배달비</span>
-                                <span className="text-base text-gray-900 font-bold">{formatPrice(order.delivery_fee || 0)}원</span>
+                                <span className="text-sm sm:text-base text-gray-700 font-medium">배달비</span>
+                                <span className="text-sm sm:text-base text-gray-900 font-bold">{formatPrice(order.delivery_fee || 0)}원</span>
                             </div>
                           )}
-                            <div className="border-t-2 border-gray-200 pt-4">
+                            <div className="border-t-2 border-gray-200 pt-3 sm:pt-4">
                               <div className="flex justify-between items-center">
-                                <span className="text-xl font-bold text-gray-900">총 결제금액</span>
-                                <span className="text-2xl font-bold text-orange-600">
+                                <span className="text-lg sm:text-xl font-bold text-gray-900">총 결제금액</span>
+                                <span className="text-xl sm:text-2xl font-bold text-orange-600">
                                   {formatPrice(order.total || 0)}원
                                 </span>
                               </div>

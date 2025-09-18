@@ -511,7 +511,7 @@ export default function AdminDailyMenu() {
 
       <div className="px-4 sm:px-6 py-6 sm:py-8">
         {/* 날짜 선택 */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sm:p-8 mb-6 sm:mb-8">
+        <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-6 sm:p-8 mb-6 sm:mb-8">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 flex items-center justify-center">
               <i className="ri-calendar-line text-orange-500 text-lg"></i>
@@ -530,7 +530,7 @@ export default function AdminDailyMenu() {
         </div>
 
         {/* 일일 메뉴 생성/상태 */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sm:p-8 mb-6 sm:mb-8">
+        <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-6 sm:p-8 mb-6 sm:mb-8">
           
           {!dailyMenu ? (
             <div className="text-center py-8 sm:py-12">
@@ -557,7 +557,6 @@ export default function AdminDailyMenu() {
                     : dailyMenu.title
                   }
                 </h3>
-                <p className="text-sm sm:text-base text-gray-700 font-medium mb-2">날짜: {dailyMenu.menu_date}</p>
                 <div className="flex items-center gap-2">
                   <span className="text-sm sm:text-base text-gray-700 font-semibold">상태:</span>
                   <div className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-semibold ${
@@ -590,7 +589,7 @@ export default function AdminDailyMenu() {
 
         {/* 메뉴 선택 및 수량 설정 */}
         {dailyMenu && (
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sm:p-8 mb-6 sm:mb-8">
+          <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-6 sm:p-8 mb-6 sm:mb-8">
             <div className="flex items-center gap-4 mb-8">
               <div className="w-12 h-12 flex items-center justify-center">
                 <i className="ri-restaurant-line text-orange-500 text-xl"></i>

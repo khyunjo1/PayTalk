@@ -567,7 +567,7 @@ export default function AdminOrders() {
               </div>
               <div className="flex items-center gap-6 sm:gap-8">
                 <div className="text-center sm:text-right">
-                  <div className="text-2xl sm:text-3xl font-bold text-orange-500 mb-1">
+                  <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">
                     {finalFilteredOrders.length}
                   </div>
                   <div className="text-gray-500 text-xs sm:text-sm font-medium">
@@ -575,7 +575,7 @@ export default function AdminOrders() {
                   </div>
                 </div>
                 <div className="text-center sm:text-right">
-                  <div className="text-2xl sm:text-3xl font-bold text-orange-500 mb-1">
+                  <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">
                     {formatKoreanCurrency(finalFilteredOrders.reduce((sum, order) => sum + (order.total || 0), 0))}
                   </div>
                   <div className="text-gray-500 text-xs sm:text-sm font-medium">
@@ -805,7 +805,7 @@ export default function AdminOrders() {
 
 
         {/* 주문 상세 목록 */}
-        <div className="space-y-8">
+        <div className="space-y-6">
           {ordersLoading ? (
             <div className="bg-white rounded-2xl p-12 shadow-lg">
               <div className="text-center">
@@ -826,7 +826,7 @@ export default function AdminOrders() {
               return (
                 <div 
                   key={order.id} 
-                  className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-xl hover:border-orange-300 transition-all duration-300 cursor-pointer group"
+                  className="bg-white rounded-2xl border-2 border-gray-300 shadow-lg hover:shadow-xl hover:border-orange-400 transition-all duration-300 cursor-pointer group mb-4"
                   onClick={() => navigate(`/admin/${storeId}/order-detail/${order.id}`)}
                 >
                   <div className="p-4 sm:p-6">
