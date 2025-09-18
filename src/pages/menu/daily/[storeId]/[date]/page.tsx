@@ -5,7 +5,8 @@ import {
   getDailyMenu, 
   getDailyMenuItems, 
   getTodayDailyMenu, 
-  getTomorrowDailyMenu
+  getTomorrowDailyMenu,
+  getLatestDailyMenu
 } from '../../../../../lib/dailyMenuApi';
 import { getStore } from '../../../../../lib/storeApi';
 import Header from '../../../../../components/Header';
@@ -161,30 +162,41 @@ export default function DailyMenuPage() {
       const storeData = await getStore(storeId);
       setStore(storeData);
       
-      
-      // 2. 일일 메뉴 로드
+      // 2. 일일 메뉴 로드 - 자동으로 최근 메뉴 로드
       let menuData: DailyMenu | null = null;
+      let menuItems: DailyMenuItem[] = [];
+      
       // 한국 표준시간 기준으로 오늘 날짜 계산
       const now = new Date();
       const koreaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Seoul"}));
       let menuDate = date || koreaTime.toISOString().split('T')[0];
       
       try {
+        // 먼저 지정된 날짜의 메뉴가 있는지 확인
         if (date && date.trim() !== '') {
           menuData = await getDailyMenu(storeId, date);
+          if (menuData) {
+            menuItems = await getDailyMenuItems(menuData.id);
+          }
         } else {
           // 날짜가 없으면 오늘 메뉴 로드
           menuData = await getTodayDailyMenu(storeId);
+          if (menuData) {
+            menuItems = await getDailyMenuItems(menuData.id);
+          }
+        }
+        
+        // 지정된 날짜에 메뉴가 없으면 내일 메뉴 확인
+        if (!menuData || menuItems.length === 0) {
+          const tomorrowMenu = await getTomorrowDailyMenu(storeId);
+          if (tomorrowMenu) {
+            menuData = tomorrowMenu;
+            menuItems = await getDailyMenuItems(tomorrowMenu.id);
+            menuDate = tomorrowMenu.menu_date;
+          }
         }
         
         if (!menuData) {
-          // 오늘 메뉴가 없으면 내일 메뉴 확인
-          const tomorrowMenu = await getTomorrowDailyMenu(storeId);
-          if (tomorrowMenu) {
-            setDailyMenu(tomorrowMenu);
-            const items = await getDailyMenuItems(tomorrowMenu.id);
-            setDailyMenuItems(items);
-          }
           return;
         }
       } catch (error) {
@@ -194,6 +206,7 @@ export default function DailyMenuPage() {
       }
       
       setDailyMenu(menuData);
+      setDailyMenuItems(menuItems);
       
       // 3. 주문 마감 상태 체크
       if (menuData && menuDate) {
@@ -208,14 +221,9 @@ export default function DailyMenuPage() {
         console.log('setIsOrderClosed 호출됨:', orderClosed);
       }
       
-        // 4. 일일 메뉴 아이템들 로드
-        const items = await getDailyMenuItems(menuData.id);
-        setDailyMenuItems(items);
-        
-        // 5. 카테고리 추출
-        const uniqueCategories = ['전체', ...new Set(items.map(item => item.menu?.category).filter(Boolean))];
-        setCategories(uniqueCategories);
-      
+      // 4. 카테고리 추출
+      const uniqueCategories = ['전체', ...new Set(menuItems.map(item => item.menu?.category).filter(Boolean))];
+      setCategories(uniqueCategories);
       
     } catch (error) {
       console.error('데이터 로드 오류:', error);
@@ -452,6 +460,7 @@ export default function DailyMenuPage() {
                 {dailyMenu?.title || `${date}의 반찬`}
               </span>
             </div>
+            
             
             {/* 주문 상태 */}
             <div className={`inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full ${

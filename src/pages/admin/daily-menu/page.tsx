@@ -10,17 +10,16 @@ import {
   updateDailyMenuItemQuantity,
   toggleDailyMenuItemAvailability,
   removeDailyMenuItem,
-  DailyMenu,
-  DailyMenuItem,
-  CreateDailyMenuItemData
+  getLatestDailyMenu
 } from '../../../lib/dailyMenuApi';
-import { MenuDB } from '../../../types';
+import type { DailyMenu, DailyMenuItem } from '../../../lib/dailyMenuApi';
+import type { MenuDB } from '../../../types';
 import Header from '../../../components/Header';
 
 export default function AdminDailyMenu() {
   const navigate = useNavigate();
   const { storeId } = useParams<{ storeId: string }>();
-  const { user } = useNewAuth();
+  const { } = useNewAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
@@ -31,8 +30,9 @@ export default function AdminDailyMenu() {
   const [availableMenus, setAvailableMenus] = useState<MenuDB[]>([]);
   const [selectedMenus, setSelectedMenus] = useState<Set<string>>(new Set());
   const [quantities, setQuantities] = useState<Record<string, number>>({});
-  const [selectedCategory, setSelectedCategory] = useState<string>('전체');
-  const [categories, setCategories] = useState<string[]>([]);
+  
+  // 아코디언 상태 관리
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   
   // 오늘 날짜 설정 (한국 표준시간 기준)
   useEffect(() => {
@@ -58,10 +58,6 @@ export default function AdminDailyMenu() {
       const menus = await getMenus(storeId);
       const availableMenus = menus.filter(menu => menu.is_available);
       setAvailableMenus(availableMenus);
-      
-      // 카테고리 추출
-      const uniqueCategories = ['전체', ...new Set(availableMenus.map(menu => menu.category).filter(Boolean))];
-      setCategories(uniqueCategories);
       
       // 2. 선택된 날짜의 일일 메뉴 로드
       let existingDailyMenu: DailyMenu | null = null;
@@ -103,11 +99,28 @@ export default function AdminDailyMenu() {
     }
   };
 
-  // 카테고리별 필터링된 메뉴
-  const filteredAvailableMenus = availableMenus.filter(menu => {
-    if (selectedCategory === '전체') return true;
-    return menu.category === selectedCategory;
-  });
+  // 카테고리별 메뉴 그룹화
+  const menuByCategory = availableMenus.reduce((acc, menu) => {
+    const category = menu.category || '기타';
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(menu);
+    return acc;
+  }, {} as Record<string, MenuDB[]>);
+
+  // 아코디언 토글 함수
+  const toggleCategory = (category: string) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(category)) {
+        newSet.delete(category);
+      } else {
+        newSet.add(category);
+      }
+      return newSet;
+    });
+  };
 
   // 일일 메뉴 생성
   const handleCreateDailyMenu = async () => {
@@ -172,50 +185,57 @@ export default function AdminDailyMenu() {
     }
   };
 
-  // 개별 아이템 수량 변경 (임시 상태만 업데이트)
-  const handleUpdateItemQuantity = (itemId: string, value: string) => {
-    // 빈 문자열이면 빈 상태로 유지
-    if (value === '') {
-      const dailyMenuItem = dailyMenuItems.find(item => item.id === itemId);
-      if (dailyMenuItem) {
-        setTempQuantities(prev => ({ ...prev, [dailyMenuItem.menu_id]: '' }));
-      }
-      return;
-    }
+  // 최근 메뉴를 템플릿으로 불러오기
+  const handleLoadRecentTemplate = async () => {
+    if (!storeId) return;
     
-    // 숫자만 파싱
-    const newQuantity = parseInt(value);
-    
-    if (isNaN(newQuantity) || newQuantity < 0) {
-      alert('수량은 0 이상의 숫자여야 합니다.');
-      return;
-    }
-
-    // 임시 상태만 업데이트 (실제 저장은 메뉴 저장 버튼에서)
-    const dailyMenuItem = dailyMenuItems.find(item => item.id === itemId);
-    if (dailyMenuItem) {
-      setTempQuantities(prev => ({ ...prev, [dailyMenuItem.menu_id]: newQuantity }));
+    try {
+      setLoading(true);
       
-      // 수량에 따라 품절 상태 자동 업데이트
-        if (newQuantity === 0) {
-          setItemAvailability(prev => ({
-            ...prev,
-            [itemId]: false
-          }));
+      // 선택된 날짜 이전의 가장 최근 일일메뉴 불러오기
+      const latestMenuData = await getLatestDailyMenu(storeId, selectedDate);
+      
+      if (latestMenuData) {
+        const newSelectedMenus = new Set<string>();
+        const newQuantities: Record<string, number> = {};
+        
+        // 아이템이 있는 경우에만 메뉴와 수량 설정
+        if (latestMenuData.items.length > 0) {
+          latestMenuData.items.forEach(item => {
+          newSelectedMenus.add(item.menu_id);
+          newQuantities[item.menu_id] = item.initial_quantity;
+        });
+        }
+        
+        setSelectedMenus(newSelectedMenus);
+        setQuantities(newQuantities);
+        
+        const dateStr = latestMenuData.menu.menu_date;
+        if (latestMenuData.items.length > 0) {
+          alert(`${dateStr}의 메뉴 ${latestMenuData.items.length}개를 불러왔습니다. 수정 후 저장해주세요.`);
         } else {
-          setItemAvailability(prev => ({
-            ...prev,
-            [itemId]: true
-          }));
+          alert(`${dateStr}의 주문서를 불러왔습니다. 메뉴를 선택하고 수량을 설정해주세요.`);
+        }
+        return;
       }
+      
+      // 최근 메뉴가 없으면 안내
+      alert('최근에 생성된 메뉴가 없습니다. 새로 메뉴를 선택해주세요.');
+      
+    } catch (error) {
+      console.error('메뉴 템플릿 불러오기 오류:', error);
+      alert('메뉴를 불러오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
     }
   };
+
 
   // 품절 상태 관리 (로컬 상태)
   const [itemAvailability, setItemAvailability] = useState<Record<string, boolean>>({});
   
   // 수량 변경 로컬 상태 (저장 전까지 임시)
-  const [tempQuantities, setTempQuantities] = useState<Record<string, number>>({});
+  const [tempQuantities, setTempQuantities] = useState<Record<string, number | string>>({});
   
   // 수량 조정 모달 상태
   const [quantityModal, setQuantityModal] = useState<{
@@ -319,7 +339,7 @@ export default function AdminDailyMenu() {
     const dailyMenuItem = dailyMenuItems.find(item => item.menu_id === menuId);
     if (!dailyMenuItem) return;
     
-    const newQuantity = tempQuantities[menuId] !== undefined ? (tempQuantities[menuId] === '' ? dailyMenuItem.initial_quantity : tempQuantities[menuId]) : dailyMenuItem.initial_quantity;
+    const newQuantity = tempQuantities[menuId] !== undefined ? (tempQuantities[menuId] === '' ? dailyMenuItem.initial_quantity : Number(tempQuantities[menuId])) : dailyMenuItem.initial_quantity;
     const newAvailability = itemAvailability[dailyMenuItem.id] !== undefined ? itemAvailability[dailyMenuItem.id] : dailyMenuItem.is_available;
     
     // 변경사항이 있는지 확인
@@ -376,7 +396,7 @@ export default function AdminDailyMenu() {
     const finalQuantities = { ...quantities };
     Object.keys(tempQuantities).forEach(menuId => {
       const value = tempQuantities[menuId];
-      finalQuantities[menuId] = value === '' ? 0 : value;
+      finalQuantities[menuId] = value === '' ? 0 : Number(value);
     });
     
     const hasQuantityChanges = dailyMenuItems.some(item => {
@@ -509,106 +529,156 @@ export default function AdminDailyMenu() {
         </div>
       </div>
 
-      <div className="px-4 sm:px-6 py-6 sm:py-8">
-        {/* 날짜 선택 */}
-        <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-6 sm:p-8 mb-6 sm:mb-8">
+      <div className="px-3 sm:px-6 py-4 sm:py-8">
+        {/* 날짜 선택 및 상태 */}
+        <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-4 sm:p-8 mb-4 sm:mb-8">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 flex items-center justify-center">
               <i className="ri-calendar-line text-orange-500 text-lg"></i>
             </div>
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900">주문서 날짜 선택</h2>
           </div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+          
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mb-6">
             <label className="text-sm sm:text-base font-semibold text-gray-700 sm:min-w-0">날짜:</label>
+            <div className="flex-1">
             <input
               type="date"
               value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-500 focus:border-gray-500 text-sm sm:text-base font-medium min-h-[48px] bg-gray-50 focus:bg-white transition-all"
-            />
+                onChange={(e) => {
+                  const selectedDate = e.target.value;
+                  
+                  // 정확한 한국 시간 계산 (UTC+9)
+                  const now = new Date();
+                  const koreaOffset = 9 * 60; // 9시간을 분으로
+                  const koreaTime = new Date(now.getTime() + (koreaOffset * 60 * 1000));
+                  const today = koreaTime.toISOString().split('T')[0];
+                  
+                  const tomorrow = new Date(koreaTime);
+                  tomorrow.setDate(tomorrow.getDate() + 1);
+                  const maxDate = tomorrow.toISOString().split('T')[0];
+                  
+                  console.log('현재 한국 날짜:', today);
+                  console.log('내일 날짜:', maxDate);
+                  console.log('선택된 날짜:', selectedDate);
+                  
+                  // 내일 이후 날짜 선택 시 경고
+                  if (selectedDate > maxDate) {
+                    alert('주문서는 내일까지만 생성가능합니다.');
+                    return;
+                  }
+                  
+                  setSelectedDate(selectedDate);
+                }}
+                min="2020-01-01"
+                max={(() => {
+                  // 정확한 한국 시간 계산 (UTC+9)
+                  const now = new Date();
+                  const koreaOffset = 9 * 60; // 9시간을 분으로
+                  const koreaTime = new Date(now.getTime() + (koreaOffset * 60 * 1000));
+                  const tomorrow = new Date(koreaTime);
+                  tomorrow.setDate(tomorrow.getDate() + 1);
+                  const maxDate = tomorrow.toISOString().split('T')[0];
+                  console.log('max 날짜 설정:', maxDate);
+                  return maxDate;
+                })()}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-500 focus:border-gray-500 text-sm sm:text-base font-medium min-h-[48px] bg-gray-50 focus:bg-white transition-all"
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                <i className="ri-information-line mr-1"></i>
+                주문서는 내일까지만 생성가능합니다 (과거 날짜 선택 가능)
+              </p>
           </div>
+          </div>
+
+          {/* 주문서 상태 정보 */}
+          {dailyMenu && (
+            <div className="bg-white rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-1">
+                    {selectedDate}의 반찬 주문서
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">상태:</span>
+                    <span className="text-sm text-gray-900">
+                      {dailyMenu.is_active ? '주문접수중' : '주문마감'}
+                    </span>
+                  </div>
+                </div>
+                </div>
+              
+              {/* 주문서 링크 복사 버튼 */}
+              <div className="mt-4">
+                <button
+                  onClick={handleCopyLink}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  <i className="ri-link"></i>
+                  주문서 링크 복사
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* 일일 메뉴 생성/상태 */}
-        <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-6 sm:p-8 mb-6 sm:mb-8">
           
-          {!dailyMenu ? (
+        {/* 일일 메뉴 생성 */}
+        {!dailyMenu && (
+          <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-4 sm:p-8 mb-4 sm:mb-8">
             <div className="text-center py-8 sm:py-12">
               <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <i className="ri-calendar-line text-3xl text-gray-400"></i>
               </div>
-              <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">일일 메뉴 페이지가 없습니다</h3>
-              <p className="text-sm sm:text-base text-gray-600 mb-8">선택한 날짜의 메뉴 페이지를 생성해주세요.</p>
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">주문서가 아직 없습니다</h3>
+              <p className="text-sm sm:text-base text-gray-600 mb-8">선택한 날짜의 주문서를 생성해주세요.</p>
               <button
                 onClick={handleCreateDailyMenu}
                 disabled={saving}
                 className="px-8 py-4 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-xl hover:from-gray-600 hover:to-gray-700 transition-all disabled:opacity-50 text-sm sm:text-base font-semibold shadow-lg hover:shadow-xl"
               >
                 <i className="ri-add-line mr-2"></i>
-                {saving ? '생성 중...' : '일일 메뉴 페이지 생성'}
+                {saving ? '생성 중...' : '주문서 링크 생성'}
               </button>
             </div>
-          ) : (
-            <div className="space-y-4 sm:space-y-5">
-              <div>
-                <h3 className="text-lg sm:text-xl font-bold text-gray-900 break-words mb-2">
-                  {dailyMenu.title.includes('의 반찬') && !dailyMenu.title.includes('주문서') 
-                    ? dailyMenu.title.replace('의 반찬', '의 반찬 주문서')
-                    : dailyMenu.title
-                  }
-                </h3>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm sm:text-base text-gray-700 font-semibold">상태:</span>
-                  <div className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-semibold ${
-                    dailyMenu.is_active 
-                      ? 'bg-green-100 text-green-800 border-2 border-green-200' 
-                      : 'bg-red-100 text-red-800 border-2 border-red-200'
-                  }`}>
-                    <i className={`ri-${dailyMenu.is_active ? 'check' : 'close'}-circle-line text-sm`}></i>
-                    {dailyMenu.is_active ? '주문접수중' : '주문마감'}
-                  </div>
-                </div>
-              </div>
-              
-              {/* 링크 표시 */}
-              <div className="bg-gray-50 border-2 border-gray-200 p-4 rounded-xl">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm text-gray-700 font-semibold">주문서 링크:</p>
-                  <button
-                    onClick={handleCopyLink}
-                    className="px-3 py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-xs font-medium"
-                  >
-                    링크 복사
-                  </button>
-                </div>
-                <p className="text-sm font-mono text-gray-800 break-all bg-white p-2 rounded-lg border border-gray-300">{generateLink()}</p>
-              </div>
             </div>
           )}
-        </div>
 
         {/* 메뉴 선택 및 수량 설정 */}
         {dailyMenu && (
-          <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-6 sm:p-8 mb-6 sm:mb-8">
-            <div className="flex items-center gap-4 mb-8">
-              <div className="w-12 h-12 flex items-center justify-center">
-                <i className="ri-restaurant-line text-orange-500 text-xl"></i>
+          <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-4 sm:p-8 mb-4 sm:mb-8">
+            <div className="mb-6 sm:mb-8">
+              <div className="flex items-center gap-3 sm:gap-4 mb-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center">
+                  <i className="ri-restaurant-line text-orange-500 text-lg sm:text-xl"></i>
+                </div>
+                <div>
+                  <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">메뉴 선택 및 수량 설정</h2>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">메뉴 선택 및 수량 설정</h2>
-                <p className="text-sm text-gray-600 mt-1">판매할 메뉴를 선택하고 재고를 관리하세요</p>
+              
+              {/* 최근 메뉴 불러오기 버튼 */}
+              <div className="flex justify-start">
+              <button
+                onClick={handleLoadRecentTemplate}
+                disabled={loading}
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded-xl transition-colors duration-200 text-sm font-medium"
+              >
+                <i className="ri-file-copy-line"></i>
+                  <span>최근 메뉴 불러오기</span>
+              </button>
               </div>
             </div>
             
             {/* 안내문구 */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-6 mb-8">
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <i className="ri-information-line text-blue-600 text-lg"></i>
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <i className="ri-information-line text-blue-600 text-sm sm:text-lg"></i>
                 </div>
-                <div>
-                  <h3 className="text-base font-bold text-blue-900 mb-2">수량 변경 안내</h3>
-                  <p className="text-sm text-blue-800 leading-relaxed">
+                <div className="flex-1">
+                  <h3 className="text-sm sm:text-base font-bold text-blue-900 mb-2">수량 변경 안내</h3>
+                  <p className="text-xs sm:text-sm text-blue-800 leading-relaxed">
                     수량을 변경하면 <span className="font-semibold text-blue-900">실시간으로 고객에게 반영</span>됩니다. 
                     고객이 주문할 때마다 수량이 자동으로 차감되니 신중하게 설정해주세요.
                   </p>
@@ -616,229 +686,211 @@ export default function AdminDailyMenu() {
               </div>
             </div>
             
-            {/* 카테고리 필터 */}
-            <div className="mb-8">
-              <div className="mb-6">
-                <h3 className="text-lg font-bold text-gray-900">카테고리 필터</h3>
-              </div>
-              <div className="overflow-x-auto">
-                <div className="flex gap-3 pb-2 min-w-max">
-                  {categories.map((category) => (
-                    <button
-                      key={category}
-                      onClick={() => setSelectedCategory(category)}
-                      className={`px-4 sm:px-6 py-2 sm:py-3 rounded-full text-xs sm:text-sm font-semibold transition-all duration-300 transform hover:scale-105 whitespace-nowrap flex-shrink-0 ${
-                        selectedCategory === category
-                          ? 'bg-gray-800 text-white shadow-lg'
-                          : 'bg-white text-gray-800 hover:bg-gray-50 border border-gray-200 shadow-sm hover:shadow-md'
-                      }`}
-                    >
-                      {category}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 mb-6">
-              {filteredAvailableMenus.map((menu) => (
-                <div
-                  key={menu.id}
-                  className={`group relative bg-white rounded-2xl border transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${
-                    selectedMenus.has(menu.id)
-                      ? 'border-gray-300 shadow-xl ring-2 ring-gray-100'
-                      : 'border-gray-200 hover:border-gray-300 hover:shadow-lg'
-                  }`}
-                >
-                  {/* 선택 체크박스 */}
-                  <div className="absolute top-4 right-4 z-10">
+            {/* 아코디언 메뉴 선택 */}
+            <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
+              {Object.entries(menuByCategory).map(([category, menus]) => {
+                const isExpanded = expandedCategories.has(category);
+                const selectedCount = menus.filter(menu => selectedMenus.has(menu.id)).length;
+                      
+                      return (
+                  <div key={category} className="bg-white border border-gray-200 rounded-xl shadow-sm">
+                    {/* 카테고리 헤더 */}
                     <button
-                      onClick={() => handleMenuToggle(menu.id)}
-                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-                        selectedMenus.has(menu.id)
-                          ? 'border-gray-900 bg-gray-900 shadow-lg'
-                          : 'border-gray-300 bg-white group-hover:border-gray-400'
-                      }`}
+                      onClick={() => toggleCategory(category)}
+                      className="w-full flex items-center justify-between p-3 sm:p-4 text-left hover:bg-gray-50 transition-colors duration-200"
                     >
-                      {selectedMenus.has(menu.id) && (
-                        <i className="ri-check-line text-white text-sm"></i>
-                      )}
-                    </button>
-                  </div>
-
-                  {/* 메뉴 정보 */}
-                  <div className="p-4 sm:p-6 pb-4">
-                    <div className="mb-4">
-                      <h3 className="font-bold text-gray-900 text-base sm:text-lg mb-2 line-clamp-2">{menu.name}</h3>
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
-                          {menu.category}
-                        </span>
-                      </div>
-                      <p className="text-xl sm:text-2xl font-bold text-gray-900">
-                        {menu.price.toLocaleString()}원
-                      </p>
+                  <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gradient-to-br from-orange-100 to-orange-200 rounded-lg flex items-center justify-center">
+                          <i className="ri-restaurant-line text-orange-600 text-sm"></i>
                     </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{category}</h3>
+                          <p className="text-sm text-gray-500">
+                            {selectedCount > 0 ? `${selectedCount}개 선택됨` : `${menus.length}개 메뉴`}
+                          </p>
+                              </div>
                   </div>
-                  
-                  {selectedMenus.has(menu.id) && (
-                    <div className="px-4 sm:px-6 pb-4 sm:pb-6">
-                      <div className="space-y-4">
-                      {/* 초기 설정 시 수량 입력 */}
-                      {!dailyMenuItems.find(item => item.menu_id === menu.id) && (
-                        <div className="space-y-4">
-                          <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl p-4 border border-gray-200">
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                              <label className="text-sm font-semibold text-gray-700 sm:min-w-0">초기 수량 설정</label>
+                                  <div className="flex items-center gap-2">
+                        {selectedCount > 0 && (
+                          <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                            {selectedCount}
+                                </span>
+                        )}
+                        <i className={`ri-arrow-down-s-line text-gray-500 transition-transform duration-200 ${
+                          isExpanded ? 'rotate-180' : ''
+                        }`}></i>
+                        </div>
+                                </button>
+                    
+                    {/* 카테고리 내용 - 아코디언 */}
+                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                      isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
+                    }`}>
+                      <div className="border-t border-gray-100 p-3 sm:p-4 space-y-2 sm:space-y-3">
+                        {menus.map((menu) => {
+                const isSelected = selectedMenus.has(menu.id);
+                const existingItem = dailyMenuItems.find(item => item.menu_id === menu.id);
+                const currentQuantity = existingItem?.current_quantity || 0;
+                const soldQuantity = existingItem ? existingItem.initial_quantity - existingItem.current_quantity : 0;
+                const isAvailable = existingItem ? (itemAvailability[existingItem.id] !== undefined ? itemAvailability[existingItem.id] : existingItem.is_available) : true;
+                
+                return (
+                  <div
+                    key={menu.id}
+                              className={`rounded-lg border transition-all duration-200 ${
+                                isSelected ? 'border-blue-300 shadow-md ring-1 ring-blue-100 bg-white' : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
+                  >
+                              <div className="p-2 sm:p-4">
+                                {/* 메뉴 헤더 */}
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex-1 min-w-0">
+                                    <h4 className="font-bold text-gray-900 text-sm sm:text-base mb-1 truncate">{menu.name}</h4>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs text-gray-500">{menu.category}</span>
+                            <span className="text-xs sm:text-sm font-bold text-gray-900">
+                              {menu.price.toLocaleString()}원
+                            </span>
+                          </div>
+                        </div>
+                                <button
+                          onClick={() => handleMenuToggle(menu.id)}
+                          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+                            isSelected
+                              ? 'border-blue-500 bg-blue-500'
+                              : 'border-gray-300 bg-white hover:border-gray-400'
+                          }`}
+                        >
+                          {isSelected && (
+                            <i className="ri-check-line text-white text-sm"></i>
+                          )}
+                                </button>
+                      </div>
+
+                      {/* 선택된 경우 수량 설정 및 상태 */}
+                      {isSelected && (
+                        <div className="space-y-3 pt-3 border-t border-gray-100">
+                          {!existingItem ? (
+                            // 초기 설정
+                            <div className="space-y-2">
+                              <label className="text-xs sm:text-sm font-semibold text-gray-700">초기 수량 설정</label>
                               <div className="flex items-center gap-2">
-                            <input
-                              type="number"
-                              min="0"
-                              value={tempQuantities[menu.id] !== undefined ? tempQuantities[menu.id] : (quantities[menu.id] || 0)}
-                              onChange={(e) => {
-                                const value = e.target.value;
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={tempQuantities[menu.id] !== undefined ? tempQuantities[menu.id] : (quantities[menu.id] || 0)}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
                                     
-                                    // 빈 문자열이면 빈 상태로 유지
                                     if (value === '') {
                                       setTempQuantities(prev => ({ ...prev, [menu.id]: '' }));
                                       return;
                                     }
                                     
-                                    // 숫자만 파싱
                                     const newQuantity = parseInt(value);
                                     
                                     if (isNaN(newQuantity) || newQuantity < 0) {
-                                      return; // 잘못된 입력은 무시
+                                      return;
                                     }
                                     
-                                setTempQuantities(prev => ({ ...prev, [menu.id]: newQuantity }));
-                                
-                                // 수량에 따라 품절 상태 자동 업데이트
-                                  if (newQuantity === 0) {
-                                    setItemAvailability(prev => ({
-                                      ...prev,
-                                      [menu.id]: false
-                                    }));
-                                  } else {
-                                    setItemAvailability(prev => ({
-                                      ...prev,
-                                      [menu.id]: true
-                                    }));
-                                }
-                                
+                                    setTempQuantities(prev => ({ ...prev, [menu.id]: newQuantity }));
+                                    
+                                    if (newQuantity === 0) {
+                                      setItemAvailability(prev => ({
+                                        ...prev,
+                                        [menu.id]: false
+                                      }));
+                                    } else {
+                                      setItemAvailability(prev => ({
+                                        ...prev,
+                                        [menu.id]: true
+                                      }));
+                                    }
+                                    
                                     handleQuantityChange(menu.id, newQuantity);
-                              }}
-                                  className="w-20 px-3 py-2 border border-indigo-200 rounded-lg text-sm font-medium text-center focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white min-h-[44px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            />
-                                <span className="text-sm text-gray-600 font-medium">개</span>
+                                  }}
+                                  className="w-16 sm:w-20 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-center text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                                <span className="text-xs sm:text-sm text-gray-600">개</span>
                               </div>
-                          </div>
-                          
-                          {/* 초기 설정 시 품절 상태 표시 */}
-                          {(() => {
-                            const currentValue = tempQuantities[menu.id] !== undefined ? tempQuantities[menu.id] : (quantities[menu.id] || 0);
-                            const displayValue = currentValue === '' ? 0 : currentValue;
-                            return displayValue === 0 && (
-                                <div className="mt-3 text-center">
-                                  <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
-                                  <i className="ri-close-line mr-1"></i>
-                                  품절 (수량 0개)
-                                </span>
-                              </div>
-                            );
-                          })()}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* 설정 완료 후 새로운 수량 관리 시스템 */}
-                      {(() => {
-                        const dailyMenuItem = dailyMenuItems.find(item => item.menu_id === menu.id);
-                        if (dailyMenuItem) {
-                          const soldQuantity = dailyMenuItem.initial_quantity - dailyMenuItem.current_quantity;
-                          const currentQuantity = dailyMenuItem.current_quantity;
-                          const isAvailable = itemAvailability[dailyMenuItem.id] !== undefined ? itemAvailability[dailyMenuItem.id] : dailyMenuItem.is_available;
-                          const currentInitialQuantity = tempQuantities[dailyMenuItem.menu_id] !== undefined ? (tempQuantities[dailyMenuItem.menu_id] === '' ? dailyMenuItem.initial_quantity : tempQuantities[dailyMenuItem.menu_id]) : dailyMenuItem.initial_quantity;
-                          
-                          return (
-                            <div className="space-y-4">
-                              {/* 재고 현황 카드 */}
-                              <div className="bg-gradient-to-br from-slate-50 to-gray-50 rounded-xl p-4 border border-gray-100">
-                                <div className="flex items-center justify-between mb-3">
-                                  <h4 className="font-bold text-gray-800 text-sm">재고 현황</h4>
-                                  <div className={`px-2 py-1 rounded-full text-xs font-bold ${
-                                    isAvailable && currentQuantity > 0
-                                      ? 'bg-emerald-100 text-emerald-700'
-                                      : 'bg-red-100 text-red-700'
-                                  }`}>
-                                    {isAvailable && currentQuantity > 0 ? '판매중' : '품절'}
-                                  </div>
+                            </div>
+                          ) : (
+                            // 기존 메뉴 관리
+                            <div className="space-y-3">
+                              {/* 상태 표시 */}
+                              <div className="flex items-center justify-between">
+                                <div className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                  isAvailable && currentQuantity > 0
+                                    ? 'bg-emerald-100 text-emerald-700'
+                                    : 'bg-red-100 text-red-700'
+                                }`}>
+                                  {isAvailable && currentQuantity > 0 ? '판매중' : '품절'}
                                 </div>
-                                
-                                <div className="grid grid-cols-2 gap-3 text-center">
-                                  <div className="bg-white rounded-lg p-3 border border-gray-200">
-                                    <div className="text-lg font-bold text-gray-900">{currentQuantity}</div>
-                                    <div className="text-xs text-gray-500">현재 재고</div>
-                                  </div>
-                                  <div className="bg-white rounded-lg p-3 border border-gray-200">
-                                    <div className="text-lg font-bold text-emerald-600">{soldQuantity}</div>
-                                    <div className="text-xs text-gray-500">판매량</div>
-                                  </div>
+                                <div className="text-xs text-gray-500">
+                                  재고: {currentQuantity}개
+                                  {soldQuantity > 0 && ` | 판매: ${soldQuantity}개`}
                                 </div>
                               </div>
                               
-                              {/* 수량 조정 버튼들 */}
-                              <div className="grid grid-cols-2 gap-3">
-                                <button
-                                  onClick={() => openQuantityModal(menu.id, 'add', currentQuantity)}
-                                  className="group flex items-center justify-center gap-2 py-3 px-3 sm:px-4 bg-white border border-gray-200 hover:bg-gray-600 hover:border-gray-600 text-gray-700 hover:text-white rounded-xl font-semibold transition-all duration-200 shadow-sm hover:shadow-lg min-h-[48px]"
-                                >
-                                  <i className="ri-add-line text-base sm:text-lg group-hover:scale-110 transition-transform"></i>
-                                  <span className="text-xs sm:text-sm">추가</span>
-                                </button>
-                                
+                              {/* 수량 조정 버튼 */}
+                                        <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => openQuantityModal(menu.id, 'subtract', currentQuantity)}
-                                  className="group flex items-center justify-center gap-2 py-3 px-3 sm:px-4 bg-white border border-gray-200 hover:bg-gray-600 hover:border-gray-600 text-gray-700 hover:text-white rounded-xl font-semibold transition-all duration-200 shadow-sm hover:shadow-lg min-h-[48px]"
+                                            className="flex items-center justify-center gap-1 py-2 px-3 bg-white border border-gray-300 hover:bg-black hover:text-white text-black rounded-lg text-xs font-medium transition-all duration-200"
                                 >
-                                  <i className="ri-subtract-line text-base sm:text-lg group-hover:scale-110 transition-transform"></i>
-                                  <span className="text-xs sm:text-sm">줄이기</span>
+                                            <i className="ri-subtract-line text-xs"></i>
+                                            <span className="text-xs">줄이기</span>
+                                </button>
+                                          <div className="bg-gray-50 px-3 py-2 rounded-lg min-w-[2.5rem] text-center">
+                                            <span className="text-sm font-bold text-gray-900">
+                                    {currentQuantity}
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={() => openQuantityModal(menu.id, 'add', currentQuantity)}
+                                            className="flex items-center justify-center gap-1 py-2 px-3 bg-white border border-gray-300 hover:bg-black hover:text-white text-black rounded-lg text-xs font-medium transition-all duration-200"
+                                >
+                                            <i className="ri-add-line text-xs"></i>
+                                            <span className="text-xs">추가</span>
                                 </button>
                               </div>
                               
                               {/* 품절처리 버튼 */}
                               <button
-                                onClick={() => handleToggleItemAvailability(dailyMenuItem.id, isAvailable)}
-                                className={`w-full py-3 px-4 rounded-xl font-semibold transition-all duration-200 min-h-[48px] ${
+                                onClick={() => handleToggleItemAvailability(existingItem.id, isAvailable)}
+                                          className={`py-2 px-3 rounded-lg font-medium transition-all duration-200 text-xs border ${
                                   isAvailable
-                                    ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg hover:shadow-xl'
-                                    : 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg hover:shadow-xl'
+                                    ? 'bg-white border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400'
+                                    : 'bg-white border-green-300 text-green-600 hover:bg-green-50 hover:border-green-400'
                                 }`}
                               >
-                                <span className="text-sm sm:text-base">{isAvailable ? '품절처리' : '판매재개'}</span>
+                                {isAvailable ? '품절처리' : '판매재개'}
                               </button>
-                              
                             </div>
-                          );
-                        }
-                        return null;
-                      })()}
-                      </div>
+                          )}
                     </div>
                   )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                 </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
             
             {/* 선택된 메뉴 저장 버튼 */}
             {selectedMenus.size > 0 && (
-              <div className="mt-8 pt-6 border-t border-gray-200">
+              <div className="mt-4 sm:mt-8 pt-3 sm:pt-6 border-t border-gray-200">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                   <div className="text-center sm:text-left">
-                    <h3 className="text-lg font-bold text-gray-900 mb-1">
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-1">
                       선택된 메뉴 {selectedMenus.size}개
                     </h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-xs sm:text-sm text-gray-600">
                       {dailyMenuItems.length === 0 
                         ? '선택한 메뉴들을 일일 메뉴에 추가하시겠습니까?'
                         : '선택한 메뉴들을 일일 메뉴에 추가하시겠습니까?'
@@ -848,7 +900,7 @@ export default function AdminDailyMenu() {
                   <button
                     onClick={handleSaveItems}
                     disabled={saving}
-                    className="px-8 py-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px]"
+                    className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] sm:min-h-[48px]"
                   >
                     <i className="ri-save-line mr-2"></i>
                     {saving ? '저장 중...' : '선택한 메뉴 저장하기'}

@@ -20,7 +20,67 @@ BEGIN
 END;
 $$;
 
--- 2. 일일 메뉴 조회 및 자동 체크 함수
+-- 2. 일일 메뉴 생성 함수
+CREATE OR REPLACE FUNCTION create_daily_menu(
+  p_store_id UUID,
+  p_menu_date DATE,
+  p_title VARCHAR(255) DEFAULT '오늘의 반찬',
+  p_description TEXT DEFAULT NULL
+)
+RETURNS TABLE (
+  id UUID,
+  store_id UUID,
+  menu_date DATE,
+  title VARCHAR(255),
+  description TEXT,
+  is_active BOOLEAN,
+  cutoff_time TIME,
+  created_at TIMESTAMP WITH TIME ZONE,
+  updated_at TIMESTAMP WITH TIME ZONE
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  new_daily_menu_id UUID;
+BEGIN
+  -- 일일 메뉴 생성
+  INSERT INTO daily_menus (
+    store_id,
+    menu_date,
+    title,
+    description,
+    is_active
+  ) VALUES (
+    p_store_id,
+    p_menu_date,
+    p_title,
+    p_description,
+    true
+  ) RETURNING id INTO new_daily_menu_id;
+  
+  -- 생성된 일일 메뉴 반환
+  RETURN QUERY
+  SELECT 
+    dm.id,
+    dm.store_id,
+    dm.menu_date,
+    dm.title,
+    dm.description,
+    dm.is_active,
+    dm.cutoff_time,
+    dm.created_at,
+    dm.updated_at
+  FROM daily_menus dm
+  WHERE dm.id = new_daily_menu_id;
+END;
+$$;
+
+-- 3. 기존 함수 삭제 (충돌 방지)
+DROP FUNCTION IF EXISTS get_daily_menu_with_auto_check(UUID, DATE);
+DROP FUNCTION IF EXISTS get_daily_menu_with_auto_check(DATE, UUID);
+
+-- 4. 일일 메뉴 조회 및 자동 체크 함수
 CREATE OR REPLACE FUNCTION get_daily_menu_with_auto_check(
   p_menu_date DATE,
   p_store_id UUID
@@ -61,7 +121,7 @@ BEGIN
 END;
 $$;
 
--- 3. 일일 메뉴 아이템 수량 차감 함수
+-- 5. 일일 메뉴 아이템 수량 차감 함수
 CREATE OR REPLACE FUNCTION update_daily_menu_item_quantity(
   p_daily_menu_item_id UUID,
   p_quantity_change INTEGER
@@ -104,7 +164,7 @@ BEGIN
 END;
 $$;
 
--- 4. 일일 메뉴 주문 생성 함수
+-- 6. 일일 메뉴 주문 생성 함수
 CREATE OR REPLACE FUNCTION create_daily_menu_order(
   p_daily_menu_id UUID,
   p_order_id UUID,
@@ -152,8 +212,9 @@ BEGIN
 END;
 $$;
 
--- 5. 함수 권한 설정
+-- 7. 함수 권한 설정
 GRANT EXECUTE ON FUNCTION execute_daily_menu_auto_deactivation() TO authenticated;
+GRANT EXECUTE ON FUNCTION create_daily_menu(UUID, DATE, VARCHAR, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION get_daily_menu_with_auto_check(DATE, UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION update_daily_menu_item_quantity(UUID, INTEGER) TO authenticated;
 GRANT EXECUTE ON FUNCTION create_daily_menu_order(UUID, UUID, UUID, INTEGER) TO authenticated;

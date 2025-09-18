@@ -18,8 +18,29 @@
     <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.5.0/remixicon.min.css">
-    <script type="module" crossorigin src="/assets/index-B08vrrM1.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-bZvkJcPm.css">
+    
+    <!-- OneSignal SDK v16 -->
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+          appId: "53e91691-f5c2-408d-9228-f08d93bd0b35",
+          safari_web_id: "web.onesignal.auto.0b3c1e09-f01e-4f75-a6ff-3f857f927766",
+          notifyButton: {
+            enable: false,
+          },
+          allowLocalhostAsSecureOrigin: true,
+        });
+
+        // OneSignal 초기화 완료 확인
+        console.log('OneSignal v16 초기화 완료');
+        window.OneSignal = OneSignal;
+        window.OneSignalInitialized = true;
+      });
+    </script>
+    <script type="module" crossorigin src="/assets/index-2tT9DRtT.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-DDs7ZTFT.css">
   </head>
   <body>
     <div id="root"></div>
