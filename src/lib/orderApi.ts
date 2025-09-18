@@ -57,7 +57,8 @@ export const createOrder = async (orderData: {
 
   if (orderError) {
     console.error('주문 생성 오류:', orderError);
-    throw orderError;
+    console.error('주문 데이터:', orderData);
+    throw new Error(`주문 생성 실패: ${orderError.message} (코드: ${orderError.code})`);
   }
 
   // 주문 아이템들 생성
@@ -74,7 +75,8 @@ export const createOrder = async (orderData: {
 
   if (itemsError) {
     console.error('주문 아이템 생성 오류:', itemsError);
-    throw itemsError;
+    console.error('주문 아이템 데이터:', orderItems);
+    throw new Error(`주문 아이템 생성 실패: ${itemsError.message} (코드: ${itemsError.code})`);
   }
 
   // 일일 메뉴 주문 데이터 저장 및 수량 차감
@@ -197,7 +199,8 @@ export const createOrder = async (orderData: {
         
         console.log('=== 사장님 푸시 알림 발송 완료 ===');
       } else {
-        console.error('❌ 매장에 owner_id가 설정되지 않음:', storeData.data);
+        console.warn('⚠️ 매장에 owner_id가 설정되지 않음 - 푸시 알림을 발송할 수 없습니다:', storeData.data);
+        console.log('ℹ️ 주문은 정상적으로 생성되었습니다. 매장 관리자에게 연락하여 owner_id를 설정해주세요.');
       }
       // const ownerNotification = await sendNewOrderNotificationToOwner({
       //   ownerPhone: storeData.data.phone,

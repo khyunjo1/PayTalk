@@ -91,7 +91,23 @@ export default function PWAInstallButton({
   }
 
   if (!deferredPrompt) {
-    return null; // PWA 설치 불가능할 때는 아무것도 표시하지 않음
+    // PWA 설치 불가능할 때도 수동 설치 안내 표시
+    return (
+      <div className={`text-center ${className}`}>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center justify-center mb-2">
+            <i className="ri-smartphone-line text-blue-600 text-xl mr-2"></i>
+            <span className="text-blue-800 font-semibold">앱 설치 방법</span>
+          </div>
+          <p className="text-sm text-blue-700 mb-2">
+            갤럭시에서 푸시 알림을 받으려면 앱을 설치해주세요
+          </p>
+          <div className="text-xs text-blue-600">
+            브라우저 메뉴(⋮) → "홈 화면에 추가" → "추가"
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

@@ -70,7 +70,7 @@ export default function OwnerPushNotificationSettings() {
 
         // PWA 체크
         if (!isPWA()) {
-          setMessage('❌ PWA에서만 푸시 알림을 사용할 수 있습니다. 폰에서 홈화면에 추가 후 사용해주세요.');
+          setMessage('❌ PWA에서만 푸시 알림을 사용할 수 있습니다.\n\n📱 갤럭시에서 앱 설치 방법:\n1. 브라우저 메뉴(⋮) → "홈 화면에 추가" 클릭\n2. "추가" 버튼 클릭\n3. 홈 화면에서 앱 아이콘으로 접속\n\n설치 후 다시 시도해주세요!');
           setIsLoading(false);
           return;
         }
@@ -232,7 +232,7 @@ export default function OwnerPushNotificationSettings() {
       </button>
       
       {message && (
-        <div className={`mt-3 text-sm ${
+        <div className={`mt-3 text-sm whitespace-pre-line ${
           message.includes('✅') ? 'text-green-600' : 
           message.includes('❌') ? 'text-red-600' : 
           'text-blue-600'

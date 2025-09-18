@@ -3,12 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { createOrder } from '../../lib/orderApi';
 import { getDeliveryAreas, getDeliveryFeeByAreaId } from '../../lib/deliveryAreaApi';
 import { supabase } from '../../lib/supabase';
-import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 
 // Cart 페이지는 인증 없이 접근 가능하도록 별도 Header 사용
 const CartHeader = () => {
-  const navigate = useNavigate();
   
   return (
     <div className="bg-white">
@@ -39,6 +37,7 @@ interface StoreInfo {
   business_hours_start?: string;
   business_hours_end?: string;
   order_cutoff_time?: string;
+  minimum_order_amount?: number;
   pickup_time_slots?: string[];
   delivery_time_slots?: Array<{
     name: string;
@@ -48,28 +47,11 @@ interface StoreInfo {
   }>;
 }
 
-// 시간 형식을 읽기 쉽게 변환하는 함수
-const formatTime = (timeString: string): string => {
-  if (!timeString) return '오후 3시';
-  
-  const [hour, minute] = timeString.split(':').map(Number);
-  
-  if (hour === 0) {
-    return minute === 0 ? '자정' : `오전 12시 ${minute}분`;
-  } else if (hour < 12) {
-    return minute === 0 ? `오전 ${hour}시` : `오전 ${hour}시 ${minute}분`;
-  } else if (hour === 12) {
-    return minute === 0 ? '정오' : `오후 12시 ${minute}분`;
-  } else {
-    const pmHour = hour - 12;
-    return minute === 0 ? `오후 ${pmHour}시` : `오후 ${pmHour}시 ${minute}분`;
-  }
-};
 
 // 날짜를 월/일 형식으로 변환하는 함수 (한국 표준시간 기준)
 const formatDate = (dateString: string): string => {
   // YYYY-MM-DD 형식의 문자열을 직접 파싱 (시간대 무시)
-  const [year, month, day] = dateString.split('-').map(Number);
+  const [, month, day] = dateString.split('-').map(Number);
   return `${month}/${day}`;
 };
 
@@ -240,7 +222,7 @@ export default function Cart() {
         
         // 배달 가능 시간이 있으면 첫 번째 시간을 기본값으로 설정
         if (store.delivery_time_slots && store.delivery_time_slots.length > 0) {
-          const enabledSlots = store.delivery_time_slots.filter(slot => slot.enabled);
+          const enabledSlots = store.delivery_time_slots.filter((slot: { enabled: boolean }) => slot.enabled);
           if (enabledSlots.length > 0) {
             setDeliveryTime(`${enabledSlots[0].name} (${enabledSlots[0].start}-${enabledSlots[0].end})`);
           }
@@ -411,22 +393,26 @@ export default function Cart() {
         });
       };
       
+      // 배달/픽업 시간을 그대로 저장 (타임스탬프 변환 없이)
+      console.log('🔍 디버깅 - deliveryTime:', deliveryTime);
+      console.log('🔍 디버깅 - pickupTime:', pickupTime);
+
       const orderData = {
         user_id: generateUUID(),
         store_id: storeInfo.id,
         order_type: orderType,
-        delivery_address: orderType === 'delivery' ? deliveryAddress : null,
-        delivery_time: orderType === 'delivery' ? `${getDeliveryDate()} ${deliveryTime}` : null,
-        pickup_time: orderType === 'pickup' ? `${getDeliveryDate()} ${pickupTime}` : null,
-        special_requests: specialRequests || null,
+        delivery_address: orderType === 'delivery' ? deliveryAddress : undefined,
+        delivery_time: orderType === 'delivery' ? deliveryTime : undefined,
+        pickup_time: orderType === 'pickup' ? pickupTime : undefined,
+        special_requests: specialRequests || undefined,
         depositor_name: depositorName,
         customer_name: customerName,
         customer_phone: customerPhone,
-        customer_address: orderType === 'delivery' ? deliveryAddress : null,
+        customer_address: orderType === 'delivery' ? deliveryAddress : undefined,
         subtotal: subtotal,
         delivery_fee: orderType === 'delivery' ? deliveryFee : 0,
         total: total,
-        delivery_area_id: orderType === 'delivery' ? selectedDeliveryArea : null,
+        delivery_area_id: orderType === 'delivery' ? selectedDeliveryArea : undefined,
         items: cart.map(item => ({
           menu_id: (item as any).originalMenuId || item.id, // originalMenuId가 있으면 사용, 없으면 기존 id 사용
           quantity: item.quantity,
@@ -437,7 +423,7 @@ export default function Cart() {
           daily_menu_id: dailyMenuCartData.dailyMenuId,
           menu_date: dailyMenuCartData.menuDate,
           items: dailyMenuCartData.items
-        } : null
+        } : undefined
       };
 
       // 주문 생성
