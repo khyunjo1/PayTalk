@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   name TEXT NOT NULL,
   profile_image TEXT,
   phone TEXT UNIQUE,
+  password TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'customer' CHECK (role IN ('customer', 'admin', 'super_admin')),
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'suspended')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -43,6 +44,21 @@ CREATE POLICY "Super admins can update user status" ON public.users
       AND users.role = 'super_admin'
     )
   );
+
+-- 기존 테이블에 password 컬럼 추가 (이미 테이블이 있는 경우)
+DO $$ 
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users' AND table_schema = 'public') THEN
+        -- password 컬럼이 없으면 추가
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'password' AND table_schema = 'public') THEN
+            ALTER TABLE public.users ADD COLUMN password TEXT;
+            -- 기존 데이터가 있다면 기본값 설정
+            UPDATE public.users SET password = 'default_password' WHERE password IS NULL;
+            -- NOT NULL 제약조건 추가
+            ALTER TABLE public.users ALTER COLUMN password SET NOT NULL;
+        END IF;
+    END IF;
+END $$;
 
 -- updated_at 자동 업데이트 트리거
 CREATE OR REPLACE FUNCTION update_updated_at_column()
