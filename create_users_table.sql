@@ -20,29 +20,30 @@ CREATE INDEX IF NOT EXISTS idx_users_role ON public.users(role);
 -- RLS 활성화
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
--- RLS 정책 생성
+-- RLS 정책 생성 (기존 정책이 있으면 삭제 후 재생성)
+DROP POLICY IF EXISTS "Users can view their own profile" ON public.users;
 CREATE POLICY "Users can view their own profile" ON public.users
   FOR SELECT USING (auth.uid() = id);
 
+-- 사장님 회원가입을 위한 정책 (id를 명시적으로 생성하여 설정)
+DROP POLICY IF EXISTS "Allow owner registration" ON public.users;
+CREATE POLICY "Allow owner registration" ON public.users
+  FOR INSERT WITH CHECK (role = 'admin' AND status IN ('active', 'pending'));
+
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.users;
 CREATE POLICY "Users can update their own profile" ON public.users
   FOR UPDATE USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Super admins can view all users" ON public.users;
 CREATE POLICY "Super admins can view all users" ON public.users
   FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM public.users 
-      WHERE users.id = auth.uid() 
-      AND users.role = 'super_admin'
-    )
+    auth.jwt() ->> 'role' = 'super_admin'
   );
 
+DROP POLICY IF EXISTS "Super admins can update user status" ON public.users;
 CREATE POLICY "Super admins can update user status" ON public.users
   FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM public.users 
-      WHERE users.id = auth.uid() 
-      AND users.role = 'super_admin'
-    )
+    auth.jwt() ->> 'role' = 'super_admin'
   );
 
 -- 기존 테이블에 password 컬럼 추가 (이미 테이블이 있는 경우)
@@ -69,6 +70,8 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+-- 기존 트리거가 있으면 삭제 후 재생성
+DROP TRIGGER IF EXISTS update_users_updated_at ON public.users;
 CREATE TRIGGER update_users_updated_at 
   BEFORE UPDATE ON public.users 
   FOR EACH ROW 

@@ -38,10 +38,12 @@ export const registerOwner = async (userData: {
     // 4자리 숫자 비밀번호는 해시 없이 저장 (개발용)
     const password = userData.password;
 
-    // 사용자 생성
+    // 사용자 생성 (id를 명시적으로 생성)
+    const userId = crypto.randomUUID();
     const { data, error } = await supabase
       .from('users')
       .insert({
+        id: userId,
         name: userData.name,
         phone: userData.phone,
         password: password,
