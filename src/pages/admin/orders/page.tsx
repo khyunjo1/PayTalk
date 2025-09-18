@@ -637,9 +637,9 @@ export default function AdminOrders() {
       <div className="p-4 flex-1">
 
         {/* 통합 검색, 필터, 주문 현황 카드 */}
-        <div className="bg-white rounded-2xl border-2 border-gray-200 shadow-xl mb-8 overflow-hidden">
+        <div className="bg-white rounded-2xl border border-black shadow-xl mb-8 overflow-hidden">
           {/* 1. 상단 - 주문 현황 */}
-          <div className="p-4 sm:p-6 border-b-2 border-gray-200">
+          <div className="p-4 sm:p-6 border-b border-black">
             <div className="flex flex-col gap-4">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-100 rounded-xl flex items-center justify-center">
@@ -656,7 +656,7 @@ export default function AdminOrders() {
               </div>
               
               {/* 세로로 깔끔하게 배치된 통계 정보 */}
-              <div className="bg-gray-50 border-2 border-gray-300 rounded-xl p-4 space-y-3 shadow-md">
+              <div className="bg-gray-50 border border-black rounded-xl p-4 space-y-3 shadow-md">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-800 text-sm font-bold">주문 건수</span>
                   <span className="font-bold text-gray-900 text-xl">{finalFilteredOrders.length}건</span>
@@ -667,7 +667,7 @@ export default function AdminOrders() {
                     <span className="font-bold text-red-600 text-xl animate-pulse">{unreadOrdersCount}건</span>
                   </div>
                 )}
-                <div className="flex justify-between items-center pt-2 border-t-2 border-gray-300">
+                <div className="flex justify-between items-center pt-2 border-t-2 border-black">
                   <span className="text-gray-800 text-sm font-bold">총 결제금액</span>
                   <span className="font-bold text-orange-600 text-xl">
                     {formatKoreanCurrency(finalFilteredOrders.reduce((sum, order) => sum + (order.total || 0), 0))}
@@ -678,7 +678,7 @@ export default function AdminOrders() {
           </div>
 
           {/* 2. 중단 - 필터 영역 */}
-          <div className="p-4 sm:p-6 border-b-2 border-gray-200 bg-gray-50">
+          <div className="p-4 sm:p-6 border-b border-black bg-gray-50">
             <div className="space-y-4">
               {/* 기간 필터 - 모바일 최적화 */}
               <div className="space-y-2">
@@ -690,7 +690,7 @@ export default function AdminOrders() {
                 <div className="relative period-dropdown-container">
                   <button
                     onClick={() => setShowPeriodDropdown(!showPeriodDropdown)}
-                    className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 cursor-pointer transition-all duration-200 hover:border-orange-400 hover:shadow-lg flex items-center justify-between"
+                    className="w-full px-4 py-3 bg-white border border-black rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 cursor-pointer transition-all duration-200 hover:border-orange-400 hover:shadow-lg flex items-center justify-between"
                   >
                     <span>
                       {selectedPeriod === 'today' ? '오늘' :
@@ -702,7 +702,7 @@ export default function AdminOrders() {
                   </button>
                   
                   {showPeriodDropdown && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-gray-400 rounded-xl shadow-xl z-20 overflow-hidden">
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-black rounded-xl shadow-xl z-20 overflow-hidden">
                       <button
                         onClick={() => {
                           handlePeriodSelect('today');
@@ -764,7 +764,7 @@ export default function AdminOrders() {
                     type="date"
                     value={selectedDate || ''}
                     onChange={(e) => handleDateSelect(e.target.value)}
-                    className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 hover:border-gray-400"
+                    className="w-full px-4 py-3 bg-white border border-black rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 hover:border-gray-600"
                     placeholder="날짜를 선택하세요"
                   />
                 </div>
@@ -774,7 +774,7 @@ export default function AdminOrders() {
 
             {/* 선택된 필터 칩 요약 */}
             {selectedPeriod !== 'today' && (
-              <div className="pt-4 border-t-2 border-gray-300">
+              <div className="pt-4 border-t-2 border-black">
                 <div className="flex flex-wrap gap-2">
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">
                     <i className="ri-calendar-line text-xs"></i>
@@ -808,14 +808,14 @@ export default function AdminOrders() {
                   placeholder="입금자명, 배달주소, 고객명 등으로 검색"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 hover:border-gray-400 transition-colors shadow-sm"
+                  className="w-full px-4 py-3 border border-black rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 hover:border-gray-600 transition-colors shadow-sm"
                 />
               </div>
               
               <div className="flex justify-end">
                 <button
                   onClick={handlePrint}
-                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 shadow-md border-2 border-blue-600"
+                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 shadow-md border border-blue-600"
                 >
                   <i className="ri-printer-line text-sm"></i>
                   <span>인쇄</span>
@@ -829,14 +829,14 @@ export default function AdminOrders() {
         {/* 주문 상세 목록 */}
         <div className="space-y-6">
           {ordersLoading ? (
-            <div className="bg-white rounded-2xl p-12 shadow-xl border-2 border-gray-300">
+            <div className="bg-white rounded-2xl p-12 shadow-xl border border-black">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-orange-500 mx-auto mb-6"></div>
                 <p className="text-lg text-gray-600 font-medium">주문 데이터를 불러오는 중...</p>
               </div>
             </div>
           ) : finalFilteredOrders.length === 0 ? (
-            <div className="bg-white rounded-2xl p-12 shadow-xl border-2 border-gray-300">
+            <div className="bg-white rounded-2xl p-12 shadow-xl border border-black">
               <div className="text-center text-gray-500">
                 <i className="ri-shopping-cart-line text-6xl mb-6"></i>
                 <p className="text-xl font-medium">선택한 조건에 해당하는 주문이 없습니다.</p>
@@ -848,7 +848,7 @@ export default function AdminOrders() {
               return (
                 <div 
                   key={order.id} 
-                  className="bg-white rounded-2xl border-2 border-gray-300 shadow-lg hover:shadow-xl hover:border-orange-400 transition-all duration-300 cursor-pointer group mb-4"
+                  className="bg-white rounded-2xl border border-black shadow-lg hover:shadow-xl hover:border-orange-400 transition-all duration-300 cursor-pointer group mb-4"
                   onClick={() => navigate(`/admin/${storeId}/order-detail/${order.id}`)}
                 >
                   <div className="p-4">
@@ -892,7 +892,7 @@ export default function AdminOrders() {
                     </div>
 
                     {/* 2. 고객 정보 미리보기 - 모바일 최적화 */}
-                    <div className="mb-4 p-3 bg-gray-50 rounded-xl border-2 border-gray-200">
+                    <div className="mb-4 p-3 bg-gray-50 rounded-xl border border-black">
                       <div className="space-y-2 text-sm text-gray-700">
                         {/* 무통장입금일 때는 입금자명, 제로페이일 때는 고객명 표시 */}
                         {(order.payment_method === 'bank_transfer' ? order.depositor_name : order.customer_name) && (
@@ -927,7 +927,7 @@ export default function AdminOrders() {
                     </div>
 
                     {/* 3. 주문 상품과 결제 금액 - 모바일 최적화 */}
-                    <div className="bg-gray-50 rounded-xl p-3 mb-4 border-2 border-gray-200">
+                    <div className="bg-gray-50 rounded-xl p-3 mb-4 border border-black">
                       <div className="space-y-3">
                         {/* 상품 정보 - 모바일 최적화 */}
                         <div className="space-y-2">
@@ -964,7 +964,7 @@ export default function AdminOrders() {
                         </div>
                         
                         {/* 주문 요약 - 모바일 최적화 */}
-                        <div className="space-y-2 pt-2 border-t-2 border-gray-400">
+                        <div className="space-y-2 pt-2 border-t-2 border-black">
                           <div className="flex justify-between items-center">
                             <span className="text-gray-700 text-sm font-semibold">상품 금액</span>
                             <span className="text-gray-900 text-sm font-bold">{(order.subtotal || 0).toLocaleString()}원</span>
@@ -977,7 +977,7 @@ export default function AdminOrders() {
                               </span>
                             </div>
                           )}
-                          <div className="flex justify-between items-center pt-2 border-t-2 border-gray-400">
+                          <div className="flex justify-between items-center pt-2 border-t-2 border-black">
                             <span className="font-bold text-gray-900 text-base">총 결제금액</span>
                             <span className="text-lg font-bold text-orange-600">
                               {formatKoreanCurrency(order.total || 0)}
@@ -1002,7 +1002,7 @@ export default function AdminOrders() {
               {currentPage > 1 && (
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
-                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg text-xs sm:text-sm font-medium transition-colors bg-white text-gray-600 border-2 border-gray-400 hover:bg-gray-50 hover:border-gray-500 flex items-center justify-center shadow-sm"
+                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg text-xs sm:text-sm font-medium transition-colors bg-white text-gray-600 border border-black hover:bg-gray-50 hover:border-gray-600 flex items-center justify-center shadow-sm"
                 >
                   <i className="ri-arrow-left-s-line text-sm"></i>
                 </button>
@@ -1021,8 +1021,8 @@ export default function AdminOrders() {
                     onClick={() => handlePageChange(page)}
                     className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg text-xs sm:text-sm font-medium transition-colors shadow-sm ${
                       currentPage === page
-                        ? 'bg-orange-500 text-white border-2 border-orange-600'
-                        : 'bg-white text-gray-600 border-2 border-gray-400 hover:bg-gray-50 hover:border-gray-500'
+                        ? 'bg-orange-500 text-white border border-orange-600'
+                        : 'bg-white text-gray-600 border border-black hover:bg-gray-50 hover:border-gray-600'
                     }`}
                   >
                     {page}
@@ -1034,7 +1034,7 @@ export default function AdminOrders() {
               {currentPage < totalPages && (
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
-                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg text-xs sm:text-sm font-medium transition-colors bg-white text-gray-600 border-2 border-gray-400 hover:bg-gray-50 hover:border-gray-500 flex items-center justify-center shadow-sm"
+                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg text-xs sm:text-sm font-medium transition-colors bg-white text-gray-600 border border-black hover:bg-gray-50 hover:border-gray-600 flex items-center justify-center shadow-sm"
                 >
                   <i className="ri-arrow-right-s-line text-sm"></i>
                 </button>
