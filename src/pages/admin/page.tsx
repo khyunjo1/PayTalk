@@ -648,43 +648,6 @@ export default function Admin() {
       .slice(0, 4);
   };
 
-  // 픽업 시간대별 주문 분석 함수
-  const getPickupTimeAnalysis = (orders: Order[]) => {
-    const pickupOrders = orders.filter(order => order.order_type === 'pickup');
-    
-    // 픽업 시간대별로 그룹화
-    const timeSlots: { [key: string]: number } = {};
-    
-    pickupOrders.forEach(order => {
-      if (order.pickup_time) {
-        const timeSlot = order.pickup_time;
-        timeSlots[timeSlot] = (timeSlots[timeSlot] || 0) + 1;
-      }
-    });
-    
-    return Object.entries(timeSlots)
-      .map(([time, orders]) => ({ time, orders }))
-      .sort((a, b) => b.orders - a.orders);
-  };
-
-  // 배달 시간대별 주문 분석 함수
-  const getDeliveryTimeAnalysis = (orders: Order[]) => {
-    const deliveryOrders = orders.filter(order => order.order_type === 'delivery');
-    
-    // 배달 시간대별로 그룹화
-    const timeSlots: { [key: string]: number } = {};
-    
-    deliveryOrders.forEach(order => {
-      if (order.delivery_time) {
-        const timeSlot = order.delivery_time;
-        timeSlots[timeSlot] = (timeSlots[timeSlot] || 0) + 1;
-      }
-    });
-    
-    return Object.entries(timeSlots)
-      .map(([time, orders]) => ({ time, orders }))
-      .sort((a, b) => b.orders - a.orders);
-  };
 
 
   // 요일별 성과 분석 함수
@@ -1978,68 +1941,6 @@ export default function Admin() {
               </div>
             </div>
 
-            {/* 추가 통계 섹션 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              {/* 픽업 시간대별 주문 분석 */}
-              <div className="bg-white rounded-lg p-6 shadow-md border-2 border-gray-300">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <i className="ri-store-line text-orange-500"></i>
-                  {getPeriodTitle('픽업 시간대별 주문')}
-                </h3>
-                <div className="space-y-3">
-                  {getPickupTimeAnalysis(filteredOrdersByPeriod).map((slot, index) => (
-                    <div key={index} className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">{slot.time}</span>
-                      <div className="flex items-center gap-3">
-                        <div className="w-24 h-2 bg-gray-200 rounded-full">
-                          <div 
-                            className="h-2 bg-orange-500 rounded-full transition-all duration-300"
-                            style={{ width: `${getPickupTimeAnalysis(filteredOrdersByPeriod).length > 0 ? (slot.orders / Math.max(...getPickupTimeAnalysis(filteredOrdersByPeriod).map(s => s.orders))) * 100 : 0}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-sm font-medium text-gray-800 w-8 text-right">{slot.orders}건</span>
-                      </div>
-                    </div>
-                  ))}
-                  {getPickupTimeAnalysis(filteredOrdersByPeriod).length === 0 && (
-                    <div className="text-center text-gray-500 py-4">
-                      <i className="ri-store-line text-2xl mb-2"></i>
-                      <p className="text-sm">픽업 주문이 없습니다</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* 배달 시간대별 주문 분석 */}
-              <div className="bg-white rounded-lg p-6 shadow-md border-2 border-gray-300">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <i className="ri-truck-line text-orange-500"></i>
-                  {getPeriodTitle('배달 시간대별 주문')}
-                </h3>
-                <div className="space-y-3">
-                  {getDeliveryTimeAnalysis(filteredOrdersByPeriod).map((slot, index) => (
-                    <div key={index} className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">{slot.time}</span>
-                      <div className="flex items-center gap-3">
-                        <div className="w-24 h-2 bg-gray-200 rounded-full">
-                          <div 
-                            className="h-2 bg-orange-500 rounded-full transition-all duration-300"
-                            style={{ width: `${getDeliveryTimeAnalysis(filteredOrdersByPeriod).length > 0 ? (slot.orders / Math.max(...getDeliveryTimeAnalysis(filteredOrdersByPeriod).map(s => s.orders))) * 100 : 0}%` }}
-                          ></div>
-                    </div>
-                        <span className="text-sm font-medium text-gray-800 w-8 text-right">{slot.orders}건</span>
-                      </div>
-                    </div>
-                  ))}
-                  {getDeliveryTimeAnalysis(filteredOrdersByPeriod).length === 0 && (
-                    <div className="text-center text-gray-500 py-4">
-                      <i className="ri-truck-line text-2xl mb-2"></i>
-                      <p className="text-sm">배달 주문이 없습니다</p>
-                  </div>
-                )}
-                </div>
-              </div>
-            </div>
 
             {/* 요일별 성과 */}
             <div className="bg-white rounded-lg p-6 shadow-md border-2 border-gray-300 mb-6">

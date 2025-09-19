@@ -268,62 +268,6 @@ export default function AdminAnalytics() {
     };
   };
 
-  const getPickupTimeAnalysis = (orders: Order[]) => {
-    const pickupOrders = orders.filter(order => order.order_type === 'pickup');
-    const timeSlots: { [key: string]: number } = {};
-    
-    pickupOrders.forEach(order => {
-      if (order.pickup_time) {
-        // 픽업 시간은 "14:30" 형식이므로 시간만 추출 (분은 무시)
-        const hour = parseInt(order.pickup_time.split(':')[0]);
-        const timeSlot = hour < 12 ? `오전 ${hour}시` : `오후 ${hour - 12}시`;
-        timeSlots[timeSlot] = (timeSlots[timeSlot] || 0) + 1;
-      }
-    });
-    
-    return Object.entries(timeSlots)
-      .map(([time, orders]) => ({ time, orders }))
-      .sort((a, b) => {
-        // 오전/오후 순서로 정렬
-        const aIsAM = a.time.includes('오전');
-        const bIsAM = b.time.includes('오전');
-        
-        if (aIsAM && !bIsAM) return -1;
-        if (!aIsAM && bIsAM) return 1;
-        
-        // 같은 오전/오후 내에서는 시간 순서로 정렬
-        const aHour = parseInt(a.time.match(/\d+/)?.[0] || '0');
-        const bHour = parseInt(b.time.match(/\d+/)?.[0] || '0');
-        
-        return aHour - bHour;
-      });
-  };
-
-  const getDeliveryTimeAnalysis = (orders: Order[]) => {
-    const deliveryOrders = orders.filter(order => order.order_type === 'delivery');
-    const timeSlots: { [key: string]: number } = {};
-    
-    deliveryOrders.forEach(order => {
-      if (order.delivery_time) {
-        // 배달 시간은 "2025-09-17 점심배송 (11:00-13:00)" 형식이므로 날짜 부분을 제거하고 이름만 추출
-        const parts = order.delivery_time.split(' ');
-        if (parts.length >= 2) {
-          // 날짜 부분을 제거하고 "점심배송 (11:00-13:00)" 부분에서 이름만 추출
-          const timeSlotWithTime = parts.slice(1).join(' '); // "점심배송 (11:00-13:00)"
-          const timeSlot = timeSlotWithTime.split(' (')[0]; // "점심배송" 부분만 추출
-          timeSlots[timeSlot] = (timeSlots[timeSlot] || 0) + 1;
-        } else {
-          // 날짜가 없는 경우 그대로 사용
-          const timeSlot = order.delivery_time.split(' (')[0];
-          timeSlots[timeSlot] = (timeSlots[timeSlot] || 0) + 1;
-        }
-      }
-    });
-    
-    return Object.entries(timeSlots)
-      .map(([time, orders]) => ({ time, orders }))
-      .sort((a, b) => a.time.localeCompare(b.time));
-  };
 
 
 
@@ -630,76 +574,6 @@ export default function AdminAnalytics() {
           </div>
         </div>
 
-        {/* 시간대별 주문 분석 */}
-        <div className="mb-6 sm:mb-8">
-          <h4 className="text-base sm:text-lg font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-2">
-            <i className="ri-time-line text-orange-500 text-base sm:text-lg"></i>
-            시간대별 주문 분석
-          </h4>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
-            <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 shadow-sm">
-              <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                  <i className="ri-store-line text-orange-600 text-base sm:text-lg"></i>
-                </div>
-                <span className="break-words">{getPeriodTitle('픽업 시간대별 주문')}</span>
-              </h3>
-              <div className="space-y-3 sm:space-y-4">
-                {getPickupTimeAnalysis(filteredOrdersByPeriod).map((slot, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <span className="text-sm sm:text-base font-semibold text-gray-800 break-words flex-1 mr-2">{slot.time}</span>
-                    <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-                      <div className="w-20 sm:w-32 h-3 bg-gray-200 rounded-full">
-                        <div 
-                          className="h-3 bg-orange-500 rounded-full transition-all duration-300"
-                          style={{ width: `${getPickupTimeAnalysis(filteredOrdersByPeriod).length > 0 ? (slot.orders / Math.max(...getPickupTimeAnalysis(filteredOrdersByPeriod).map(s => s.orders))) * 100 : 0}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-sm sm:text-base font-bold text-gray-900 w-8 sm:w-12 text-right">{slot.orders}건</span>
-                    </div>
-                  </div>
-                ))}
-                {getPickupTimeAnalysis(filteredOrdersByPeriod).length === 0 && (
-                  <div className="text-center text-gray-500 py-6 sm:py-8">
-                    <i className="ri-store-line text-2xl sm:text-3xl mb-3"></i>
-                    <p className="text-sm sm:text-base font-medium">픽업 주문이 없습니다</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 shadow-sm">
-              <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <i className="ri-truck-line text-blue-600 text-base sm:text-lg"></i>
-                </div>
-                <span className="break-words">{getPeriodTitle('배달 시간대별 주문')}</span>
-              </h3>
-              <div className="space-y-3 sm:space-y-4">
-                {getDeliveryTimeAnalysis(filteredOrdersByPeriod).map((slot, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <span className="text-sm sm:text-base font-semibold text-gray-800 break-words flex-1 mr-2">{slot.time}</span>
-                    <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-                      <div className="w-20 sm:w-32 h-3 bg-gray-200 rounded-full">
-                        <div 
-                          className="h-3 bg-blue-500 rounded-full transition-all duration-300"
-                          style={{ width: `${getDeliveryTimeAnalysis(filteredOrdersByPeriod).length > 0 ? (slot.orders / Math.max(...getDeliveryTimeAnalysis(filteredOrdersByPeriod).map(s => s.orders))) * 100 : 0}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-sm sm:text-base font-bold text-gray-900 w-8 sm:w-12 text-right">{slot.orders}건</span>
-                    </div>
-                  </div>
-                ))}
-                {getDeliveryTimeAnalysis(filteredOrdersByPeriod).length === 0 && (
-                  <div className="text-center text-gray-500 py-6 sm:py-8">
-                    <i className="ri-truck-line text-2xl sm:text-3xl mb-3"></i>
-                    <p className="text-sm sm:text-base font-medium">배달 주문이 없습니다</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
 
 
 
