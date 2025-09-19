@@ -496,7 +496,7 @@ export default function DailyMenuPage() {
       </div>
 
       {/* 매장 정보 헤더 */}
-      <div className="bg-white border-b border-gray-200 shadow-sm sticky top-[76px] z-40">
+      <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="px-5 py-3">
           <div className="flex items-center justify-between">
             {/* 왼쪽: 상호명 + 주문일시 + 최소주문 */}

@@ -17,19 +17,8 @@ export default function AdminStore() {
     category: '',
     delivery_area: '',
     phone: '',
-    business_hours_start: '',
-    business_hours_end: '',
-    order_cutoff_time: '',
-    minimum_order_amount: '',
     bank_account: '',
-    account_holder: '',
-    pickup_time_slots: ['09:00', '20:00'] as string[],
-    delivery_time_slots: [] as Array<{
-      name: string;
-      start: string;
-      end: string;
-      enabled: boolean;
-    }>
+    account_holder: ''
   });
 
   useEffect(() => {
@@ -63,14 +52,8 @@ export default function AdminStore() {
         category: currentStore.category || '',
         delivery_area: currentStore.delivery_area || '',
         phone: currentStore.phone || '',
-        business_hours_start: currentStore.business_hours_start || '',
-        business_hours_end: currentStore.business_hours_end || '',
-        order_cutoff_time: currentStore.order_cutoff_time || '',
-        minimum_order_amount: currentStore.minimum_order_amount?.toString() || '',
         bank_account: currentStore.bank_account || '',
-        account_holder: currentStore.account_holder || '',
-        pickup_time_slots: currentStore.pickup_time_slots || ['09:00', '20:00'],
-        delivery_time_slots: currentStore.delivery_time_slots || []
+        account_holder: currentStore.account_holder || ''
       });
     } catch (error) {
       console.error('❌ 매장 로드 실패:', error);
@@ -79,35 +62,6 @@ export default function AdminStore() {
     }
   };
 
-  // 픽업시간 설정 함수들
-  const updatePickupTimeSlot = (index: number, value: string) => {
-    const updatedSlots = [...formData.pickup_time_slots];
-    updatedSlots[index] = value;
-    setFormData({ ...formData, pickup_time_slots: updatedSlots });
-  };
-
-  // 배달시간 설정 함수들
-  const addDeliveryTimeSlot = () => {
-    setFormData({
-      ...formData,
-      delivery_time_slots: [
-        ...formData.delivery_time_slots,
-        { name: '', start: '', end: '', enabled: true }
-      ]
-    });
-  };
-
-  const updateDeliveryTimeSlot = (index: number, field: string, value: string | boolean) => {
-    const updatedSlots = formData.delivery_time_slots.map((slot, i) =>
-      i === index ? { ...slot, [field]: value } : slot
-    );
-    setFormData({ ...formData, delivery_time_slots: updatedSlots });
-  };
-
-  const removeDeliveryTimeSlot = (index: number) => {
-    const updatedSlots = formData.delivery_time_slots.filter((_, i) => i !== index);
-    setFormData({ ...formData, delivery_time_slots: updatedSlots });
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,14 +73,8 @@ export default function AdminStore() {
         category: formData.category,
         delivery_area: formData.delivery_area,
         phone: formData.phone,
-        business_hours_start: formData.business_hours_start,
-        business_hours_end: formData.business_hours_end,
-        order_cutoff_time: formData.order_cutoff_time,
-        minimum_order_amount: formData.minimum_order_amount ? parseInt(formData.minimum_order_amount) : 0,
         bank_account: formData.bank_account,
-        account_holder: formData.account_holder,
-        pickup_time_slots: formData.pickup_time_slots,
-        delivery_time_slots: formData.delivery_time_slots
+        account_holder: formData.account_holder
       };
 
       const updatedStore = await updateStore(storeId, updateData);
@@ -193,7 +141,7 @@ export default function AdminStore() {
               >
                 <i className="ri-arrow-left-line text-xl text-gray-600"></i>
               </button>
-              <h1 className="text-xl font-bold text-gray-800">매장관리</h1>
+              <h1 className="text-xl font-bold text-gray-800">매장정보</h1>
             </div>
             <button
               onClick={() => setShowForm(true)}
@@ -229,32 +177,12 @@ export default function AdminStore() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">배달지역</label>
                 <p className="text-gray-800">{store.delivery_area || '배달지역이 없습니다.'}</p>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">전화번호</label>
-                <p className="text-gray-800">{store.phone || '전화번호가 없습니다.'}</p>
-              </div>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">운영시간</label>
-                <p className="text-gray-800">
-                  {store.business_hours_start && store.business_hours_end 
-                    ? `${store.business_hours_start} - ${store.business_hours_end}`
-                    : '운영시간이 설정되지 않았습니다.'
-                  }
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">주문마감시간</label>
-                <p className="text-gray-800">{store.order_cutoff_time || '주문마감시간이 설정되지 않았습니다.'}</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">최소 주문금액</label>
-                <p className="text-gray-800">₩{store.minimum_order_amount?.toLocaleString() || '0'}</p>
+                <label className="block text-sm font-medium text-gray-700 mb-1">전화번호</label>
+                <p className="text-gray-800">{store.phone || '전화번호가 없습니다.'}</p>
               </div>
 
               <div>
@@ -266,7 +194,6 @@ export default function AdminStore() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">예금주명</label>
                 <p className="text-gray-800">{store.account_holder || '예금주명이 없습니다.'}</p>
               </div>
-
             </div>
           </div>
         </div>
@@ -345,58 +272,6 @@ export default function AdminStore() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    운영시간 시작
-                  </label>
-                  <input
-                    type="time"
-                    value={formData.business_hours_start}
-                    onChange={(e) => setFormData({ ...formData, business_hours_start: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    운영시간 종료
-                  </label>
-                  <input
-                    type="time"
-                    value={formData.business_hours_end}
-                    onChange={(e) => setFormData({ ...formData, business_hours_end: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  주문마감시간
-                </label>
-                <input
-                  type="time"
-                  value={formData.order_cutoff_time}
-                  onChange={(e) => setFormData({ ...formData, order_cutoff_time: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  최소 주문금액
-                </label>
-                <input
-                  type="number"
-                  value={formData.minimum_order_amount}
-                  onChange={(e) => setFormData({ ...formData, minimum_order_amount: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  min="0"
-                  placeholder="예: 10000"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     계좌번호
                   </label>
                   <input
@@ -422,123 +297,6 @@ export default function AdminStore() {
                 </div>
               </div>
 
-              {/* 픽업시간 설정 */}
-              <div>
-                <h4 className="text-md font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">픽업시간 설정</h4>
-                <div className="p-2 bg-blue-100 mb-2 rounded">
-                  <p className="text-xs text-blue-800">
-                    🚚 디버깅: pickup_time_slots = {JSON.stringify(formData.pickup_time_slots)}
-                  </p>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-4">
-                    <label className="text-sm font-medium text-gray-700">시작 시간:</label>
-                    <select
-                      value={formData.pickup_time_slots[0] || '09:00'}
-                      onChange={(e) => updatePickupTimeSlot(0, e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    >
-                      {['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'].map(time => (
-                        <option key={time} value={time}>{time}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div className="flex items-center space-x-4">
-                    <label className="text-sm font-medium text-gray-700">종료 시간:</label>
-                    <select
-                      value={formData.pickup_time_slots[1] || '20:00'}
-                      onChange={(e) => updatePickupTimeSlot(1, e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    >
-                      {['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'].map(time => (
-                        <option key={time} value={time}>{time}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div className="text-sm text-gray-500">
-                    픽업 가능 시간: {formData.pickup_time_slots[0] || '09:00'} ~ {formData.pickup_time_slots[1] || '20:00'}
-                  </div>
-                </div>
-              </div>
-
-              {/* 배달시간 설정 */}
-              <div>
-                <h4 className="text-md font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">배달시간 설정</h4>
-                <div className="p-2 bg-green-100 mb-2 rounded">
-                  <p className="text-xs text-green-800">
-                    🚚 디버깅: delivery_time_slots 개수 = {formData.delivery_time_slots.length}, 데이터 = {JSON.stringify(formData.delivery_time_slots)}
-                  </p>
-                </div>
-                <div className="space-y-3">
-                  {formData.delivery_time_slots.map((slot, index) => (
-                    <div key={index} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg">
-                      <input
-                        type="checkbox"
-                        checked={slot.enabled}
-                        onChange={(e) => {
-                          const updatedSlots = [...formData.delivery_time_slots];
-                          updatedSlots[index].enabled = e.target.checked;
-                          setFormData({...formData, delivery_time_slots: updatedSlots});
-                        }}
-                        className="mr-2"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="text"
-                            value={slot.name}
-                            onChange={(e) => {
-                              const updatedSlots = [...formData.delivery_time_slots];
-                              updatedSlots[index].name = e.target.value;
-                              setFormData({...formData, delivery_time_slots: updatedSlots});
-                            }}
-                            className="px-2 py-1 border border-gray-300 rounded text-sm w-20"
-                            placeholder="시간대명"
-                          />
-                          <input
-                            type="time"
-                            value={slot.start}
-                            onChange={(e) => {
-                              const updatedSlots = [...formData.delivery_time_slots];
-                              updatedSlots[index].start = e.target.value;
-                              setFormData({...formData, delivery_time_slots: updatedSlots});
-                            }}
-                            className="px-2 py-1 border border-gray-300 rounded text-sm"
-                          />
-                          <span className="text-gray-500">~</span>
-                          <input
-                            type="time"
-                            value={slot.end}
-                            onChange={(e) => {
-                              const updatedSlots = [...formData.delivery_time_slots];
-                              updatedSlots[index].end = e.target.value;
-                              setFormData({...formData, delivery_time_slots: updatedSlots});
-                            }}
-                            className="px-2 py-1 border border-gray-300 rounded text-sm"
-                          />
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeDeliveryTimeSlot(index)}
-                        className="px-2 py-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
-                      >
-                        <i className="ri-delete-bin-line"></i>
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={addDeliveryTimeSlot}
-                    className="w-full py-2 px-4 border-2 border-dashed border-gray-300 text-gray-600 rounded-lg hover:border-orange-500 hover:text-orange-600 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <i className="ri-add-line"></i>
-                    배달 시간대 추가
-                  </button>
-                </div>
-              </div>
 
               <div className="flex gap-3 pt-4">
                 <button

@@ -313,7 +313,7 @@ export default function AdminAnalytics() {
     
     return Object.values(menuData)
       .sort((a, b) => b.profitability - a.profitability)
-      .slice(0, 10); // 상위 10개 메뉴만
+      .slice(0, 5); // 상위 5개 메뉴만
   };
 
   const filteredOrdersByPeriod = filterOrdersByPeriod(orders);
@@ -384,7 +384,7 @@ export default function AdminAnalytics() {
                 >
                   <i className="ri-arrow-left-line text-xl text-gray-600"></i>
                 </button>
-                <h1 className="text-lg font-semibold text-gray-800">성과분석</h1>
+                <h1 className="text-lg font-semibold text-gray-800">가게매출</h1>
               </div>
               <div className="flex items-center gap-3">
                 <button
