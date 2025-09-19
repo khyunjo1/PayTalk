@@ -113,8 +113,8 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
       showToast('메뉴명은 2글자 이상 입력해주세요');
       return;
     }
-    if (newMenu.price <= 0) {
-      showToast('가격을 입력해주세요');
+    if (newMenu.price < 0) {
+      showToast('가격은 0원 이상이어야 합니다');
       return;
     }
     if (newMenu.price > 100000) {
@@ -184,8 +184,8 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
       showToast('메뉴명은 2글자 이상 입력해주세요');
       return;
     }
-    if (editingMenu.price <= 0) {
-      showToast('가격을 입력해주세요');
+    if (editingMenu.price < 0) {
+      showToast('가격은 0원 이상이어야 합니다');
       return;
     }
     if (editingMenu.price > 100000) {

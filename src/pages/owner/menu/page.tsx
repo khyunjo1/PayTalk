@@ -108,8 +108,8 @@ export default function OwnerMenu() {
   }, [selectedStoreId]);
 
   const handleAddMenu = async () => {
-    if (!selectedStoreId || !menuForm.name || menuForm.price <= 0) {
-      alert('메뉴명과 가격을 입력해주세요.');
+    if (!selectedStoreId || !menuForm.name || menuForm.price < 0) {
+      alert('메뉴명을 입력하고 가격은 0원 이상이어야 합니다.');
       return;
     }
 
@@ -135,8 +135,8 @@ export default function OwnerMenu() {
   };
 
   const handleUpdateMenu = async () => {
-    if (!editingMenu || !menuForm.name || menuForm.price <= 0) {
-      alert('메뉴명과 가격을 입력해주세요.');
+    if (!editingMenu || !menuForm.name || menuForm.price < 0) {
+      alert('메뉴명을 입력하고 가격은 0원 이상이어야 합니다.');
       return;
     }
 
