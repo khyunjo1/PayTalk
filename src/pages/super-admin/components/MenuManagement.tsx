@@ -410,6 +410,8 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
                   <option value="월식메뉴">월식메뉴</option>
                   <option value="3000원 반찬">3000원 반찬</option>
                   <option value="오늘의 특가">오늘의 특가</option>
+                  <option value="오늘의 메인반찬">오늘의 메인반찬</option>
+                  <option value="서비스반찬">서비스반찬</option>
                   <option value="기타">기타</option>
                 </select>
               </div>
@@ -501,6 +503,8 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
                   <option value="월식메뉴">월식메뉴</option>
                   <option value="3000원 반찬">3000원 반찬</option>
                   <option value="오늘의 특가">오늘의 특가</option>
+                  <option value="오늘의 메인반찬">오늘의 메인반찬</option>
+                  <option value="서비스반찬">서비스반찬</option>
                   <option value="기타">기타</option>
                 </select>
               </div>
