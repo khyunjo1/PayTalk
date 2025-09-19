@@ -185,54 +185,77 @@ export default function Cart() {
             // 일일 메뉴 날짜로 배달 날짜 설정
             console.log('일일 메뉴 날짜 설정:', dailyMenuData.menuDate);
             
-            // 일일 메뉴 아이템들의 실제 메뉴 정보를 가져와서 변환
+            // 일일 메뉴 아이템들을 장바구니에 추가 (메뉴 정보가 이미 포함되어 있음)
             try {
-              const menuIds = dailyMenuData.items.map((item: any) => item.menuId);
-              console.log('🔍 메뉴 ID 목록:', menuIds);
               console.log('🔍 일일 메뉴 데이터:', dailyMenuData);
               
-              // menuIds가 비어있거나 잘못된 경우 처리
-              if (!menuIds || menuIds.length === 0) {
-                console.warn('⚠️ 메뉴 ID가 없습니다. 빈 장바구니로 설정합니다.');
-                setCart([]);
-                return;
-              }
+              // 일일 메뉴 데이터에 메뉴 정보가 포함되어 있는지 확인
+              const hasMenuInfo = dailyMenuData.items.some((item: any) => item.menuInfo);
               
-              // 유효한 메뉴 ID만 필터링
-              const validMenuIds = menuIds.filter((id: any) => id && typeof id === 'string');
-              if (validMenuIds.length === 0) {
-                console.warn('⚠️ 유효한 메뉴 ID가 없습니다. 빈 장바구니로 설정합니다.');
-                setCart([]);
-                return;
-              }
-              
-              console.log('🔍 유효한 메뉴 ID:', validMenuIds);
-              
-              const { data: menuData, error } = await supabase
-                .from('menus')
-                .select('id, name, price, available')
-                .in('id', validMenuIds);
-                
-              if (error) {
-                console.error('❌ 메뉴 데이터 조회 오류:', error);
-                throw error;
-              }
-
-              if (menuData) {
+              if (hasMenuInfo) {
+                // 메뉴 정보가 포함된 경우 직접 사용
                 const dailyMenuItems = dailyMenuData.items.map((item: any, index: number) => {
-                  const menu = menuData.find(m => m.id === item.menuId);
-                  const quantity = item.quantity || 1; // 수량 정보 사용
+                  const quantity = item.quantity || 1;
+                  const menuInfo = item.menuInfo;
+                  
                   return {
                     id: `daily-${index}-${Date.now()}-${item.menuId}`,
                     originalMenuId: item.menuId,
-                    name: menu?.name || `메뉴-${item.menuId}`,
-                    price: (menu?.price || 0) * quantity, // 수량을 곱한 가격으로 설정
-                    quantity: quantity, // 수량 정보 추가
-                    available: menu?.available !== false
+                    name: menuInfo?.name || `메뉴-${item.menuId}`,
+                    price: (menuInfo?.price || 0) * quantity,
+                    quantity: quantity,
+                    available: menuInfo?.available !== false
                   };
                 });
-
+                
+                console.log('✅ 메뉴 정보 포함 아이템들:', dailyMenuItems);
                 setCart(dailyMenuItems);
+              } else {
+                // 메뉴 정보가 없는 경우 API 호출로 가져오기 (기존 방식)
+                const menuIds = dailyMenuData.items.map((item: any) => item.menuId);
+                console.log('🔍 메뉴 ID 목록:', menuIds);
+                
+                if (!menuIds || menuIds.length === 0) {
+                  console.warn('⚠️ 메뉴 ID가 없습니다. 빈 장바구니로 설정합니다.');
+                  setCart([]);
+                  return;
+                }
+                
+                const validMenuIds = menuIds.filter((id: any) => id && typeof id === 'string');
+                if (validMenuIds.length === 0) {
+                  console.warn('⚠️ 유효한 메뉴 ID가 없습니다. 빈 장바구니로 설정합니다.');
+                  setCart([]);
+                  return;
+                }
+                
+                console.log('🔍 유효한 메뉴 ID:', validMenuIds);
+                
+                const { data: menuData, error } = await supabase
+                  .from('menus')
+                  .select('id, name, price, available')
+                  .in('id', validMenuIds);
+                  
+                if (error) {
+                  console.error('❌ 메뉴 데이터 조회 오류:', error);
+                  throw error;
+                }
+
+                if (menuData) {
+                  const dailyMenuItems = dailyMenuData.items.map((item: any, index: number) => {
+                    const menu = menuData.find(m => m.id === item.menuId);
+                    const quantity = item.quantity || 1;
+                    return {
+                      id: `daily-${index}-${Date.now()}-${item.menuId}`,
+                      originalMenuId: item.menuId,
+                      name: menu?.name || `메뉴-${item.menuId}`,
+                      price: (menu?.price || 0) * quantity,
+                      quantity: quantity,
+                      available: menu?.available !== false
+                    };
+                  });
+
+                  setCart(dailyMenuItems);
+                }
               }
             } catch (error) {
               console.error('메뉴 정보 가져오기 오류:', error);
@@ -242,8 +265,8 @@ export default function Cart() {
                 return {
                   id: `daily-${index}-${Date.now()}-${item.menuId}`,
                   originalMenuId: item.menuId,
-                  name: `일일메뉴-${item.menuId}`,
-                  price: 0, // 가격 정보가 없어도 장바구니에 표시
+                  name: `메뉴-${item.menuId}`,
+                  price: 0,
                   quantity: quantity,
                   available: true
                 };

@@ -312,14 +312,24 @@ export default function DailyMenuPage() {
       return;
     }
     
-    // 장바구니에 일일 메뉴 정보 저장
+    // 장바구니에 일일 메뉴 정보 저장 (메뉴 정보 포함)
     const dailyMenuData = {
       dailyMenuId: dailyMenu?.id,
       menuDate: dailyMenu?.menu_date,
-      items: Array.from(cart.entries()).map(([menuId, quantity]) => ({
-        menuId,
-        quantity
-      })),
+      items: Array.from(cart.entries()).map(([menuId, quantity]) => {
+        // 해당 메뉴의 상세 정보 찾기
+        const menuItem = dailyMenuItems.find(item => item.menu_id === menuId);
+        return {
+          menuId,
+          quantity,
+          menuInfo: menuItem?.menu ? {
+            id: menuItem.menu.id,
+            name: menuItem.menu.name,
+            price: menuItem.menu.price,
+            available: menuItem.is_available
+          } : null
+        };
+      }),
     };
     
     console.log('🔍 저장할 일일 메뉴 데이터:', dailyMenuData);
