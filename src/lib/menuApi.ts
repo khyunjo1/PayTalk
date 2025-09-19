@@ -54,8 +54,8 @@ export const createMenu = async (menuData: CreateMenuData): Promise<MenuDB> => {
   if (!menuData.name?.trim()) {
     throw new Error('메뉴명을 입력해주세요.');
   }
-  if (!menuData.price || menuData.price <= 0) {
-    throw new Error('올바른 가격을 입력해주세요.');
+  if (menuData.price === undefined || menuData.price === null || menuData.price < 0) {
+    throw new Error('가격은 0원 이상이어야 합니다.');
   }
 
   console.log('📝 데이터베이스에 메뉴 저장 시작:', menuData);
@@ -90,8 +90,8 @@ export const updateMenu = async (menuId: string, updateData: UpdateMenuData): Pr
   if (updateData.name !== undefined && !updateData.name?.trim()) {
     throw new Error('메뉴명을 입력해주세요.');
   }
-  if (updateData.price !== undefined && updateData.price <= 0) {
-    throw new Error('올바른 가격을 입력해주세요.');
+  if (updateData.price !== undefined && updateData.price < 0) {
+    throw new Error('가격은 0원 이상이어야 합니다.');
   }
 
   console.log('📝 메뉴 수정 시작:', { menuId, updateData });
