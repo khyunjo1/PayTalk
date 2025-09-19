@@ -245,7 +245,12 @@ export default function Admin() {
       console.log('🎯 메뉴 로드 대상 매장 ID:', targetStoreId);
       if (targetStoreId) {
         const menusData = await getMenus(targetStoreId);
-        console.log('📋 로드된 메뉴 데이터:', menusData);
+        console.log('📋 로드된 메뉴 데이터 총 개수:', menusData.length);
+        console.log('📋 특별반찬 메뉴 개수:', menusData.filter(m => m.category === '특별반찬').length);
+        console.log('📋 모든 카테고리별 개수:', menusData.reduce((acc, menu) => {
+          acc[menu.category] = (acc[menu.category] || 0) + 1;
+          return acc;
+        }, {}));
         setMenus(menusData);
       } else {
         console.log('⚠️ 매장 ID가 없어서 메뉴를 로드할 수 없습니다.');
@@ -2057,13 +2062,13 @@ export default function Admin() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
                 <p className="text-gray-600">메뉴를 불러오는 중...</p>
               </div>
-            ) : filteredMenus.length > 0 ? (
+            ) : menus.length > 0 ? (
               <div className="space-y-4">
                 {/* 카테고리별로 그룹화 */}
                 {STANDARD_CATEGORIES.map((category) => {
-                  const categoryMenus = filteredMenus.filter(menu => 
-                    selectedMenuCategory === 'all' ? menu.category === category : true
-                  );
+                  const categoryMenus = selectedMenuCategory === 'all'
+                    ? menus.filter(menu => menu.category === category)
+                    : filteredMenus.filter(menu => menu.category === category);
                   
                   if (categoryMenus.length === 0) return null;
                   
@@ -2096,12 +2101,18 @@ export default function Admin() {
                       </button>
                       
                       {/* 카테고리 메뉴 목록 */}
-                      <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                        isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
+                      <div className={`transition-all duration-300 ${
+                        isExpanded ? 'opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
                       }`}>
                         <div className="px-6 pb-6">
                           <div className="space-y-2">
-                            {categoryMenus.map((menu, index) => (
+                            {(() => {
+                              console.log(`🔍 ${category} 카테고리 메뉴 개수:`, categoryMenus.length);
+                              console.log(`🔍 ${category} 카테고리 메뉴 목록:`, categoryMenus.map(m => m.name));
+                              console.log(`🔍 DOM 렌더링 시작 - ${category} 카테고리`);
+                              return categoryMenus.map((menu, index) => {
+                                console.log(`🔍 렌더링 중: ${index + 1}/${categoryMenus.length} - ${menu.name}`);
+                                return (
                   <div key={menu.id} className={`px-4 py-4 hover:bg-gray-50 transition-colors duration-200 ${index !== filteredMenus.length - 1 ? 'border-b border-gray-100' : ''}`}>
                     <div className="flex gap-4">
                       <div className="flex-1 min-w-0">
@@ -2167,7 +2178,9 @@ export default function Admin() {
                       </div>
                     </div>
                   </div>
-                            ))}
+                                );
+                              });
+                            })()}
                           </div>
                         </div>
                       </div>

@@ -14,7 +14,8 @@ export const getMenus = async (storeId: string): Promise<MenuDB[]> => {
     .from('menus')
     .select('*')
     .eq('store_id', storeId)
-    .order('category', { ascending: true });
+    .order('category', { ascending: true })
+    .limit(1000);
 
   if (error) {
     console.error('메뉴 목록 가져오기 오류:', error);
