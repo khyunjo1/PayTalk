@@ -19,6 +19,7 @@ import {
 } from '../../../lib/dailyMenuApi';
 import { getStore } from '../../../lib/storeApi';
 import { getMenuCategoriesByStoreCategory } from '../../../lib/categoryMapping';
+import { getCurrentKoreaTime } from '../../../lib/dateUtils';
 import type { DailyMenu, DailyMenuItem } from '../../../lib/dailyMenuApi';
 import type { MenuDB, DailyDeliveryArea } from '../../../types';
 import Header from '../../../components/Header';
@@ -35,12 +36,9 @@ export default function AdminDailyMenu() {
 
   // 상태 관리
   const [selectedDate, setSelectedDate] = useState(() => {
-    // 오늘 날짜를 기본값으로 설정
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    // 한국 시간대 기준으로 오늘 날짜를 기본값으로 설정
+    const koreaTime = getCurrentKoreaTime();
+    return koreaTime.toISOString().split('T')[0];
   });
   const [dailyMenu, setDailyMenu] = useState<DailyMenu | null>(null);
   const [dailyMenuItems, setDailyMenuItems] = useState<DailyMenuItem[]>([]);
