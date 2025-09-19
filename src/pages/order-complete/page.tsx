@@ -80,7 +80,7 @@ export default function OrderComplete() {
               menus (
                 name
               )
-            ),
+            )
           `)
           .eq('id', orderId)
           .single();
@@ -143,14 +143,14 @@ export default function OrderComplete() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
           <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">주문 메뉴</h3>
           <div className="space-y-2 sm:space-y-3">
-            {orderData.daily_menu_orders?.map((item, index) => (
+            {orderData.order_items?.map((item, index) => (
               <div key={index} className="flex justify-between items-start py-2">
                 <div className="flex-1 min-w-0 pr-2">
                   <span className="text-sm sm:text-base text-gray-900 font-medium block">{item.menus.name}</span>
                   <span className="text-xs sm:text-sm text-gray-500">× {item.quantity}개</span>
                 </div>
                 <span className="text-sm sm:text-base text-gray-800 font-semibold flex-shrink-0">
-                  {((item.menus?.price || 0) * item.quantity).toLocaleString()}원
+                  {(item.price * item.quantity).toLocaleString()}원
                 </span>
               </div>
             ))}

@@ -18,7 +18,9 @@ export const createOrder = async (orderData: {
   customer_phone: string;
   customer_address?: string;
   subtotal: number;
+  delivery_fee?: number;
   total: number;
+  delivery_area_id?: string;
   payment_method: 'bank_transfer' | 'zeropay';
   items: Array<{
     menu_id: string;
@@ -50,7 +52,9 @@ export const createOrder = async (orderData: {
       customer_phone: orderData.customer_phone,
       customer_address: orderData.customer_address,
       subtotal: orderData.subtotal,
+      delivery_fee: orderData.delivery_fee || 0,
       total: orderData.total,
+      delivery_area_id: orderData.delivery_area_id,
       payment_method: orderData.payment_method,
       status: '입금대기'
     })
