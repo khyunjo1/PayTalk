@@ -160,8 +160,9 @@ export const subscribeToOneSignal = async (): Promise<boolean> => {
       }
     }
 
-    // Android/Desktop에서의 OneSignal 구독
-    console.log('Android/Desktop에서 OneSignal 구독 시도...');
+    // Android/Desktop에서의 OneSignal 구독 (갤럭시 최적화)
+    const isSamsung = navigator.userAgent.includes('SamsungBrowser') || navigator.userAgent.includes('Samsung');
+    console.log(`Android/Desktop에서 OneSignal 구독 시도... (Samsung: ${isSamsung})`);
 
     // OneSignal 사용자 등록
     try {
@@ -183,11 +184,25 @@ export const subscribeToOneSignal = async (): Promise<boolean> => {
       // 권한 요청 실패해도 계속 진행
     }
 
-    // 구독 상태 확인을 위해 잠시 대기
-    console.log('구독 상태 확인 대기 중...');
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // 갤럭시/Samsung Internet은 더 오래 기다림
+    const waitTime = isSamsung ? 4000 : 2000;
+    console.log(`구독 상태 확인 대기 중... (${waitTime/1000}초)`);
+    await new Promise(resolve => setTimeout(resolve, waitTime));
 
-    const isSubscribed = window.OneSignal.User?.PushSubscription?.optedIn || false;
+    // 갤럭시에서 추가 확인 시도
+    let isSubscribed = window.OneSignal.User?.PushSubscription?.optedIn || false;
+
+    if (!isSubscribed && isSamsung) {
+      console.log('갤럭시에서 구독 상태 재확인 중...');
+      // 2초 더 기다린 후 재확인
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      isSubscribed = window.OneSignal.User?.PushSubscription?.optedIn || false;
+
+      // Player ID도 확인
+      const playerId = window.OneSignal.User?.PushSubscription?.id;
+      console.log('갤럭시 재확인 결과:', { isSubscribed, playerId });
+    }
+
     console.log('OneSignal v16 구독 활성화 결과:', isSubscribed);
     console.log('=== OneSignal v16 구독 완료 ===');
     return isSubscribed;

@@ -36,22 +36,33 @@ export default function OwnerPushNotificationSettings() {
     }
   };
 
-  // PWA 감지 함수
+  // PWA 감지 함수 (갤럭시 지원 개선)
   const isPWA = () => {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
     const isIOSStandalone = window.navigator.standalone === true;
     const isAndroidApp = document.referrer.includes('android-app://');
-    const isPWA = isStandalone || isIOSStandalone || isAndroidApp;
-    
-    console.log('PWA 감지 결과:', {
+    const isSamsungInternet = navigator.userAgent.includes('SamsungBrowser');
+    const isFullscreen = window.matchMedia('(display-mode: fullscreen)').matches;
+    const isMinimalUI = window.matchMedia('(display-mode: minimal-ui)').matches;
+
+    // 갤럭시에서는 Samsung Internet에서 다른 감지 방법 사용
+    const isPWA = isStandalone || isIOSStandalone || isAndroidApp || isFullscreen || isMinimalUI ||
+                  (isSamsungInternet && window.outerHeight === window.innerHeight);
+
+    console.log('PWA 감지 결과 (갤럭시 개선):', {
       isStandalone,
       isIOSStandalone,
       isAndroidApp,
+      isSamsungInternet,
+      isFullscreen,
+      isMinimalUI,
       isPWA,
       userAgent: navigator.userAgent,
-      referrer: document.referrer
+      referrer: document.referrer,
+      outerHeight: window.outerHeight,
+      innerHeight: window.innerHeight
     });
-    
+
     return isPWA;
   };
 
@@ -68,11 +79,19 @@ export default function OwnerPushNotificationSettings() {
           console.warn('OneSignal이 아직 로드되지 않았습니다. 기본 알림으로 진행합니다.');
         }
 
-        // PWA 체크
-        if (!isPWA()) {
-          setMessage('❌ PWA에서만 푸시 알림을 사용할 수 있습니다.\n\n📱 갤럭시에서 앱 설치 방법:\n1. 브라우저 메뉴(⋮) → "홈 화면에 추가" 클릭\n2. "추가" 버튼 클릭\n3. 홈 화면에서 앱 아이콘으로 접속\n\n설치 후 다시 시도해주세요!');
+        // iOS만 PWA 체크, Android는 브라우저에서도 푸시 알림 가능
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isAndroid = /Android/.test(navigator.userAgent);
+
+        if (isIOS && !isPWA()) {
+          setMessage('❌ iOS에서는 PWA 앱으로 설치해야 푸시 알림을 사용할 수 있습니다.\n\n📱 iPhone에서 앱 설치 방법:\n1. Safari 하단 공유 버튼 → "홈 화면에 추가"\n2. "추가" 버튼 클릭\n3. 홈 화면에서 PayTalk 아이콘으로 접속\n\n설치 후 다시 시도해주세요!');
           setIsLoading(false);
           return;
+        }
+
+        // Android/갤럭시는 PWA 체크 생략하고 바로 진행
+        if (isAndroid) {
+          console.log('🤖 Android 기기 감지: PWA 체크 생략하고 푸시 알림 설정 진행');
         }
 
         // 간단한 테스트: OneSignal 없이 기본 알림만 사용
@@ -93,10 +112,17 @@ export default function OwnerPushNotificationSettings() {
         
         console.log('알림 권한 허용됨, OneSignal 시도...');
         
-        // OneSignal 시도 (30초 타임아웃, iOS는 더 오래 걸릴 수 있음)
+        // OneSignal 시도 (기기별 타임아웃 설정)
         try {
           const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-          const timeoutDuration = isIOS ? 30000 : 15000; // iOS는 30초, 기타는 15초
+          const isSamsung = navigator.userAgent.includes('SamsungBrowser') || navigator.userAgent.includes('Samsung');
+
+          // 갤럭시는 더 오래 걸릴 수 있으므로 타임아웃을 늘림
+          let timeoutDuration = 15000; // 기본 15초
+          if (isIOS) timeoutDuration = 30000; // iOS는 30초
+          if (isSamsung) timeoutDuration = 25000; // 갤럭시는 25초
+
+          console.log(`OneSignal 타임아웃 설정: ${timeoutDuration/1000}초 (iOS: ${isIOS}, Samsung: ${isSamsung})`);
 
           const timeoutPromise = new Promise((_, reject) =>
             setTimeout(() => reject(new Error('OneSignal 타임아웃')), timeoutDuration)
