@@ -1,25 +1,25 @@
 -- 메뉴 카테고리 업데이트 SQL
--- 1. "인기메뉴" → "고기반찬"
--- 2. "국물류" → "국"
--- 3. "기타" 카테고리 추가
--- 4. "3000원 반찬" 카테고리 추가
+-- ✅ 이미 완료된 작업:
+-- 1. "인기메뉴" → "고기반찬" (완료)
+-- 2. "국물류" → "국" (완료)
+-- 3. "기타" 카테고리 추가 (완료)
+-- 4. "3000원 반찬" 카테고리 추가 (완료)
+--
+-- 🆕 새로 추가된 카테고리:
+-- 5. "튀김류" 카테고리 추가 (프론트엔드에만 추가됨)
 
--- 기존 메뉴들의 카테고리 업데이트
-UPDATE menus
-SET category = '고기반찬'
-WHERE category = '인기메뉴';
-
-UPDATE menus
-SET category = '국'
-WHERE category = '국물류';
-
--- 변경 사항 확인을 위한 조회 쿼리
+-- 현재 카테고리 상태 확인
 SELECT category, COUNT(*) as menu_count
 FROM menus
 GROUP BY category
 ORDER BY category;
 
 -- 참고: 새로 추가된 카테고리들은 새로운 메뉴 추가 시 사용하시면 됩니다.
+-- 현재 사용 가능한 카테고리:
+-- - 메인요리, 국, 김치류, 젓갈류, 나물류, 조림류
+-- - 튀김류 (새로 추가), 특별반찬, 고기반찬, 세트메뉴, 월식메뉴
+-- - 3000원 반찬, 기타
+--
 -- 예시:
--- INSERT INTO menus (name, category, ...) VALUES ('메뉴명', '기타', ...);
--- INSERT INTO menus (name, category, ...) VALUES ('메뉴명', '3000원 반찬', ...);
+-- INSERT INTO menus (name, category, ...) VALUES ('새우튀김', '튀김류', ...);
+-- INSERT INTO menus (name, category, ...) VALUES ('야채튀김', '튀김류', ...);

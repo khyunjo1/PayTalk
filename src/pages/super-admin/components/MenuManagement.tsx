@@ -403,6 +403,7 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
                   <option value="젓갈류">젓갈류</option>
                   <option value="나물류">나물류</option>
                   <option value="조림류">조림류</option>
+                  <option value="튀김류">튀김류</option>
                   <option value="특별반찬">특별반찬</option>
                   <option value="고기반찬">고기반찬</option>
                   <option value="세트메뉴">세트메뉴</option>
@@ -492,6 +493,7 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
                   <option value="젓갈류">젓갈류</option>
                   <option value="나물류">나물류</option>
                   <option value="조림류">조림류</option>
+                  <option value="튀김류">튀김류</option>
                   <option value="특별반찬">특별반찬</option>
                   <option value="고기반찬">고기반찬</option>
                   <option value="세트메뉴">세트메뉴</option>
