@@ -490,14 +490,21 @@ export default function Cart() {
         total: total,
         delivery_area_id: (orderType === 'delivery' && selectedDeliveryArea && selectedDeliveryArea.trim() !== '') ? selectedDeliveryArea : undefined,
         payment_method: paymentMethod,
-        items: cart.filter(item => item.available).map(item => ({
-          menu_id: (item as any).originalMenuId || item.id,
-          price: item.quantity ? item.price / item.quantity : item.price, // 단가로 저장
-          quantity: item.quantity || 1
-        })),
+        items: cart.filter(item => item.available).map(item => {
+          const menuId = (item as any).originalMenuId || item.id;
+          if (!menuId || menuId.trim() === '') {
+            console.error('유효하지 않은 menu_id:', item);
+            throw new Error('메뉴 ID가 유효하지 않습니다.');
+          }
+          return {
+            menu_id: menuId,
+            price: item.quantity ? item.price / item.quantity : item.price, // 단가로 저장
+            quantity: item.quantity || 1
+          };
+        }),
         // 일일 메뉴 데이터 추가
         daily_menu_data: dailyMenuCartData ? {
-          daily_menu_id: dailyMenuCartData.dailyMenuId,
+          daily_menu_id: dailyMenuCartData.dailyMenuId && dailyMenuCartData.dailyMenuId.trim() !== '' ? dailyMenuCartData.dailyMenuId : undefined,
           menu_date: dailyMenuCartData.menuDate,
           items: dailyMenuCartData.items
         } : undefined

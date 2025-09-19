@@ -68,12 +68,17 @@ export const createOrder = async (orderData: {
   }
 
   // 주문 아이템들 생성
-  const orderItems = orderData.items.map(item => ({
-    order_id: order.id,
-    menu_id: item.menu_id,
-    quantity: item.quantity,
-    price: item.price
-  }));
+  const orderItems = orderData.items.map(item => {
+    if (!item.menu_id || item.menu_id.trim() === '') {
+      throw new Error('유효하지 않은 메뉴 ID입니다.');
+    }
+    return {
+      order_id: order.id,
+      menu_id: item.menu_id,
+      quantity: item.quantity,
+      price: item.price
+    };
+  });
 
   const { error: itemsError } = await supabase
     .from('order_items')
