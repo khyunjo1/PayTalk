@@ -482,59 +482,53 @@ export default function DailyMenuPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 모바일 최적화 헤더 */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="px-3 py-2">
-          <div className="flex items-center justify-between gap-2">
-            {/* 왼쪽: 뒤로가기 + 매장명 */}
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <button
-                onClick={() => navigate(-1)}
-                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
-              >
-                <i className="ri-arrow-left-line text-lg text-gray-600"></i>
-              </button>
-              <div className="flex-1 min-w-0">
-                <h1 className="text-base font-bold text-gray-900 truncate">
-                  {store?.name || '매장'}
-                </h1>
-                <span className="text-xs text-gray-500 truncate">{dailyMenu?.title || `${date}의 반찬`}</span>
+      {/* 페이톡 헤더 - 다른 페이지와 동일 */}
+      <div className="bg-white sticky top-0 z-50">
+        <div className="px-4 py-3">
+          <div className="flex items-center">
+            <img 
+              src="https://static.readdy.ai/image/912b0945f01d9fdb4ff4544659653c90/2d4890bd82abce85d430bd82d04df8d6.png" 
+              alt="페이톡 로고" 
+              className="w-12 h-12"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* 매장 정보 헤더 */}
+      <div className="bg-white border-b border-gray-200 shadow-sm sticky top-[76px] z-40">
+        <div className="px-5 py-3">
+          <div className="flex items-center justify-between">
+            {/* 왼쪽: 상호명 + 주문일시 + 최소주문 */}
+            <div className="flex-1 min-w-0">
+              <h1 className="text-base font-bold text-gray-900 truncate">
+                {store?.name || '매장'}
+              </h1>
+              <span className="text-xs text-gray-500 truncate">{dailyMenu?.title || `${date}의 반찬`}</span>
+              <div className="flex items-center gap-1 mt-1">
+                <i className="ri-money-dollar-circle-line text-xs text-gray-500"></i>
+                <span className="text-xs text-gray-500">최소주문</span>
+                <span className="text-xs font-bold text-gray-900">{store?.minimum_order_amount?.toLocaleString() || '0'}원</span>
               </div>
-            </div>
-            
-            {/* 중앙: 최소주문금액 */}
-            <div className="hidden sm:block text-center flex-shrink-0">
-              <div className="text-xs text-gray-500">최소주문</div>
-              <div className="text-xs font-semibold text-gray-700">{store?.minimum_order_amount?.toLocaleString() || '0'}원</div>
             </div>
             
             {/* 오른쪽: 상태 + 내주문 버튼 */}
-            <div className="flex items-center gap-1.5 flex-shrink-0">
-              <div className="flex items-center gap-1">
-                <i className={`text-xs ${
-                  isOrderClosed ? 'ri-close-circle-line text-red-500' : 'ri-check-circle-line text-green-500'
-                }`}></i>
-                <span className={`px-1.5 py-0.5 rounded-full text-xs font-semibold ${
-                  isOrderClosed 
-                    ? 'bg-red-100 text-red-700' 
-                    : 'bg-green-100 text-green-700'
-                }`}>
-                  {isOrderClosed ? '마감' : '접수중'}
-                </span>
-              </div>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <span className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
+                isOrderClosed 
+                  ? 'bg-red-100 text-red-700' 
+                  : 'bg-green-100 text-green-700'
+              }`}>
+                {isOrderClosed ? '마감' : '접수중'}
+              </span>
               <button
                 onClick={() => navigate(`/order-status/${storeId}`)}
-                className="flex items-center gap-1 px-2 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold transition-colors text-xs"
+                className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
               >
                 <i className="ri-shopping-bag-3-line text-xs"></i>
-                <span className="hidden sm:inline">내 주문</span>
+                <span>내주문</span>
               </button>
             </div>
-          </div>
-          
-          {/* 모바일에서만 표시되는 최소주문금액 */}
-          <div className="sm:hidden mt-1 text-center">
-            <span className="text-xs text-gray-500">최소주문 {store?.minimum_order_amount?.toLocaleString() || '0'}원</span>
           </div>
         </div>
       </div>
