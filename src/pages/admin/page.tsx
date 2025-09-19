@@ -116,7 +116,13 @@ export default function Admin() {
     order_deadline_hour: '',
     order_deadline_minute: '',
     delivery_area: '',
-    delivery_fee: 0
+    delivery_fee: 0,
+    delivery_time_slots: [] as Array<{
+      name: string;
+      start: string;
+      end: string;
+      enabled: boolean;
+    }>
   });
   
   
@@ -331,10 +337,34 @@ export default function Admin() {
         order_deadline_hour: currentStore.order_deadline_hour || '',
         order_deadline_minute: currentStore.order_deadline_minute || '',
         delivery_area: currentStore.delivery_area || '',
-        delivery_fee: currentStore.delivery_fee || 0
+        delivery_fee: currentStore.delivery_fee || 0,
+        delivery_time_slots: currentStore.delivery_time_slots || []
       });
       setShowStoreEditModal(true);
     }
+  };
+
+  // 배달시간대 관리 함수들
+  const addDeliveryTimeSlot = () => {
+    setStoreEditForm({
+      ...storeEditForm,
+      delivery_time_slots: [
+        ...storeEditForm.delivery_time_slots,
+        { name: '', start: '', end: '', enabled: true }
+      ]
+    });
+  };
+
+  const updateDeliveryTimeSlot = (index: number, field: string, value: string | boolean) => {
+    const updatedSlots = storeEditForm.delivery_time_slots.map((slot, i) =>
+      i === index ? { ...slot, [field]: value } : slot
+    );
+    setStoreEditForm({ ...storeEditForm, delivery_time_slots: updatedSlots });
+  };
+
+  const removeDeliveryTimeSlot = (index: number) => {
+    const updatedSlots = storeEditForm.delivery_time_slots.filter((_, i) => i !== index);
+    setStoreEditForm({ ...storeEditForm, delivery_time_slots: updatedSlots });
   };
 
   const handleStoreEditSubmit = async (e: React.FormEvent) => {
@@ -355,6 +385,7 @@ export default function Admin() {
           order_deadline_minute: storeEditForm.order_deadline_minute,
           delivery_area: storeEditForm.delivery_area,
           delivery_fee: storeEditForm.delivery_fee,
+          delivery_time_slots: storeEditForm.delivery_time_slots,
           updated_at: new Date().toISOString()
         })
         .eq('id', storeId);
@@ -2428,6 +2459,33 @@ export default function Admin() {
                   </div>
                 </div>
 
+                {/* 배달 시간대 섹션 */}
+                <div>
+                  <h3 className="text-md font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <i className="ri-truck-line text-orange-500"></i>
+                    배달 시간대
+                  </h3>
+                  <div className="p-3 bg-gray-50 rounded-lg border">
+                    {currentStore?.delivery_time_slots && currentStore.delivery_time_slots.length > 0 ? (
+                      <div className="space-y-2">
+                        {currentStore.delivery_time_slots.map((slot, index) => (
+                          <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
+                            <span className="font-medium text-gray-900">{slot.name}</span>
+                            <span className="text-gray-600">{slot.start} - {slot.end}</span>
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              slot.enabled ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            }`}>
+                              {slot.enabled ? '활성' : '비활성'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-gray-500">설정된 배달 시간대가 없습니다</span>
+                    )}
+                  </div>
+                </div>
+
                 {/* 결제 정보 섹션 */}
                 <div>
                   <h3 className="text-md font-semibold text-gray-800 mb-4 flex items-center gap-2">
@@ -2647,6 +2705,76 @@ export default function Admin() {
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                         />
                       </div>
+                    </div>
+                  </div>
+
+                  {/* 배달 시간대 설정 */}
+                  <div>
+                    <h4 className="text-lg font-medium text-gray-800 mb-4">배달 시간대 설정</h4>
+                    <div className="space-y-3">
+                      {storeEditForm.delivery_time_slots.map((slot, index) => (
+                        <div key={index} className="p-4 border border-gray-200 rounded-lg">
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">시간대 이름</label>
+                              <input
+                                type="text"
+                                value={slot.name}
+                                onChange={(e) => updateDeliveryTimeSlot(index, 'name', e.target.value)}
+                                placeholder="예: 점심배송"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">시작시간</label>
+                              <input
+                                type="time"
+                                value={slot.start}
+                                onChange={(e) => updateDeliveryTimeSlot(index, 'start', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">종료시간</label>
+                              <input
+                                type="time"
+                                value={slot.end}
+                                onChange={(e) => updateDeliveryTimeSlot(index, 'end', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                              />
+                            </div>
+                            <div className="flex items-end gap-2">
+                              <div className="flex items-center">
+                                <input
+                                  type="checkbox"
+                                  id={`enabled-${index}`}
+                                  checked={slot.enabled}
+                                  onChange={(e) => updateDeliveryTimeSlot(index, 'enabled', e.target.checked)}
+                                  className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                                />
+                                <label htmlFor={`enabled-${index}`} className="ml-2 text-sm text-gray-700">
+                                  활성
+                                </label>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeDeliveryTimeSlot(index)}
+                                className="px-2 py-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
+                              >
+                                <i className="ri-delete-bin-line"></i>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={addDeliveryTimeSlot}
+                        className="w-full py-2 px-4 border-2 border-dashed border-gray-300 text-gray-600 rounded-lg hover:border-orange-500 hover:text-orange-600 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <i className="ri-add-line"></i>
+                        배달 시간대 추가
+                      </button>
                     </div>
                   </div>
 

@@ -558,11 +558,11 @@ export default function DailyMenuPage() {
                     </button>
                     
                     {/* 카테고리 메뉴 목록 */}
-                    <div className={`overflow-hidden transition-all duration-300 ${
-                      isExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'
+                    <div className={`transition-all duration-300 ${
+                      isExpanded ? 'opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
                     }`}>
                       <div className="px-4 pt-4 pb-4">
-                        <div className="space-y-3 max-h-[600px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                        <div className="space-y-3">
                           {categoryItems.map((item) => (
                             <div key={item.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200 group">
                               {/* 메뉴 정보 */}
