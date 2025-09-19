@@ -6,6 +6,7 @@ import { getStores } from '../../lib/storeApi';
 import { getStoreOrders, updateOrderStatus } from '../../lib/orderApi';
 import { getMenus, createMenu, updateMenu, deleteMenu } from '../../lib/menuApi';
 import { getMenuCategoriesByStoreCategory } from '../../lib/categoryMapping';
+import { getCurrentKoreaTime } from '../../lib/dateUtils';
 import { supabase } from '../../lib/supabase';
 import Footer from '../../components/Footer';
 
@@ -1453,6 +1454,7 @@ export default function Admin() {
                     <input
                       type="date"
                       value={selectedDate || ''}
+                      min={getCurrentKoreaTime().toISOString().split('T')[0]}
                       onChange={(e) => {
                         handleDateSelect(e.target.value);
                         setShowCalendar(false);
@@ -1949,6 +1951,7 @@ export default function Admin() {
                       <input
                         type="date"
                         value={selectedDate || ''}
+                        min={getCurrentKoreaTime().toISOString().split('T')[0]}
                         onChange={(e) => {
                           console.log('날짜 선택됨:', e.target.value);
                           handleDateSelect(e.target.value);

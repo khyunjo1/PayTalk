@@ -9,6 +9,7 @@ import {
   getLatestDailyMenu
 } from '../../../../../lib/dailyMenuApi';
 import { getStore } from '../../../../../lib/storeApi';
+import { getCurrentKoreaTime } from '../../../../../lib/dateUtils';
 import Header from '../../../../../components/Header';
 import Footer from '../../../../../components/Footer';
 
@@ -82,9 +83,10 @@ export default function DailyMenuPage() {
     // 일일 메뉴의 설정값을 우선적으로 사용
     const cutoffTime = dailyMenu?.order_cutoff_time || storeData.order_cutoff_time || '15:00';
     
-    // 한국 표준시간으로 현재 시간 가져오기
+    // UTC+9 (한국 시간) 직접 계산 - 클라이언트 시간대에 무관하게 일관된 결과
     const now = new Date();
-    const koreaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Seoul"}));
+    const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const koreaTime = new Date(utcTime + (9 * 3600000)); // UTC+9
     const currentTime = koreaTime.toTimeString().split(' ')[0]; // HH:MM:SS 형식
     
     // 메뉴 날짜가 오늘인지 확인 (한국 표준시간 기준)
@@ -170,9 +172,10 @@ export default function DailyMenuPage() {
       let menuData: DailyMenu | null = null;
       let menuItems: DailyMenuItem[] = [];
       
-      // 한국 표준시간 기준으로 오늘 날짜 계산
+      // UTC+9 (한국 시간) 직접 계산 - 클라이언트 시간대에 무관하게 일관된 결과
       const now = new Date();
-      const koreaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Seoul"}));
+      const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+      const koreaTime = new Date(utcTime + (9 * 3600000)); // UTC+9
       let menuDate = date || koreaTime.toISOString().split('T')[0];
       
       try {
@@ -217,7 +220,7 @@ export default function DailyMenuPage() {
         const orderClosed = checkOrderClosed(storeData, menuDate);
         console.log('주문 마감 상태 체크:', {
           menuDate,
-          currentTime: new Date().toLocaleString("en-US", {timeZone: "Asia/Seoul"}),
+          currentTime: getCurrentKoreaTime().toLocaleString("en-US", {timeZone: "Asia/Seoul"}),
           cutoffTime: storeData.order_cutoff_time,
           orderClosed
         });
@@ -403,20 +406,12 @@ export default function DailyMenuPage() {
         <div className="bg-white border-b border-gray-200 sticky top-0 z-50">
           <div className="px-3 py-2">
             <div className="flex items-center justify-between gap-2">
-              {/* 왼쪽: 뒤로가기 + 매장명 */}
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <button
-                  onClick={() => navigate(-1)}
-                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
-                >
-                  <i className="ri-arrow-left-line text-lg text-gray-600"></i>
-                </button>
-                <div className="flex-1 min-w-0">
-                  <h1 className="text-base font-bold text-gray-900 truncate">
-                    {store?.name || '매장'}
-                  </h1>
-                  <span className="text-xs text-gray-500 truncate">{dailyMenu?.title || `${date}의 반찬`}</span>
-                </div>
+              {/* 왼쪽: 매장명 */}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-base font-bold text-gray-900 truncate">
+                  {store?.name || '매장'}
+                </h1>
+                <span className="text-xs text-gray-500 truncate">{dailyMenu?.title || `${date}의 반찬`}</span>
               </div>
               
               {/* 중앙: 최소주문금액 */}

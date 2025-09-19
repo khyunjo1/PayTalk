@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getStores } from '../../../lib/storeApi';
 import { getStoreOrders, updateOrderStatus } from '../../../lib/orderApi';
+import { getCurrentKoreaTime } from '../../../lib/dateUtils';
 import { supabase } from '../../../lib/supabase';
 import type { Store } from '../../../types';
 
@@ -609,6 +610,7 @@ export default function OrdersManagement({ showToast }: OrdersManagementProps) {
               <input
                 type="date"
                 value={selectedDate}
+                min={getCurrentKoreaTime().toISOString().split('T')[0]}
                 onChange={(e) => handleDateSelect(e.target.value)}
                     className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white transition-all duration-200 hover:bg-gray-100"
                   />

@@ -758,6 +758,7 @@ export default function AdminOrders() {
                   type="date"
                   value={selectedDate || ''}
                   onChange={(e) => handleDateSelect(e.target.value)}
+                  min={getCurrentKoreaTime().toISOString().split('T')[0]}
                   className="flex-shrink-0 px-2 py-1.5 bg-white border border-gray-300 rounded-lg text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 hover:border-gray-400 min-w-0"
                 />
               )}

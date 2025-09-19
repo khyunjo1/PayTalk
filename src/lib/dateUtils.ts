@@ -5,10 +5,11 @@ export interface StoreTimeInfo {
   orderCutoffTime: string;   // "15:00"
 }
 
-// 현재 한국 시간 가져오기
+// 현재 한국 시간 가져오기 (UTC+9 직접 계산)
 export function getCurrentKoreaTime(): Date {
   const now = new Date();
-  return new Date(now.toLocaleString("en-US", {timeZone: "Asia/Seoul"}));
+  const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+  return new Date(utcTime + (9 * 3600000)); // UTC+9
 }
 
 // 주문 날짜 계산 (오늘 vs 내일)

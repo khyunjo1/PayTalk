@@ -493,6 +493,7 @@ export default function AdminAnalytics() {
                     type="date"
                     value={selectedDate || ''}
                     onChange={(e) => handleDateSelect(e.target.value)}
+                    min={getCurrentKoreaTime().toISOString().split('T')[0]}
                     className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-gray-50 border-0 rounded-xl text-sm sm:text-base font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white transition-all duration-200 hover:bg-gray-100"
                     placeholder="날짜를 선택하세요"
                   />

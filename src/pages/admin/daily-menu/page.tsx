@@ -771,6 +771,7 @@ export default function AdminDailyMenu() {
             <input
               type="date"
               value={selectedDate}
+              min={getCurrentKoreaTime().toISOString().split('T')[0]}
                 onChange={(e) => {
                   const selectedDate = e.target.value;
                   
@@ -796,7 +797,6 @@ export default function AdminDailyMenu() {
                   
                   setSelectedDate(selectedDate);
                 }}
-                min="2020-01-01"
                 max={(() => {
                   // 정확한 한국 시간 계산 (UTC+9)
                   const now = new Date();

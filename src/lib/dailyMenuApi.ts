@@ -317,18 +317,20 @@ export const getDailyMenusByStore = async (storeId: string): Promise<DailyMenu[]
 
 // 오늘의 일일 메뉴 페이지 조회 (고객용)
 export const getTodayDailyMenu = async (storeId: string): Promise<DailyMenu | null> => {
-  // 한국 표준시간 기준으로 오늘 날짜 계산
+  // UTC+9 (한국 시간) 직접 계산
   const now = new Date();
-  const koreaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Seoul"}));
+  const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const koreaTime = new Date(utcTime + (9 * 3600000)); // UTC+9
   const today = koreaTime.toISOString().split('T')[0];
   return getDailyMenu(storeId, today);
 };
 
 // 내일의 일일 메뉴 페이지 조회 (고객용)
 export const getTomorrowDailyMenu = async (storeId: string): Promise<DailyMenu | null> => {
-  // 한국 표준시간 기준으로 내일 날짜 계산
+  // UTC+9 (한국 시간) 직접 계산
   const now = new Date();
-  const koreaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Seoul"}));
+  const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const koreaTime = new Date(utcTime + (9 * 3600000)); // UTC+9
   const tomorrow = new Date(koreaTime);
   tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowStr = tomorrow.toISOString().split('T')[0];
@@ -337,9 +339,10 @@ export const getTomorrowDailyMenu = async (storeId: string): Promise<DailyMenu |
 
 // 어제의 일일 메뉴 페이지 조회 (템플릿용)
 export const getYesterdayDailyMenu = async (storeId: string): Promise<DailyMenu | null> => {
-  // 한국 표준시간 기준으로 어제 날짜 계산
+  // UTC+9 (한국 시간) 직접 계산
   const now = new Date();
-  const koreaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Seoul"}));
+  const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const koreaTime = new Date(utcTime + (9 * 3600000)); // UTC+9
   const yesterday = new Date(koreaTime);
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = yesterday.toISOString().split('T')[0];
@@ -367,9 +370,10 @@ export const getYesterdayDailyMenuItems = async (storeId: string): Promise<Daily
 // 최근 일일 메뉴 아이템들을 템플릿으로 가져오기 (어제가 없으면 최근 7일 내에서 찾기)
 export const getRecentDailyMenuItems = async (storeId: string): Promise<{ items: DailyMenuItem[], date: string } | null> => {
   try {
-    // 최근 7일 동안의 메뉴를 확인
+    // 최근 7일 동안의 메뉴를 확인 - UTC+9 (한국 시간) 직접 계산
     const today = new Date();
-    const koreaTime = new Date(today.toLocaleString("en-US", {timeZone: "Asia/Seoul"}));
+    const utcTime = today.getTime() + (today.getTimezoneOffset() * 60000);
+    const koreaTime = new Date(utcTime + (9 * 3600000)); // UTC+9
     
     for (let i = 1; i <= 7; i++) {
       const checkDate = new Date(koreaTime);
