@@ -2102,10 +2102,10 @@ export default function Admin() {
                       
                       {/* 카테고리 메뉴 목록 */}
                       <div className={`transition-all duration-300 ${
-                        isExpanded ? 'opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
+                        isExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
                       }`}>
                         <div className="px-6 pb-6">
-                          <div className="space-y-2">
+                          <div className="space-y-2 max-h-[600px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                             {(() => {
                               console.log(`🔍 ${category} 카테고리 메뉴 개수:`, categoryMenus.length);
                               console.log(`🔍 ${category} 카테고리 메뉴 목록:`, categoryMenus.map(m => m.name));
