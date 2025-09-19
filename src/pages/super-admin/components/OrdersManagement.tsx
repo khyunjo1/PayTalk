@@ -402,14 +402,32 @@ export default function OrdersManagement({ showToast }: OrdersManagementProps) {
                   ${order.special_requests ? `<div>요청사항: ${order.special_requests}</div>` : ''}
                 </div>
                 
-                <div class="order-items">
-                  ${order.order_items?.map(item => `
-                    <div class="order-item">
-                      <span>${item.menus.name} x ${item.quantity}</span>
-                      <span>${(item.price * item.quantity).toLocaleString()}원</span>
-                    </div>
-                  `).join('') || '<div>주문 상품 정보 없음</div>'}
-                </div>
+                ${order.order_items && order.order_items.length > 0 ? `
+                  <div class="order-items">
+                    <strong>일반 메뉴 주문:</strong>
+                    ${order.order_items.map(item => `
+                      <div class="order-item">
+                        <span>${item.menus?.name || '메뉴'} x ${item.quantity}</span>
+                        <span>${(item.price * item.quantity).toLocaleString()}원</span>
+                      </div>
+                    `).join('')}
+                  </div>
+                ` : ''}
+                
+                ${order.daily_menu_orders && order.daily_menu_orders.length > 0 ? `
+                  <div class="order-items">
+                    <strong>일일 메뉴 주문:</strong>
+                    ${order.daily_menu_orders.map(item => `
+                      <div class="order-item">
+                        <span>${item.menus?.name || '메뉴'} x ${item.quantity} (${item.daily_menus?.menu_date} 일일메뉴)</span>
+                        <span>${((item.menus?.price || 0) * item.quantity).toLocaleString()}원</span>
+                      </div>
+                    `).join('')}
+                  </div>
+                ` : ''}
+                
+                ${(!order.order_items || order.order_items.length === 0) && (!order.daily_menu_orders || order.daily_menu_orders.length === 0) ? 
+                  '<div class="order-items"><div>주문 상품 정보 없음</div></div>' : ''}
                 
                 <div class="total">총 결제 금액: ${order.total.toLocaleString()}원</div>
               </div>

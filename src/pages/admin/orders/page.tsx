@@ -414,6 +414,18 @@ export default function AdminOrders() {
                   ${order.special_requests ? `<div><strong>요청사항:</strong> ${order.special_requests}</div>` : ''}
                 </div>
                 
+                ${order.order_items && order.order_items.length > 0 ? `
+                  <div class="order-items">
+                    <strong>일반 메뉴 주문:</strong>
+                    ${order.order_items.map(item => `
+                      <div class="order-item">
+                        <span>${item.menus?.name || '메뉴'} x ${item.quantity}</span>
+                        <span>${((item.price || 0) * (item.quantity || 0)).toLocaleString()}원</span>
+                      </div>
+                    `).join('')}
+                  </div>
+                ` : ''}
+                
                 ${order.daily_menu_orders && order.daily_menu_orders.length > 0 ? `
                   <div class="order-items">
                     <strong>일일 메뉴 주문:</strong>
