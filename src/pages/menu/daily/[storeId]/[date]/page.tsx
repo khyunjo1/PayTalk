@@ -223,6 +223,10 @@ export default function DailyMenuPage() {
       const uniqueCategories = ['전체', ...new Set(menuItems.map(item => item.menu?.category).filter(Boolean))];
       setCategories(uniqueCategories);
       
+      // 5. 모든 카테고리를 펼친 상태로 설정
+      const allCategories = new Set(uniqueCategories);
+      setExpandedCategories(allCategories);
+      
     } catch (error) {
       console.error('데이터 로드 오류:', error);
     } finally {
