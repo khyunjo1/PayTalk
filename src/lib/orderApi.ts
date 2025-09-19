@@ -81,8 +81,12 @@ export const createOrder = async (orderData: {
     throw new Error(`주문 아이템 생성 실패: ${itemsError.message} (코드: ${itemsError.code})`);
   }
 
-  // 일일 메뉴 주문 데이터 저장 및 수량 차감
+  // 일일 메뉴 주문 데이터 저장 및 수량 차감 (임시 비활성화)
   if (orderData.daily_menu_data) {
+    console.log('일일 메뉴 주문 데이터:', orderData.daily_menu_data);
+    console.log('일일 메뉴 주문 데이터 저장은 임시로 비활성화되었습니다.');
+    // TODO: daily_menu_orders 테이블 생성 후 활성화
+    /*
     try {
       const dailyMenuOrders = orderData.daily_menu_data.items.map(item => ({
         daily_menu_id: orderData.daily_menu_data!.daily_menu_id,
@@ -100,12 +104,12 @@ export const createOrder = async (orderData: {
         // 일일 메뉴 주문 데이터 저장 실패해도 주문은 성공으로 처리
       } else {
         console.log('일일 메뉴 주문 데이터 저장 성공');
-        
       }
     } catch (error) {
       console.error('일일 메뉴 주문 데이터 저장 중 오류:', error);
       // 일일 메뉴 주문 데이터 저장 실패해도 주문은 성공으로 처리
     }
+    */
   }
 
   // 푸시 알림 발송 (비동기로 처리하여 주문 생성에 영향 없도록)
@@ -236,27 +240,9 @@ export const getStoreOrders = async (storeId: string) => {
         console.error('주문 아이템 가져오기 오류:', itemsError);
       }
 
-      // 일일 메뉴 주문
-      const { data: dailyMenuOrders, error: dailyMenuError } = await supabase
-        .from('daily_menu_orders')
-        .select(`
-          *,
-          daily_menus (
-            id,
-            menu_date,
-            title
-          ),
-          menus (
-            id,
-            name,
-            price
-          )
-        `)
-        .eq('order_id', order.id);
-
-      if (dailyMenuError) {
-        console.error('일일 메뉴 주문 가져오기 오류:', dailyMenuError);
-      }
+      // 일일 메뉴 주문 (임시 비활성화)
+      const dailyMenuOrders = []; // 빈 배열로 설정
+      console.log('일일 메뉴 주문 조회는 임시로 비활성화되었습니다.');
 
       return { 
         ...order, 

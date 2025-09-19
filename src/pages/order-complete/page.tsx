@@ -33,19 +33,6 @@ interface OrderData {
       name: string;
     };
   }>;
-  daily_menu_orders?: Array<{
-    daily_menu_id: string;
-    menu_id: string;
-    quantity: number;
-    daily_menus: {
-      menu_date: string;
-      title: string;
-    };
-    menus: {
-      name: string;
-      price: number;
-    };
-  }>;
 }
 
 export default function OrderComplete() {
@@ -94,19 +81,6 @@ export default function OrderComplete() {
                 name
               )
             ),
-            daily_menu_orders (
-              daily_menu_id,
-              menu_id,
-              quantity,
-              daily_menus (
-                menu_date,
-                title
-              ),
-              menus (
-                name,
-                price
-              )
-            )
           `)
           .eq('id', orderId)
           .single();

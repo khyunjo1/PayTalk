@@ -204,7 +204,7 @@ export default function Cart() {
                     name: menuInfo?.name || `메뉴-${item.menuId}`,
                     price: (menuInfo?.price || 0) * quantity,
                     quantity: quantity,
-                    available: menuInfo?.available !== false
+                    available: menuInfo?.is_available !== false
                   };
                 });
                 
@@ -232,7 +232,7 @@ export default function Cart() {
                 
                 const { data: menuData, error } = await supabase
                   .from('menus')
-                  .select('id, name, price, available')
+                  .select('id, name, price, is_available')
                   .in('id', validMenuIds);
                   
                 if (error) {
@@ -250,7 +250,7 @@ export default function Cart() {
                       name: menu?.name || `메뉴-${item.menuId}`,
                       price: (menu?.price || 0) * quantity,
                       quantity: quantity,
-                      available: menu?.available !== false
+                      available: menu?.is_available !== false
                     };
                   });
 

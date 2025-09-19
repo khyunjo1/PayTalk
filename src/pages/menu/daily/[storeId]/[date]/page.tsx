@@ -333,7 +333,7 @@ export default function DailyMenuPage() {
             id: menuItem.menu.id,
             name: menuItem.menu.name,
             price: menuItem.menu.price,
-            available: menuItem.is_available
+            is_available: menuItem.is_available
           } : null
         };
       }),
