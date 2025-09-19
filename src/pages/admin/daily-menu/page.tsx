@@ -545,8 +545,8 @@ export default function AdminDailyMenu() {
                                 </button>
                     
                     {/* 카테고리 내용 - 아코디언 */}
-                    <div className={`overflow-hidden ${
-                      isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
+                    <div className={`transition-all duration-300 ${
+                      isExpanded ? 'opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
                     }`}>
                       <div className="border-t border-gray-100 p-3 sm:p-4 pt-5 sm:pt-6 space-y-2 sm:space-y-3">
                         {menus.map((menu) => {
