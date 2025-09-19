@@ -319,6 +319,13 @@ export default function DailyMenuPage() {
       items: Array.from(cart.entries()).map(([menuId, quantity]) => {
         // 해당 메뉴의 상세 정보 찾기
         const menuItem = dailyMenuItems.find(item => item.menu_id === menuId);
+        console.log('🔍 메뉴 아이템 찾기:', {
+          menuId,
+          menuItem,
+          menu: menuItem?.menu,
+          dailyMenuItems: dailyMenuItems.map(item => ({ menu_id: item.menu_id, menu: item.menu }))
+        });
+        
         return {
           menuId,
           quantity,
