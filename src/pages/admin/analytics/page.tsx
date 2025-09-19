@@ -332,11 +332,6 @@ export default function AdminAnalytics() {
       .slice(0, 5);
   })();
 
-  const handleLogout = () => {
-    const { logout } = useNewAuth();
-    logout();
-    navigate('/admin-login');
-  };
 
   if (loading || ordersLoading) {
     return (
@@ -379,15 +374,6 @@ export default function AdminAnalytics() {
                   <i className="ri-arrow-left-line text-xl text-gray-600"></i>
                 </button>
                 <h1 className="text-lg font-semibold text-gray-800">가게매출</h1>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleLogout}
-                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-md flex items-center whitespace-nowrap cursor-pointer text-sm"
-                >
-                  <i className="ri-logout-box-r-line mr-1.5 text-xs"></i>
-                  로그아웃
-                </button>
               </div>
             </div>
           </div>

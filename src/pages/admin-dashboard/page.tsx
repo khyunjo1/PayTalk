@@ -134,7 +134,7 @@ export default function AdminDashboard() {
                 className="bg-white hover:bg-gray-50 text-gray-800 py-3 px-4 rounded-xl font-medium text-sm shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-center gap-2 border border-gray-200"
               >
                 <i className="ri-calendar-line text-lg text-indigo-500"></i>
-                <span>일일 주문서</span>
+                <span>주문서 만들기</span>
               </button>
               
               <button
