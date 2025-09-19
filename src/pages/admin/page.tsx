@@ -2252,9 +2252,13 @@ export default function Admin() {
                   required
                 >
                   <option value="">카테고리를 선택하세요</option>
-                  {STANDARD_CATEGORIES.map(category => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
+                  {(() => {
+                    console.log('🔍 STANDARD_CATEGORIES 배열:', STANDARD_CATEGORIES);
+                    return STANDARD_CATEGORIES.map(category => {
+                      console.log('🔍 렌더링 중인 카테고리:', category);
+                      return <option key={category} value={category}>{category}</option>;
+                    });
+                  })()}
                 </select>
               </div>
               <div className="flex items-center">
