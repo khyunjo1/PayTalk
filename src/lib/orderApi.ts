@@ -54,7 +54,7 @@ export const createOrder = async (orderData: {
       subtotal: orderData.subtotal,
       delivery_fee: orderData.delivery_fee || 0,
       total: orderData.total,
-      delivery_area_id: orderData.delivery_area_id,
+      delivery_area_id: orderData.delivery_area_id && orderData.delivery_area_id.trim() !== '' ? orderData.delivery_area_id : null,
       payment_method: orderData.payment_method,
       status: '입금대기'
     })
