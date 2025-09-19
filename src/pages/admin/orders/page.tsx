@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useNewAuth } from '../../../hooks/useNewAuth';
 import { getStoreOrders } from '../../../lib/orderApi';
 import { getStores } from '../../../lib/storeApi';
+import { getCurrentKoreaTime } from '../../../lib/dateUtils';
 import Header from '../../../components/Header';
 
 interface Order {
@@ -163,14 +164,8 @@ export default function AdminOrders() {
       setSelectedDate('');
     } else {
       // 커스텀 날짜 선택 시 오늘 날짜를 기본값으로 설정
-      const now = new Date();
-      const koreaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Seoul"}));
-      const today = new Date(koreaTime.getFullYear(), koreaTime.getMonth(), koreaTime.getDate());
-      const year = today.getFullYear();
-      const month = String(today.getMonth() + 1).padStart(2, '0');
-      const day = String(today.getDate()).padStart(2, '0');
-      const todayString = `${year}-${month}-${day}`;
-      setSelectedDate(todayString);
+      const koreaTime = getCurrentKoreaTime();
+      setSelectedDate(koreaTime.toISOString().split('T')[0]);
     }
   };
 
@@ -184,8 +179,7 @@ export default function AdminOrders() {
 
   const filterOrdersByPeriod = (orders: Order[]) => {
     // 한국 시간 기준으로 오늘 날짜 계산
-    const now = new Date();
-    const koreaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Seoul"}));
+    const koreaTime = getCurrentKoreaTime();
     const today = new Date(koreaTime.getFullYear(), koreaTime.getMonth(), koreaTime.getDate());
     
     const formatDateForComparison = (date: Date) => {
