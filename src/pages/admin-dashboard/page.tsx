@@ -142,7 +142,7 @@ export default function AdminDashboard() {
                 className="bg-white hover:bg-gray-50 text-gray-800 py-3 px-4 rounded-xl font-medium text-sm shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-center gap-2 border border-gray-200"
               >
                 <i className="ri-bar-chart-line text-lg text-purple-500"></i>
-                <span>성과분석</span>
+                <span>가게매출</span>
               </button>
               
               <button
@@ -150,7 +150,7 @@ export default function AdminDashboard() {
                 className="bg-white hover:bg-gray-50 text-gray-800 py-3 px-4 rounded-xl font-medium text-sm shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-center gap-2 border border-gray-200"
               >
                 <i className="ri-store-line text-lg text-orange-500"></i>
-                <span>매장관리</span>
+                <span>매장정보</span>
               </button>
               
             </div>
