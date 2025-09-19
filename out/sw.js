@@ -77,7 +77,7 @@ self.addEventListener('push', (event) => {
     badge: notificationData.badge,
     tag: 'paytalk-notification',
     renotify: true,
-    vibrate: [200, 100, 200],
+    vibrate: [200, 100, 200, 100, 200], // 갤럭시에서 더 강한 진동
     data: {
       ...notificationData.data,
       dateOfArrival: Date.now(),
@@ -93,8 +93,11 @@ self.addEventListener('push', (event) => {
         title: '닫기'
       }
     ],
-    requireInteraction: false,
-    silent: false
+    requireInteraction: true, // 갤럭시에서 알림이 더 오래 표시되도록
+    silent: false,
+    // 갤럭시/Android용 추가 옵션
+    sticky: true,
+    timestamp: Date.now()
   };
 
   console.log('Showing notification with options:', options);

@@ -108,15 +108,20 @@ export default function Admin() {
   const [showStoreEditModal, setShowStoreEditModal] = useState(false);
   const [storeEditForm, setStoreEditForm] = useState({
     name: '',
+    category: '',
+    owner_name: '',
     phone: '',
     address: '',
     description: '',
     business_hours_start: '',
     business_hours_end: '',
-    order_deadline_hour: '',
-    order_deadline_minute: '',
+    order_cutoff_time: '',
+    minimum_order_amount: 0,
     delivery_area: '',
     delivery_fee: 0,
+    bank_account: '',
+    account_holder: '',
+    pickup_time_slots: ['09:00', '20:00'] as string[],
     delivery_time_slots: [] as Array<{
       name: string;
       start: string;
@@ -295,7 +300,7 @@ export default function Admin() {
         console.log('🔍 매장 정보 로드 시도, storeId:', storeId);
         const { data: storeData, error } = await supabase
           .from('stores')
-          .select('*')
+          .select('*, pickup_time_slots, delivery_time_slots')
           .eq('id', storeId)
           .single();
         
@@ -308,6 +313,8 @@ export default function Admin() {
           setCurrentStore(storeData);
           setStoreName(storeData.name); // 매장 이름 설정
           console.log('✅ 매장 정보 로드됨:', storeData);
+          console.log('🚚 pickup_time_slots:', storeData.pickup_time_slots);
+          console.log('🚚 delivery_time_slots:', storeData.delivery_time_slots);
         } else {
           console.log('⚠️ 매장 데이터 없음');
         }
@@ -326,18 +333,28 @@ export default function Admin() {
 
   // 매장 정보 수정 함수들
   const handleEditStore = () => {
+    console.log('🔧 매장 정보 수정 버튼 클릭');
+    console.log('🏪 currentStore:', currentStore);
+    console.log('🚚 currentStore.pickup_time_slots:', currentStore?.pickup_time_slots);
+    console.log('🚚 currentStore.delivery_time_slots:', currentStore?.delivery_time_slots);
+    
     if (currentStore) {
       setStoreEditForm({
         name: currentStore.name || '',
+        category: currentStore.category || '한식반찬',
+        owner_name: currentStore.owner_name || '',
         phone: currentStore.phone || '',
         address: currentStore.address || '',
         description: currentStore.description || '',
-        business_hours_start: currentStore.business_hours_start || '',
-        business_hours_end: currentStore.business_hours_end || '',
-        order_deadline_hour: currentStore.order_deadline_hour || '',
-        order_deadline_minute: currentStore.order_deadline_minute || '',
+        business_hours_start: currentStore.business_hours_start || '09:00',
+        business_hours_end: currentStore.business_hours_end || '22:00',
+        order_cutoff_time: currentStore.order_cutoff_time || '15:00',
+        minimum_order_amount: currentStore.minimum_order_amount || 0,
         delivery_area: currentStore.delivery_area || '',
         delivery_fee: currentStore.delivery_fee || 0,
+        bank_account: currentStore.bank_account || '',
+        account_holder: currentStore.account_holder || '',
+        pickup_time_slots: currentStore.pickup_time_slots || ['09:00', '20:00'],
         delivery_time_slots: currentStore.delivery_time_slots || []
       });
       setShowStoreEditModal(true);
@@ -367,6 +384,13 @@ export default function Admin() {
     setStoreEditForm({ ...storeEditForm, delivery_time_slots: updatedSlots });
   };
 
+  // 픽업시간 설정 함수들
+  const updatePickupTimeSlot = (index: number, value: string) => {
+    const updatedSlots = [...storeEditForm.pickup_time_slots];
+    updatedSlots[index] = value;
+    setStoreEditForm({ ...storeEditForm, pickup_time_slots: updatedSlots });
+  };
+
   const handleStoreEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!storeId) return;
@@ -376,15 +400,20 @@ export default function Admin() {
         .from('stores')
         .update({
           name: storeEditForm.name,
+          category: storeEditForm.category,
+          owner_name: storeEditForm.owner_name,
           phone: storeEditForm.phone,
           address: storeEditForm.address,
           description: storeEditForm.description,
           business_hours_start: storeEditForm.business_hours_start,
           business_hours_end: storeEditForm.business_hours_end,
-          order_deadline_hour: storeEditForm.order_deadline_hour,
-          order_deadline_minute: storeEditForm.order_deadline_minute,
+          order_cutoff_time: storeEditForm.order_cutoff_time,
+          minimum_order_amount: storeEditForm.minimum_order_amount,
           delivery_area: storeEditForm.delivery_area,
           delivery_fee: storeEditForm.delivery_fee,
+          bank_account: storeEditForm.bank_account,
+          account_holder: storeEditForm.account_holder,
+          pickup_time_slots: storeEditForm.pickup_time_slots,
           delivery_time_slots: storeEditForm.delivery_time_slots,
           updated_at: new Date().toISOString()
         })
@@ -2139,7 +2168,7 @@ export default function Admin() {
                         isExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
                       }`}>
                         <div className="px-6 pb-6">
-                          <div className="space-y-2 max-h-[600px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                          <div className="space-y-2">
                             {(() => {
                               console.log(`🔍 ${category} 카테고리 메뉴 개수:`, categoryMenus.length);
                               console.log(`🔍 ${category} 카테고리 메뉴 목록:`, categoryMenus.map(m => m.name));
@@ -2466,6 +2495,11 @@ export default function Admin() {
                     배달 시간대
                   </h3>
                   <div className="p-3 bg-gray-50 rounded-lg border">
+                    {(() => {
+                      console.log('🚚 currentStore:', currentStore);
+                      console.log('🚚 delivery_time_slots:', currentStore?.delivery_time_slots);
+                      return null;
+                    })()}
                     {currentStore?.delivery_time_slots && currentStore.delivery_time_slots.length > 0 ? (
                       <div className="space-y-2">
                         {currentStore.delivery_time_slots.map((slot, index) => (
@@ -2577,192 +2611,238 @@ export default function Admin() {
         {/* 매장 정보 수정 모달 */}
         {showStoreEditModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border-2 border-gray-300 shadow-xl">
+            <div className="bg-white rounded-lg w-full max-w-2xl max-h-[95vh] overflow-y-auto">
               <div className="p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-xl font-semibold text-gray-800">매장 정보 수정</h3>
-                  <button
-                    onClick={() => setShowStoreEditModal(false)}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    <i className="ri-close-line text-xl"></i>
-                  </button>
-                </div>
-
+                <h3 className="text-lg font-semibold mb-4">매장 정보 수정</h3>
                 <form onSubmit={handleStoreEditSubmit} className="space-y-6">
-                  {/* 기본 정보 */}
+                  {/* 기본 정보 섹션 */}
                   <div>
-                    <h4 className="text-lg font-medium text-gray-800 mb-4">기본 정보</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <h4 className="text-md font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">기본 정보</h4>
+                    <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">매장명</label>
-                        <input
-                          type="text"
-                          value={storeEditForm.name}
-                          onChange={(e) => setStoreEditForm({ ...storeEditForm, name: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">전화번호</label>
-                        <input
-                          type="tel"
-                          value={storeEditForm.phone}
-                          onChange={(e) => setStoreEditForm({ ...storeEditForm, phone: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">주소</label>
-                        <input
-                          type="text"
-                          value={storeEditForm.address}
-                          onChange={(e) => setStoreEditForm({ ...storeEditForm, address: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">매장 설명</label>
-                        <textarea
-                          value={storeEditForm.description}
-                          onChange={(e) => setStoreEditForm({ ...storeEditForm, description: e.target.value })}
-                          rows={3}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                        />
-                      </div>
-                    </div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">매장명</label>
+                    <input
+                      type="text"
+                      value={storeEditForm.name}
+                      onChange={(e) => setStoreEditForm({...storeEditForm, name: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
                   </div>
-
-                  {/* 운영 정보 */}
                   <div>
-                    <h4 className="text-lg font-medium text-gray-800 mb-4">운영 정보</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">운영 시작시간</label>
-                        <input
-                          type="time"
-                          value={storeEditForm.business_hours_start}
-                          onChange={(e) => setStoreEditForm({ ...storeEditForm, business_hours_start: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">운영 종료시간</label>
-                        <input
-                          type="time"
-                          value={storeEditForm.business_hours_end}
-                          onChange={(e) => setStoreEditForm({ ...storeEditForm, business_hours_end: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">주문마감시간 (시)</label>
-                        <input
-                          type="number"
-                          min="0"
-                          max="23"
-                          value={storeEditForm.order_deadline_hour}
-                          onChange={(e) => setStoreEditForm({ ...storeEditForm, order_deadline_hour: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">주문마감시간 (분)</label>
-                        <input
-                          type="number"
-                          min="0"
-                          max="59"
-                          value={storeEditForm.order_deadline_minute}
-                          onChange={(e) => setStoreEditForm({ ...storeEditForm, order_deadline_minute: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                        />
-                      </div>
-                    </div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">카테고리</label>
+                    <select
+                      value={storeEditForm.category}
+                      onChange={(e) => setStoreEditForm({...storeEditForm, category: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    >
+                      <option value="한식반찬">한식반찬</option>
+                    </select>
                   </div>
-
-                  {/* 배달 정보 */}
                   <div>
-                    <h4 className="text-lg font-medium text-gray-800 mb-4">배달 정보</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">사장님 이름</label>
+                    <input
+                      type="text"
+                      value={storeEditForm.owner_name}
+                      onChange={(e) => setStoreEditForm({...storeEditForm, owner_name: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      placeholder="사장님 이름을 입력하세요"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">전화번호</label>
+                    <input
+                      type="text"
+                      value={storeEditForm.phone}
+                      onChange={(e) => setStoreEditForm({...storeEditForm, phone: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">배달 지역</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">배달지역</label>
                         <input
                           type="text"
                           value={storeEditForm.delivery_area}
-                          onChange={(e) => setStoreEditForm({ ...storeEditForm, delivery_area: e.target.value })}
-                          placeholder="예: 강남구, 서초구, 송파구"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">기본 배달비 (원)</label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={storeEditForm.delivery_fee}
-                          onChange={(e) => setStoreEditForm({ ...storeEditForm, delivery_fee: parseInt(e.target.value) || 0 })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                          onChange={(e) => setStoreEditForm({...storeEditForm, delivery_area: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                         />
                       </div>
                     </div>
                   </div>
 
-                  {/* 배달 시간대 설정 */}
+                  {/* 운영 정보 섹션 */}
                   <div>
-                    <h4 className="text-lg font-medium text-gray-800 mb-4">배달 시간대 설정</h4>
+                    <h4 className="text-md font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">운영 정보</h4>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">운영시작</label>
+                          <input
+                            type="time"
+                            value={storeEditForm.business_hours_start}
+                            onChange={(e) => setStoreEditForm({...storeEditForm, business_hours_start: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">운영종료</label>
+                          <input
+                            type="time"
+                            value={storeEditForm.business_hours_end}
+                            onChange={(e) => setStoreEditForm({...storeEditForm, business_hours_end: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">주문마감시간</label>
+                        <input
+                          type="time"
+                          value={storeEditForm.order_cutoff_time}
+                          onChange={(e) => setStoreEditForm({...storeEditForm, order_cutoff_time: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">이 시간 이후 주문은 다음날 배달됩니다</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">최소주문금액 (원)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={storeEditForm.minimum_order_amount === 0 ? '' : storeEditForm.minimum_order_amount}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            const numValue = value === '' ? 0 : parseInt(value);
+                            setStoreEditForm(prev => ({...prev, minimum_order_amount: numValue}));
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          placeholder="0"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">최소 주문 금액을 설정하세요 (0원이면 제한 없음)</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 결제 정보 섹션 */}
+                  <div>
+                    <h4 className="text-md font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">결제 정보</h4>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">계좌번호</label>
+                        <input
+                          type="text"
+                          value={storeEditForm.bank_account}
+                          onChange={(e) => setStoreEditForm({...storeEditForm, bank_account: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">예금주</label>
+                        <input
+                          type="text"
+                          value={storeEditForm.account_holder}
+                          onChange={(e) => setStoreEditForm({...storeEditForm, account_holder: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* 픽업시간 설정 섹션 */}
+                  <div>
+                    <h4 className="text-md font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">픽업시간 설정</h4>
+                    <div className="p-2 bg-blue-100 mb-2 rounded">
+                      <p className="text-xs text-blue-800">
+                        🚚 디버깅: pickup_time_slots = {JSON.stringify(storeEditForm.pickup_time_slots)}
+                      </p>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-4">
+                        <label className="text-sm font-medium text-gray-700">시작 시간:</label>
+                        <select
+                          value={storeEditForm.pickup_time_slots[0] || '09:00'}
+                          onChange={(e) => updatePickupTimeSlot(0, e.target.value)}
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        >
+                          {['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'].map(time => (
+                            <option key={time} value={time}>{time}</option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div className="flex items-center space-x-4">
+                        <label className="text-sm font-medium text-gray-700">종료 시간:</label>
+                        <select
+                          value={storeEditForm.pickup_time_slots[1] || '20:00'}
+                          onChange={(e) => updatePickupTimeSlot(1, e.target.value)}
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        >
+                          {['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'].map(time => (
+                            <option key={time} value={time}>{time}</option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div className="text-sm text-gray-500">
+                        픽업 가능 시간: {storeEditForm.pickup_time_slots[0] || '09:00'} ~ {storeEditForm.pickup_time_slots[1] || '20:00'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 배달시간 설정 섹션 */}
+                  <div>
+                    <h4 className="text-md font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">배달시간 설정</h4>
+                    <div className="p-2 bg-green-100 mb-2 rounded">
+                      <p className="text-xs text-green-800">
+                        🚚 디버깅: delivery_time_slots 개수 = {storeEditForm.delivery_time_slots.length}, 데이터 = {JSON.stringify(storeEditForm.delivery_time_slots)}
+                      </p>
+                    </div>
                     <div className="space-y-3">
                       {storeEditForm.delivery_time_slots.map((slot, index) => (
-                        <div key={index} className="p-4 border border-gray-200 rounded-lg">
-                          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">시간대 이름</label>
+                        <div key={index} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg">
+                          <input
+                            type="checkbox"
+                            checked={slot.enabled}
+                            onChange={(e) => {
+                              const updatedSlots = [...storeEditForm.delivery_time_slots];
+                              updatedSlots[index].enabled = e.target.checked;
+                              setStoreEditForm({...storeEditForm, delivery_time_slots: updatedSlots});
+                            }}
+                            className="mr-2"
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2">
                               <input
                                 type="text"
                                 value={slot.name}
-                                onChange={(e) => updateDeliveryTimeSlot(index, 'name', e.target.value)}
-                                placeholder="예: 점심배송"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                onChange={(e) => {
+                                  const updatedSlots = [...storeEditForm.delivery_time_slots];
+                                  updatedSlots[index].name = e.target.value;
+                                  setStoreEditForm({...storeEditForm, delivery_time_slots: updatedSlots});
+                                }}
+                                className="px-2 py-1 border border-gray-300 rounded text-sm w-20"
+                                placeholder="시간대명"
                               />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">시작시간</label>
                               <input
                                 type="time"
                                 value={slot.start}
-                                onChange={(e) => updateDeliveryTimeSlot(index, 'start', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                onChange={(e) => {
+                                  const updatedSlots = [...storeEditForm.delivery_time_slots];
+                                  updatedSlots[index].start = e.target.value;
+                                  setStoreEditForm({...storeEditForm, delivery_time_slots: updatedSlots});
+                                }}
+                                className="px-2 py-1 border border-gray-300 rounded text-sm"
                               />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">종료시간</label>
+                              <span className="text-gray-500">~</span>
                               <input
                                 type="time"
                                 value={slot.end}
-                                onChange={(e) => updateDeliveryTimeSlot(index, 'end', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                onChange={(e) => {
+                                  const updatedSlots = [...storeEditForm.delivery_time_slots];
+                                  updatedSlots[index].end = e.target.value;
+                                  setStoreEditForm({...storeEditForm, delivery_time_slots: updatedSlots});
+                                }}
+                                className="px-2 py-1 border border-gray-300 rounded text-sm"
                               />
-                            </div>
-                            <div className="flex items-end gap-2">
-                              <div className="flex items-center">
-                                <input
-                                  type="checkbox"
-                                  id={`enabled-${index}`}
-                                  checked={slot.enabled}
-                                  onChange={(e) => updateDeliveryTimeSlot(index, 'enabled', e.target.checked)}
-                                  className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
-                                />
-                                <label htmlFor={`enabled-${index}`} className="ml-2 text-sm text-gray-700">
-                                  활성
-                                </label>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => removeDeliveryTimeSlot(index)}
-                                className="px-2 py-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
-                              >
-                                <i className="ri-delete-bin-line"></i>
-                              </button>
                             </div>
                           </div>
                         </div>
@@ -2777,23 +2857,21 @@ export default function Admin() {
                       </button>
                     </div>
                   </div>
-
-                  <div className="flex gap-3 pt-4">
-                    <button
-                      type="button"
-                      onClick={() => setShowStoreEditModal(false)}
-                      className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      취소
-                    </button>
-                    <button
-                      type="submit"
-                      className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
-                    >
-                      수정 완료
-                    </button>
-                  </div>
                 </form>
+                <div className="flex space-x-3 mt-6">
+                  <button
+                    onClick={() => setShowStoreEditModal(false)}
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={handleStoreEditSubmit}
+                    className="flex-1 bg-white hover:bg-orange-500 text-gray-700 hover:text-white px-4 py-2 rounded-lg border border-gray-300 hover:border-orange-500 transition-colors"
+                  >
+                    수정
+                  </button>
+                </div>
               </div>
             </div>
           </div>
