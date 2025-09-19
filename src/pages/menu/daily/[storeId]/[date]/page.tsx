@@ -610,7 +610,7 @@ export default function DailyMenuPage() {
                                           : 'bg-red-100 text-red-700'
                                       }`}>
                                         <i className={`ri-${item.is_available ? 'check' : 'close'}-line text-xs`}></i>
-                                        {item.is_available ? '판매가능' : '품절'}
+                                        {item.is_available ? '판매중' : '품절'}
                                       </span>
                                     </div>
                                   </div>
