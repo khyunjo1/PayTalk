@@ -84,6 +84,7 @@ export default function Admin() {
     '세트메뉴',
     '월식메뉴',
     '3000원 반찬',
+    '오늘의 특가',
     '기타'
   ];
 

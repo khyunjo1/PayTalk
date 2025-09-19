@@ -7,6 +7,7 @@
 --
 -- 🆕 새로 추가된 카테고리:
 -- 5. "튀김류" 카테고리 추가 (프론트엔드에만 추가됨)
+-- 6. "오늘의 특가" 카테고리 추가 (프론트엔드에만 추가됨)
 
 -- 현재 카테고리 상태 확인
 SELECT category, COUNT(*) as menu_count
@@ -18,8 +19,9 @@ ORDER BY category;
 -- 현재 사용 가능한 카테고리:
 -- - 메인요리, 국, 김치류, 젓갈류, 나물류, 조림류
 -- - 튀김류 (새로 추가), 특별반찬, 고기반찬, 세트메뉴, 월식메뉴
--- - 3000원 반찬, 기타
+-- - 3000원 반찬, 오늘의 특가 (새로 추가), 기타
 --
 -- 예시:
 -- INSERT INTO menus (name, category, ...) VALUES ('새우튀김', '튀김류', ...);
 -- INSERT INTO menus (name, category, ...) VALUES ('야채튀김', '튀김류', ...);
+-- INSERT INTO menus (name, category, ...) VALUES ('특가메뉴', '오늘의 특가', ...);
