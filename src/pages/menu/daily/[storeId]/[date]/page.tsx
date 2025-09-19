@@ -569,7 +569,7 @@ export default function DailyMenuPage() {
                     {/* 카테고리 헤더 */}
                     <button
                       onClick={() => toggleCategory(category)}
-                      className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors duration-200"
+                      className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-gray-50 transition-colors duration-200"
                     >
                       <div className="flex items-center gap-3">
                         <div className="text-left">
@@ -591,20 +591,20 @@ export default function DailyMenuPage() {
                     <div className={`transition-all duration-300 ${
                       isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
                     }`}>
-                      <div className="px-4 pt-4 pb-4">
-                        <div className="space-y-3">
+                      <div className="px-3 pt-3 pb-3">
+                        <div className="space-y-2">
                           {categoryItems.map((item) => (
-                            <div key={item.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200 group">
+                            <div key={item.id} className="bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200 group">
                               {/* 메뉴 정보 */}
-                              <div className="p-4">
+                              <div className="p-3">
                                 {/* 상단: 메뉴명 + 상태 + 가격 */}
-                                <div className="flex justify-between items-start mb-2">
+                                <div className="flex justify-between items-start mb-1">
                                   <div className="flex-1 min-w-0 pr-2">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <h3 className="text-base font-bold text-gray-900 group-hover:text-orange-600 transition-colors truncate">
+                                    <div className="flex items-center gap-1.5 mb-1">
+                                      <h3 className="text-sm font-bold text-gray-900 group-hover:text-orange-600 transition-colors truncate">
                                         {item.menu?.name || '메뉴 정보 없음'}
                                       </h3>
-                                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 flex-shrink-0 ${
+                                      <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium flex items-center gap-1 flex-shrink-0 ${
                                         item.is_available
                                           ? 'bg-green-100 text-green-700'
                                           : 'bg-red-100 text-red-700'
@@ -615,14 +615,14 @@ export default function DailyMenuPage() {
                                     </div>
                                   </div>
                                   <div className="text-right flex-shrink-0">
-                                    <span className="text-lg font-bold text-gray-900">
+                                    <span className="text-sm font-bold text-gray-900">
                                       {(item.menu?.price || 0).toLocaleString()}원
                                     </span>
                                   </div>
                                 </div>
 
                                 {item.menu?.description && (
-                                  <p className="text-gray-600 mb-3 line-clamp-2 leading-relaxed text-sm">
+                                  <p className="text-gray-600 mb-2 line-clamp-2 leading-relaxed text-xs">
                                     {item.menu.description}
                                   </p>
                                 )}
@@ -630,18 +630,18 @@ export default function DailyMenuPage() {
                                 {/* 장바구니 수량 조절 UI */}
                                 <div className="flex items-center justify-end">
                                   {cart.has(item.menu_id) ? (
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1.5">
                                       <button
                                         onClick={() => {
                                           const currentQuantity = cart.get(item.menu_id) || 0;
                                           handleQuantityChange(item.menu_id, currentQuantity - 1);
                                         }}
                                         disabled={!item.is_available || isOrderClosed}
-                                        className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-600 hover:text-gray-800 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="w-6 h-6 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-600 hover:text-gray-800 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                       >
-                                        <i className="ri-subtract-line text-sm"></i>
+                                        <i className="ri-subtract-line text-xs"></i>
                                       </button>
-                                      <span className="w-8 text-center font-semibold text-gray-900">
+                                      <span className="w-6 text-center font-semibold text-gray-900 text-sm">
                                         {cart.get(item.menu_id) || 0}
                                       </span>
                                       <button
@@ -650,22 +650,22 @@ export default function DailyMenuPage() {
                                           handleQuantityChange(item.menu_id, currentQuantity + 1);
                                         }}
                                         disabled={!item.is_available || isOrderClosed}
-                                        className="w-8 h-8 rounded-full bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="w-6 h-6 rounded-full bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                       >
-                                        <i className="ri-add-line text-sm"></i>
+                                        <i className="ri-add-line text-xs"></i>
                                       </button>
                                     </div>
                                   ) : (
                                     <button
                                       onClick={() => handleToggleCart(item.menu_id)}
                                       disabled={!item.is_available || isOrderClosed}
-                                      className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 text-xs sm:text-sm ${
+                                      className={`px-3 py-1.5 rounded-md font-medium transition-all duration-300 transform hover:scale-105 text-xs ${
                                         item.is_available && !isOrderClosed
                                           ? 'bg-white text-gray-900 hover:bg-gray-900 hover:text-white border border-gray-300 hover:border-gray-900 shadow-sm hover:shadow-lg'
                                           : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                                       }`}
                                     >
-                                      <i className="ri-add-line mr-1"></i>
+                                      <i className="ri-add-line mr-1 text-xs"></i>
                                       담기
                                     </button>
                                   )}
