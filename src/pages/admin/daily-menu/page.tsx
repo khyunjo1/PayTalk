@@ -17,28 +17,11 @@ import {
   removeDailyDeliveryArea,
   copyStoreDeliveryAreasToDailyMenu
 } from '../../../lib/dailyMenuApi';
+import { getStore } from '../../../lib/storeApi';
+import { getMenuCategoriesByStoreCategory } from '../../../lib/categoryMapping';
 import type { DailyMenu, DailyMenuItem } from '../../../lib/dailyMenuApi';
 import type { MenuDB, DailyDeliveryArea } from '../../../types';
 import Header from '../../../components/Header';
-
-const STANDARD_CATEGORIES = [
-  '메인요리',
-  '국',
-  '김치류',
-  '젓갈류',
-  '나물류',
-  '조림류',
-  '튀김류',
-  '밑반찬',
-  '고기반찬',
-  '세트메뉴',
-  '월식메뉴',
-  '3000원 반찬',
-  '오늘의 특가',
-  '오늘의 메인반찬',
-  '서비스반찬',
-  '기타'
-];
 
 export default function AdminDailyMenu() {
   const navigate = useNavigate();
@@ -46,6 +29,9 @@ export default function AdminDailyMenu() {
   const { } = useNewAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  
+  // 매장 정보 상태
+  const [menuCategories, setMenuCategories] = useState<string[]>([]);
 
   // 상태 관리
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -86,13 +72,20 @@ export default function AdminDailyMenu() {
     name: '',
     description: '',
     price: '',
-    category: '메인요리'
+    category: ''
   });
 
   // 선택된 메뉴 변경 감지
   useEffect(() => {
     setHasChanges(selectedMenus.size > 0);
   }, [selectedMenus]);
+
+  // 메뉴 카테고리가 로드되면 기본 카테고리 설정
+  useEffect(() => {
+    if (menuCategories.length > 0 && !menuForm.category) {
+      setMenuForm(prev => ({ ...prev, category: menuCategories[0] }));
+    }
+  }, [menuCategories, menuForm.category]);
 
   // dailyMenu 변경 시 입력 필드 동기화
   useEffect(() => {
@@ -136,7 +129,14 @@ export default function AdminDailyMenu() {
     try {
       setLoading(true);
 
-      // 1. 사용 가능한 메뉴 목록 로드
+      // 1. 매장 정보 로드
+      const store = await getStore(storeId);
+      
+      // 2. 매장 카테고리에 맞는 메뉴 카테고리 설정
+      const categories = getMenuCategoriesByStoreCategory(store.category);
+      setMenuCategories(categories);
+
+      // 3. 사용 가능한 메뉴 목록 로드
       const menus = await getMenus(storeId);
       const availableMenus = menus.filter(menu => menu.is_available);
       setAvailableMenus(availableMenus);
@@ -520,7 +520,7 @@ export default function AdminDailyMenu() {
         name: '',
         description: '',
         price: '',
-        category: '메인요리'
+        category: menuCategories.length > 0 ? menuCategories[0] : ''
       });
     }
     setShowMenuModal(true);
@@ -1474,7 +1474,7 @@ export default function AdminDailyMenu() {
                     onChange={(e) => setMenuForm(prev => ({ ...prev, category: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   >
-                    {STANDARD_CATEGORIES.map(category => (
+                    {menuCategories.map(category => (
                       <option key={category} value={category}>{category}</option>
                     ))}
                   </select>

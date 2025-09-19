@@ -5,6 +5,7 @@ import { getUserStores } from '../../lib/database';
 import { getStores } from '../../lib/storeApi';
 import { getStoreOrders, updateOrderStatus } from '../../lib/orderApi';
 import { getMenus, createMenu, updateMenu, deleteMenu } from '../../lib/menuApi';
+import { getMenuCategoriesByStoreCategory } from '../../lib/categoryMapping';
 import { supabase } from '../../lib/supabase';
 import Footer from '../../components/Footer';
 
@@ -145,6 +146,9 @@ export default function Admin() {
   
   // 사용자의 매장 정보
   const [currentStore, setCurrentStore] = useState<any>(null);
+  
+  // 동적 메뉴 카테고리 상태
+  const [menuCategories, setMenuCategories] = useState<string[]>([]);
 
   // 달력 외부 클릭 시 닫기
   useEffect(() => {
@@ -312,6 +316,11 @@ export default function Admin() {
         if (storeData) {
           setCurrentStore(storeData);
           setStoreName(storeData.name); // 매장 이름 설정
+          
+          // 매장 카테고리에 맞는 메뉴 카테고리 설정
+          const categories = getMenuCategoriesByStoreCategory(storeData.category);
+          setMenuCategories(categories);
+          
           console.log('✅ 매장 정보 로드됨:', storeData);
           console.log('🚚 pickup_time_slots:', storeData.pickup_time_slots);
           console.log('🚚 delivery_time_slots:', storeData.delivery_time_slots);
@@ -330,6 +339,13 @@ export default function Admin() {
   useEffect(() => {
     loadStoreInfo();
   }, [storeId]);
+
+  // 메뉴 카테고리가 로드되면 기본 카테고리 설정
+  useEffect(() => {
+    if (menuCategories.length > 0 && !menuForm.category) {
+      setMenuForm(prev => ({ ...prev, category: menuCategories[0] }));
+    }
+  }, [menuCategories, menuForm.category]);
 
   // 매장 정보 수정 함수들
   const handleEditStore = () => {
@@ -2081,7 +2097,13 @@ export default function Admin() {
                   onClick={() => {
                     console.log('메뉴 추가 버튼 클릭됨');
                     setEditingMenu(null);
-                    setMenuForm({ name: '', description: '', price: '', category: '', is_available: true });
+                    setMenuForm({ 
+                      name: '', 
+                      description: '', 
+                      price: '', 
+                      category: menuCategories.length > 0 ? menuCategories[0] : '', 
+                      is_available: true 
+                    });
                     setShowMenuModal(true);
                     console.log('showMenuModal 상태:', true);
                   }}
@@ -2097,7 +2119,7 @@ export default function Admin() {
             {menus.length > 0 && (
               <div className="bg-white px-4 py-4 border-b shadow-sm mb-0">
                 <div className="flex space-x-2 overflow-x-auto pb-1">
-                  {STANDARD_CATEGORIES.map(category => {
+                  {menuCategories.map(category => {
                     const count = menus.filter(menu => menu.category === category).length;
                     if (count === 0) return null; // 메뉴가 없는 카테고리는 표시하지 않음
                     return (
@@ -2128,7 +2150,7 @@ export default function Admin() {
             ) : menus.length > 0 ? (
               <div className="space-y-4">
                 {/* 카테고리별로 그룹화 */}
-                {STANDARD_CATEGORIES.map((category) => {
+                {menuCategories.map((category) => {
                   const categoryMenus = selectedMenuCategory === 'all'
                     ? menus.filter(menu => menu.category === category)
                     : filteredMenus.filter(menu => menu.category === category);
@@ -2315,8 +2337,8 @@ export default function Admin() {
                 >
                   <option value="">카테고리를 선택하세요</option>
                   {(() => {
-                    console.log('🔍 STANDARD_CATEGORIES 배열:', STANDARD_CATEGORIES);
-                    return STANDARD_CATEGORIES.map(category => {
+                    console.log('🔍 menuCategories 배열:', menuCategories);
+                    return menuCategories.map(category => {
                       console.log('🔍 렌더링 중인 카테고리:', category);
                       return <option key={category} value={category}>{category}</option>;
                     });

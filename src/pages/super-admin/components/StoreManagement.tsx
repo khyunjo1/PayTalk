@@ -468,6 +468,10 @@ export default function StoreManagement({ showToast }: StoreManagementProps) {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 >
                   <option value="한식반찬">한식반찬</option>
+                  <option value="동태탕">동태탕</option>
+                  <option value="중식">중식</option>
+                  <option value="일식">일식</option>
+                  <option value="양식">양식</option>
                 </select>
               </div>
               <div>
