@@ -667,7 +667,7 @@ export default function AdminOrders() {
                     <span className="font-bold text-red-600 text-xl animate-pulse">{unreadOrdersCount}건</span>
                   </div>
                 )}
-                <div className="flex justify-between items-center pt-2 border-t-2 border-black">
+                <div className="flex justify-between items-center pt-2">
                   <span className="text-gray-800 text-sm font-bold">총 결제금액</span>
                   <span className="font-bold text-orange-600 text-xl">
                     {formatKoreanCurrency(finalFilteredOrders.reduce((sum, order) => sum + (order.total || 0), 0))}
@@ -964,7 +964,7 @@ export default function AdminOrders() {
                         </div>
                         
                         {/* 주문 요약 - 모바일 최적화 */}
-                        <div className="space-y-2 pt-2 border-t-2 border-black">
+                        <div className="space-y-2 pt-2 border-t border-gray-300">
                           <div className="flex justify-between items-center">
                             <span className="text-gray-700 text-sm font-semibold">상품 금액</span>
                             <span className="text-gray-900 text-sm font-bold">{(order.subtotal || 0).toLocaleString()}원</span>
@@ -977,7 +977,7 @@ export default function AdminOrders() {
                               </span>
                             </div>
                           )}
-                          <div className="flex justify-between items-center pt-2 border-t-2 border-black">
+                          <div className="flex justify-between items-center pt-2 border-t border-gray-300">
                             <span className="font-bold text-gray-900 text-base">총 결제금액</span>
                             <span className="text-lg font-bold text-orange-600">
                               {formatKoreanCurrency(order.total || 0)}
