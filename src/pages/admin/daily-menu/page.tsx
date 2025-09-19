@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useNewAuth } from '../../../hooks/useNewAuth';
-import { getMenus } from '../../../lib/menuApi';
+import { getMenus, createMenu, updateMenu, deleteMenu } from '../../../lib/menuApi';
 import {
   createDailyMenu,
   getDailyMenu,
@@ -10,7 +10,6 @@ import {
   toggleDailyMenuItemAvailability,
   removeDailyMenuItem,
   getLatestDailyMenu,
-  updateDailyMenuSettings,
   copyStoreSettingsToDailyMenu,
   getDailyDeliveryAreas,
   addDailyDeliveryArea,
@@ -19,8 +18,27 @@ import {
   copyStoreDeliveryAreasToDailyMenu
 } from '../../../lib/dailyMenuApi';
 import type { DailyMenu, DailyMenuItem } from '../../../lib/dailyMenuApi';
-import type { MenuDB, DeliveryTimeSlot, DailyDeliveryArea } from '../../../types';
+import type { MenuDB, DailyDeliveryArea } from '../../../types';
 import Header from '../../../components/Header';
+
+const STANDARD_CATEGORIES = [
+  '메인요리',
+  '국',
+  '김치류',
+  '젓갈류',
+  '나물류',
+  '조림류',
+  '튀김류',
+  '밑반찬',
+  '고기반찬',
+  '세트메뉴',
+  '월식메뉴',
+  '3000원 반찬',
+  '오늘의 특가',
+  '오늘의 메인반찬',
+  '서비스반찬',
+  '기타'
+];
 
 export default function AdminDailyMenu() {
   const navigate = useNavigate();
@@ -61,6 +79,16 @@ export default function AdminDailyMenu() {
   const [minimumOrderAmountInput, setMinimumOrderAmountInput] = useState('');
   const [deliveryFeeInput, setDeliveryFeeInput] = useState('');
 
+  // 메뉴 관리 상태
+  const [showMenuModal, setShowMenuModal] = useState(false);
+  const [editingMenu, setEditingMenu] = useState<MenuDB | null>(null);
+  const [menuForm, setMenuForm] = useState({
+    name: '',
+    description: '',
+    price: '',
+    category: '메인요리'
+  });
+
   // 선택된 메뉴 변경 감지
   useEffect(() => {
     setHasChanges(selectedMenus.size > 0);
@@ -69,7 +97,7 @@ export default function AdminDailyMenu() {
   // dailyMenu 변경 시 입력 필드 동기화
   useEffect(() => {
     if (dailyMenu) {
-      setMinimumOrderAmountInput(dailyMenu.minimum_order_amount?.toString() || '');
+        setMinimumOrderAmountInput(dailyMenu.minimum_order_amount?.toString() || '0');
     }
   }, [dailyMenu]);
 
@@ -77,11 +105,11 @@ export default function AdminDailyMenu() {
   useEffect(() => {
     if (dailyMenu) {
       // 기본값과 다른지 확인
-      const hasSettingsChanged = 
-        (dailyMenu.pickup_time_slots && dailyMenu.pickup_time_slots.length > 0) ||
-        (dailyMenu.delivery_time_slots && dailyMenu.delivery_time_slots.length > 0) ||
-        (dailyMenu.order_cutoff_time) ||
-        (dailyMenu.minimum_order_amount && dailyMenu.minimum_order_amount > 0) ||
+      const hasSettingsChanged: boolean = 
+        Boolean(dailyMenu.pickup_time_slots && dailyMenu.pickup_time_slots.length > 0) ||
+        Boolean(dailyMenu.delivery_time_slots && dailyMenu.delivery_time_slots.length > 0) ||
+        Boolean(dailyMenu.order_cutoff_time) ||
+        Boolean(dailyMenu.minimum_order_amount && dailyMenu.minimum_order_amount > 0) ||
         deliveryAreas.length > 0;
       
       setSettingsChanged(hasSettingsChanged);
@@ -142,7 +170,7 @@ export default function AdminDailyMenu() {
             store_id: storeId,
             menu_date: selectedDate,
             title: '오늘의 반찬',
-            description: null
+            description: '맛있는 반찬을 주문해보세요!'
           });
           
           // 매장의 기본 설정값을 복사
@@ -259,7 +287,7 @@ export default function AdminDailyMenu() {
             ...dailyMenu,
             pickup_time_slots: latestMenuData.menu.pickup_time_slots || dailyMenu.pickup_time_slots,
             delivery_time_slots: latestMenuData.menu.delivery_time_slots || dailyMenu.delivery_time_slots,
-            delivery_fee: latestMenuData.menu.delivery_fee || dailyMenu.delivery_fee,
+            // delivery_fee: latestMenuData.menu.delivery_fee || dailyMenu.delivery_fee,
             order_cutoff_time: latestMenuData.menu.order_cutoff_time || dailyMenu.order_cutoff_time,
             minimum_order_amount: latestMenuData.menu.minimum_order_amount || dailyMenu.minimum_order_amount
           };
@@ -408,28 +436,6 @@ export default function AdminDailyMenu() {
     });
   };
 
-  const handleSaveSettings = async () => {
-    if (!dailyMenu || !storeId) return;
-    
-    try {
-      setSaving(true);
-      
-      await updateDailyMenuSettings(dailyMenu.id, {
-        pickup_time_slots: dailyMenu.pickup_time_slots,
-        delivery_time_slots: dailyMenu.delivery_time_slots,
-        order_cutoff_time: dailyMenu.order_cutoff_time,
-        minimum_order_amount: dailyMenu.minimum_order_amount
-      });
-      
-      setSettingsChanged(false);
-      alert('설정값이 저장되었습니다.');
-    } catch (error) {
-      console.error('설정값 저장 오류:', error);
-      alert('설정값 저장에 실패했습니다.');
-    } finally {
-      setSaving(false);
-    }
-  };
 
   // 배달지역 관리 핸들러들
   const handleAddArea = async () => {
@@ -498,6 +504,115 @@ export default function AdminDailyMenu() {
     setShowAddAreaModal(true);
   };
 
+  // 메뉴 관리 함수들
+  const openMenuModal = (menu?: MenuDB) => {
+    if (menu) {
+      setEditingMenu(menu);
+      setMenuForm({
+        name: menu.name,
+        description: menu.description || '',
+        price: menu.price.toString(),
+        category: menu.category
+      });
+    } else {
+      setEditingMenu(null);
+      setMenuForm({
+        name: '',
+        description: '',
+        price: '',
+        category: '메인요리'
+      });
+    }
+    setShowMenuModal(true);
+  };
+
+  const handleSaveMenu = async () => {
+    if (!menuForm.name.trim()) {
+      alert('메뉴명을 입력해주세요.');
+      return;
+    }
+    if (!menuForm.price || isNaN(Number(menuForm.price)) || Number(menuForm.price) < 0) {
+      alert('올바른 가격을 입력해주세요.');
+      return;
+    }
+    if (!storeId) {
+      alert('매장 정보가 없습니다.');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      
+      if (editingMenu) {
+        // 메뉴 수정
+        const updatedMenu = await updateMenu(editingMenu.id, {
+          name: menuForm.name.trim(),
+          description: menuForm.description.trim(),
+          price: Number(menuForm.price),
+          category: menuForm.category
+        });
+        
+        // availableMenus 업데이트
+        setAvailableMenus(prev => 
+          prev.map(menu => menu.id === editingMenu.id ? updatedMenu : menu)
+        );
+        
+        alert('메뉴가 수정되었습니다.');
+      } else {
+        // 메뉴 생성
+        const newMenu = await createMenu({
+          store_id: storeId,
+          name: menuForm.name.trim(),
+          description: menuForm.description.trim(),
+          price: Number(menuForm.price),
+          category: menuForm.category,
+          is_available: true
+        });
+        
+        // availableMenus에 새 메뉴 추가
+        setAvailableMenus(prev => [...prev, newMenu]);
+        
+        alert('메뉴가 추가되었습니다.');
+      }
+      
+      setShowMenuModal(false);
+    } catch (error) {
+      console.error('메뉴 저장 오류:', error);
+      alert('메뉴 저장에 실패했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteMenu = async (menuId: string, menuName: string) => {
+    if (!confirm(`"${menuName}" 메뉴를 삭제하시겠습니까?\n삭제된 메뉴는 복구할 수 없습니다.`)) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+      
+      await deleteMenu(menuId);
+      
+      // availableMenus에서 제거
+      setAvailableMenus(prev => prev.filter(menu => menu.id !== menuId));
+      
+      // selectedMenus에서도 제거
+      setSelectedMenus(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(menuId);
+        return newSet;
+      });
+      
+      alert('메뉴가 삭제되었습니다.');
+    } catch (error) {
+      console.error('메뉴 삭제 오류:', error);
+      alert('메뉴 삭제에 실패했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // 품절 상태 관리 (로컬 상태)
   const [itemAvailability, setItemAvailability] = useState<Record<string, boolean>>({});
   
@@ -512,19 +627,6 @@ export default function AdminDailyMenu() {
     type: 'success'
   });
 
-  // 토스트 표시 함수
-  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
-    setToast({
-      show: true,
-      message,
-      type
-    });
-    
-    // 3초 후 자동으로 숨기기
-    setTimeout(() => {
-      setToast(prev => ({ ...prev, show: false }));
-    }, 3000);
-  };
 
   // 개별 아이템 품절 처리 (로컬 상태만 업데이트)
   const handleToggleItemAvailability = (itemId: string, currentAvailability: boolean) => {
@@ -1052,6 +1154,39 @@ export default function AdminDailyMenu() {
             
             
             
+            {/* 메뉴 관리 버튼 */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-6 mb-4 sm:mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <i className="ri-restaurant-line text-blue-600 text-sm"></i>
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900">메뉴 관리</h3>
+                </div>
+                <button
+                  onClick={() => openMenuModal()}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm font-semibold"
+                >
+                  <i className="ri-add-line text-sm"></i>
+                  메뉴 추가
+                </button>
+              </div>
+              
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={handleLoadRecentTemplate}
+                  className="flex items-center gap-2 px-3 py-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg transition-colors text-sm font-medium"
+                >
+                  <i className="ri-file-copy-line text-sm"></i>
+                  최근 주문서 적용
+                </button>
+                <div className="text-sm text-gray-500 flex items-center">
+                  <i className="ri-information-line mr-1"></i>
+                  최근 주문서의 메뉴를 불러온 후 수정/추가/삭제 가능
+                </div>
+              </div>
+            </div>
+
             {/* 아코디언 메뉴 선택 */}
             <div className={`space-y-2 sm:space-y-3 mb-4 sm:mb-6 ${(hasChanges || settingsChanged) ? 'pb-20' : ''}`}>
               {Object.entries(menuByCategory).map(([category, menus]) => {
@@ -1115,6 +1250,24 @@ export default function AdminDailyMenu() {
                           </div>
                       </div>
                         <div className="flex items-center gap-2">
+                          {/* 메뉴 관리 버튼들 */}
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => openMenuModal(menu)}
+                              className="p-1.5 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                              title="메뉴 수정"
+                            >
+                              <i className="ri-edit-line text-sm"></i>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMenu(menu.id, menu.name)}
+                              className="p-1.5 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                              title="메뉴 삭제"
+                            >
+                              <i className="ri-delete-bin-line text-sm"></i>
+                            </button>
+                          </div>
+                          
                           {existingItem && (
                             <button
                               onClick={() => handleToggleItemAvailability(existingItem.id, isAvailable)}
@@ -1260,6 +1413,101 @@ export default function AdminDailyMenu() {
                   className="flex-1 bg-orange-500 hover:bg-orange-600 text-white px-4 py-3 rounded-lg transition-colors text-sm font-medium"
                 >
                   {editingArea ? '수정' : '추가'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 메뉴 추가/수정 모달 */}
+      {showMenuModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-bold text-gray-900">
+                  {editingMenu ? '메뉴 수정' : '메뉴 추가'}
+                </h3>
+                <button
+                  onClick={() => setShowMenuModal(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <i className="ri-close-line text-xl"></i>
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    메뉴명 *
+                  </label>
+                  <input
+                    type="text"
+                    value={menuForm.name}
+                    onChange={(e) => setMenuForm(prev => ({ ...prev, name: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    placeholder="메뉴명을 입력하세요"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    가격 (원) *
+                  </label>
+                  <input
+                    type="number"
+                    value={menuForm.price}
+                    onChange={(e) => setMenuForm(prev => ({ ...prev, price: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    min="0"
+                    placeholder="0"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    카테고리 *
+                  </label>
+                  <select
+                    value={menuForm.category}
+                    onChange={(e) => setMenuForm(prev => ({ ...prev, category: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  >
+                    {STANDARD_CATEGORIES.map(category => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    설명
+                  </label>
+                  <textarea
+                    value={menuForm.description}
+                    onChange={(e) => setMenuForm(prev => ({ ...prev, description: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
+                    rows={3}
+                    placeholder="메뉴 설명을 입력하세요 (선택사항)"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 mt-6">
+                <button
+                  onClick={() => setShowMenuModal(false)}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-lg transition-colors text-sm font-medium"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleSaveMenu}
+                  disabled={saving}
+                  className="flex-1 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white px-4 py-3 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                >
+                  {saving && <i className="ri-loader-4-line animate-spin text-sm"></i>}
+                  {editingMenu ? '수정' : '추가'}
                 </button>
               </div>
             </div>

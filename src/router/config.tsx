@@ -13,7 +13,6 @@ import SuperAdmin from "../pages/super-admin/page";
 import OwnerOrders from "../pages/owner/orders/page";
 import OwnerMenu from "../pages/owner/menu/page";
 import AdminOrders from "../pages/admin/orders/page";
-import AdminMenu from "../pages/admin/menu/page";
 import AdminAnalytics from "../pages/admin/analytics/page";
 import AdminStore from "../pages/admin/store/page";
 import OrderStatus from "../pages/order-status/[storeId]/page";
@@ -71,10 +70,6 @@ const routes: RouteObject[] = [
   {
     path: "/admin/:storeId/orders",
     element: <AdminOrders />,
-  },
-  {
-    path: "/admin/:storeId/menu",
-    element: <AdminMenu />,
   },
   {
     path: "/admin/:storeId/analytics",
