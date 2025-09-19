@@ -143,11 +143,17 @@ export default function Cart() {
     if (hasLoaded.current) return;
     hasLoaded.current = true;
     
-    console.log('useEffect 실행됨');
+    console.log('🔍 장바구니 페이지 useEffect 실행됨');
     const loadCartData = async () => {
       const savedCart = localStorage.getItem('cart');
       const savedStoreInfo = localStorage.getItem('storeInfo');
       const dailyMenuCart = localStorage.getItem('dailyMenuCart');
+      
+      console.log('🔍 localStorage 데이터 확인:', {
+        savedCart: savedCart ? JSON.parse(savedCart) : null,
+        savedStoreInfo: savedStoreInfo ? JSON.parse(savedStoreInfo) : null,
+        dailyMenuCart: dailyMenuCart ? JSON.parse(dailyMenuCart) : null
+      });
       
       if (savedCart && savedStoreInfo) {
         setCart(JSON.parse(savedCart));
@@ -182,10 +188,35 @@ export default function Cart() {
             // 일일 메뉴 아이템들의 실제 메뉴 정보를 가져와서 변환
             try {
               const menuIds = dailyMenuData.items.map((item: any) => item.menuId);
-              const { data: menuData } = await supabase
+              console.log('🔍 메뉴 ID 목록:', menuIds);
+              console.log('🔍 일일 메뉴 데이터:', dailyMenuData);
+              
+              // menuIds가 비어있거나 잘못된 경우 처리
+              if (!menuIds || menuIds.length === 0) {
+                console.warn('⚠️ 메뉴 ID가 없습니다. 빈 장바구니로 설정합니다.');
+                setCart([]);
+                return;
+              }
+              
+              // 유효한 메뉴 ID만 필터링
+              const validMenuIds = menuIds.filter((id: any) => id && typeof id === 'string');
+              if (validMenuIds.length === 0) {
+                console.warn('⚠️ 유효한 메뉴 ID가 없습니다. 빈 장바구니로 설정합니다.');
+                setCart([]);
+                return;
+              }
+              
+              console.log('🔍 유효한 메뉴 ID:', validMenuIds);
+              
+              const { data: menuData, error } = await supabase
                 .from('menus')
                 .select('id, name, price, available')
-                .in('id', menuIds);
+                .in('id', validMenuIds);
+                
+              if (error) {
+                console.error('❌ 메뉴 데이터 조회 오류:', error);
+                throw error;
+              }
 
               if (menuData) {
                 const dailyMenuItems = dailyMenuData.items.map((item: any, index: number) => {
@@ -205,17 +236,19 @@ export default function Cart() {
               }
             } catch (error) {
               console.error('메뉴 정보 가져오기 오류:', error);
+              // 에러 발생 시에도 수량 정보를 유지하여 장바구니에 표시
               const dailyMenuItems = dailyMenuData.items.map((item: any, index: number) => {
                 const quantity = item.quantity || 1;
                 return {
                   id: `daily-${index}-${Date.now()}-${item.menuId}`,
                   originalMenuId: item.menuId,
                   name: `일일메뉴-${item.menuId}`,
-                  price: 0,
+                  price: 0, // 가격 정보가 없어도 장바구니에 표시
                   quantity: quantity,
                   available: true
                 };
               });
+              console.log('🔍 에러 발생 시 생성된 아이템들:', dailyMenuItems);
               setCart(dailyMenuItems);
             }
           } catch (error) {
@@ -242,6 +275,7 @@ export default function Cart() {
         
         setLoading(false);
       } else {
+        console.log('⚠️ localStorage에 필요한 데이터가 없습니다. 홈으로 이동합니다.');
         setLoading(false);
         navigate('/');
       }
@@ -286,7 +320,31 @@ export default function Cart() {
     );
   }
 
-  if (!storeInfo || cart.length === 0) {
+  console.log('🔍 장바구니 상태 확인:', {
+    storeInfo: !!storeInfo,
+    cartLength: cart.length,
+    cart: cart
+  });
+
+  if (!storeInfo) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <i className="ri-store-line text-6xl text-gray-300 mb-4"></i>
+          <h2 className="text-xl font-semibold text-gray-600 mb-2">매장 정보를 찾을 수 없습니다</h2>
+          <p className="text-gray-500 mb-4">매장을 선택하고 다시 시도해주세요</p>
+          <button
+            onClick={() => navigate('/stores')}
+            className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg whitespace-nowrap cursor-pointer"
+          >
+            매장으로 돌아가기
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (cart.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">

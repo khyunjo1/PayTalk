@@ -294,6 +294,13 @@ export default function DailyMenuPage() {
 
 
   const handleGoToCart = () => {
+    console.log('🔍 장바구니 이동 시도:', {
+      cartItemCount: getCartItemCount(),
+      cart: Array.from(cart.entries()),
+      store: store?.id,
+      dailyMenu: dailyMenu?.id
+    });
+    
     if (getCartItemCount() === 0) {
       alert('장바구니가 비어있습니다.');
       return;
@@ -314,6 +321,8 @@ export default function DailyMenuPage() {
         quantity
       })),
     };
+    
+    console.log('🔍 저장할 일일 메뉴 데이터:', dailyMenuData);
     
     // 매장 정보를 localStorage에 저장 (장바구니에서 필요)
     localStorage.setItem('storeInfo', JSON.stringify(store));
