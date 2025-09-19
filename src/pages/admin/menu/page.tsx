@@ -6,15 +6,16 @@ import Header from '../../../components/Header';
 
 const STANDARD_CATEGORIES = [
   '메인요리',
-  '국물류', 
+  '국',
   '김치류',
   '젓갈류',
   '나물류',
   '조림류',
   '특별반찬',
-  '인기메뉴',
+  '고기반찬',
   '세트메뉴',
-  '월식메뉴'
+  '월식메뉴',
+  '기타'
 ];
 
 interface Menu {

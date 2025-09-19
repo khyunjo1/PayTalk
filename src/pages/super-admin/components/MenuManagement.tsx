@@ -79,7 +79,7 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
         id: menu.id,
         name: menu.name,
         price: menu.price,
-        category: menu.category || '인기메뉴',
+        category: menu.category || '고기반찬',
         description: menu.description || '',
         isAvailable: menu.is_available !== false,
         storeId: menu.store_id,
@@ -98,7 +98,7 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
   const [newMenu, setNewMenu] = useState({
     name: '',
     price: 0,
-    category: '인기메뉴',
+    category: '고기반찬',
     description: '',
     isAvailable: true
   });
@@ -145,7 +145,7 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
         id: createdMenu.id,
         name: createdMenu.name,
         price: createdMenu.price,
-        category: createdMenu.category || '인기메뉴',
+        category: createdMenu.category || '고기반찬',
         description: createdMenu.description || '',
         isAvailable: createdMenu.is_available !== false,
         storeId: createdMenu.store_id,
@@ -156,7 +156,7 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
       setNewMenu({
       name: '',
       price: 0,
-        category: '인기메뉴',
+        category: '고기반찬',
         description: '',
         isAvailable: true,
       });
@@ -398,15 +398,16 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 >
                   <option value="메인요리">메인요리</option>
-                  <option value="국물류">국물류</option>
+                  <option value="국">국</option>
                   <option value="김치류">김치류</option>
                   <option value="젓갈류">젓갈류</option>
                   <option value="나물류">나물류</option>
                   <option value="조림류">조림류</option>
                   <option value="특별반찬">특별반찬</option>
-                  <option value="인기메뉴">인기메뉴</option>
+                  <option value="고기반찬">고기반찬</option>
                   <option value="세트메뉴">세트메뉴</option>
                   <option value="월식메뉴">월식메뉴</option>
+                  <option value="기타">기타</option>
                 </select>
               </div>
               <div>
@@ -485,15 +486,16 @@ export default function MenuManagement({ showToast }: MenuManagementProps) {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 >
                   <option value="메인요리">메인요리</option>
-                  <option value="국물류">국물류</option>
+                  <option value="국">국</option>
                   <option value="김치류">김치류</option>
                   <option value="젓갈류">젓갈류</option>
                   <option value="나물류">나물류</option>
                   <option value="조림류">조림류</option>
                   <option value="특별반찬">특별반찬</option>
-                  <option value="인기메뉴">인기메뉴</option>
+                  <option value="고기반찬">고기반찬</option>
                   <option value="세트메뉴">세트메뉴</option>
                   <option value="월식메뉴">월식메뉴</option>
+                  <option value="기타">기타</option>
                 </select>
               </div>
               <div>

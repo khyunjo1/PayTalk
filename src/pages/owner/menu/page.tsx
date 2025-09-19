@@ -37,7 +37,7 @@ interface Store {
   updated_at: string;
 }
 
-const CATEGORIES = ['인기메뉴', '계절메뉴', '고기 반찬', '튀김/전류', '국', '분식', '밑반찬', '아이들 반찬'];
+const CATEGORIES = ['고기반찬', '계절메뉴', '국', '김치류', '나물류', '조림류', '특별반찬', '세트메뉴', '기타'];
 
 export default function OwnerMenu() {
   const navigate = useNavigate();
@@ -54,7 +54,7 @@ export default function OwnerMenu() {
   const [menuForm, setMenuForm] = useState({
     name: '',
     price: 0,
-    category: '인기메뉴',
+    category: '고기반찬',
     description: '',
     is_available: true
   });
@@ -178,7 +178,7 @@ export default function OwnerMenu() {
     setMenuForm({
       name: '',
       price: 0,
-      category: '인기메뉴',
+      category: '고기반찬',
       description: '',
       image_url: '',
       is_available: true
