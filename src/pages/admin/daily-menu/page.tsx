@@ -32,6 +32,14 @@ export default function AdminDailyMenu() {
   // 아코디언 상태 관리
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
+  // 수정 사항 감지 상태
+  const [hasChanges, setHasChanges] = useState(false);
+
+  // 선택된 메뉴 변경 감지
+  useEffect(() => {
+    setHasChanges(selectedMenus.size > 0);
+  }, [selectedMenus]);
+
   // 오늘 날짜 설정 (한국 표준시간 기준)
   useEffect(() => {
     const now = new Date();
@@ -278,6 +286,8 @@ export default function AdminDailyMenu() {
 
       // 4. 로컬 상태 초기화
       setItemAvailability({});
+      setSelectedMenus(new Set());
+      setHasChanges(false);
 
       // 데이터 다시 로드
       await loadData();
@@ -669,6 +679,21 @@ export default function AdminDailyMenu() {
             </div>
             </div>
           )}
+
+      {/* Floating 저장 버튼 */}
+      {hasChanges && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <button
+            onClick={handleSaveItems}
+            disabled={saving}
+            className="px-6 py-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-full font-semibold transition-all duration-200 shadow-2xl hover:shadow-3xl disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base flex items-center gap-2 animate-bounce hover:animate-none"
+          >
+            <i className="ri-save-line text-lg"></i>
+            <span className="hidden sm:inline">{saving ? '저장 중...' : `저장 (${selectedMenus.size}개)`}</span>
+            <span className="sm:hidden">{saving ? '저장 중...' : selectedMenus.size}</span>
+          </button>
+        </div>
+      )}
 
       </div>
     </div>
