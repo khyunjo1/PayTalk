@@ -130,14 +130,6 @@ export default function AdminDashboard() {
               </button>
               
               <button
-                onClick={() => navigate(`/admin/${userStores[0]?.id}/menu`)}
-                className="bg-white hover:bg-gray-50 text-gray-800 py-3 px-4 rounded-xl font-medium text-sm shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-center gap-2 border border-gray-200"
-              >
-                <i className="ri-restaurant-line text-lg text-green-500"></i>
-                <span>메뉴관리</span>
-              </button>
-              
-              <button
                 onClick={() => navigate(`/admin/${userStores[0]?.id}/daily-menu`)}
                 className="bg-white hover:bg-gray-50 text-gray-800 py-3 px-4 rounded-xl font-medium text-sm shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-center gap-2 border border-gray-200"
               >
@@ -161,13 +153,6 @@ export default function AdminDashboard() {
                 <span>매장관리</span>
               </button>
               
-              <button
-                onClick={() => navigate(`/admin/delivery-settings/${userStores[0]?.id}`)}
-                className="bg-white hover:bg-gray-50 text-gray-800 py-3 px-4 rounded-xl font-medium text-sm shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-center gap-2 border border-gray-200"
-              >
-                <i className="ri-truck-line text-lg text-purple-500"></i>
-                <span>배달비 설정</span>
-              </button>
             </div>
             
           </div>

@@ -19,7 +19,6 @@ import OrderStatus from "../pages/order-status/[storeId]/page";
 import OrderDetail from "../pages/admin/order-detail/[orderId]/page";
 import AdminDailyMenu from "../pages/admin/daily-menu/page";
 import DailyMenuPage from "../pages/menu/daily/[storeId]/[date]/page";
-import DeliverySettings from "../pages/admin/delivery-settings/[storeId]/page";
 import DeliveryTimesPage from "../pages/admin/delivery-times/[storeId]/page";
 
 const routes: RouteObject[] = [
@@ -102,10 +101,6 @@ const routes: RouteObject[] = [
   {
     path: "/admin/:storeId/daily-menu",
     element: <AdminDailyMenu />,
-  },
-  {
-    path: "/admin/delivery-settings/:storeId",
-    element: <DeliverySettings />,
   },
   {
     path: "/admin/:storeId/delivery-times",
