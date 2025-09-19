@@ -597,10 +597,23 @@ export default function DailyMenuPage() {
                             <div key={item.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200 group">
                               {/* 메뉴 정보 */}
                               <div className="p-4">
+                                {/* 상단: 메뉴명 + 상태 + 가격 */}
                                 <div className="flex justify-between items-start mb-2">
-                                  <h3 className="text-base font-bold text-gray-900 group-hover:text-orange-600 transition-colors flex-1 pr-2">
-                                    {item.menu?.name || '메뉴 정보 없음'}
-                                  </h3>
+                                  <div className="flex-1 min-w-0 pr-2">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <h3 className="text-base font-bold text-gray-900 group-hover:text-orange-600 transition-colors truncate">
+                                        {item.menu?.name || '메뉴 정보 없음'}
+                                      </h3>
+                                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 flex-shrink-0 ${
+                                        item.is_available
+                                          ? 'bg-green-100 text-green-700'
+                                          : 'bg-red-100 text-red-700'
+                                      }`}>
+                                        <i className={`ri-${item.is_available ? 'check' : 'close'}-line text-xs`}></i>
+                                        {item.is_available ? '판매가능' : '품절'}
+                                      </span>
+                                    </div>
+                                  </div>
                                   <div className="text-right flex-shrink-0">
                                     <span className="text-lg font-bold text-gray-900">
                                       {(item.menu?.price || 0).toLocaleString()}원
@@ -613,18 +626,6 @@ export default function DailyMenuPage() {
                                     {item.menu.description}
                                   </p>
                                 )}
-
-                                {/* 상태 정보 */}
-                                <div className="flex flex-wrap items-center gap-2 mb-3">
-                                  <span className={`px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${
-                                    item.is_available
-                                      ? 'bg-green-100 text-green-700'
-                                      : 'bg-red-100 text-red-700'
-                                  }`}>
-                                    <i className={`ri-${item.is_available ? 'check' : 'close'}-line text-xs`}></i>
-                                    {item.is_available ? '판매가능' : '품절'}
-                                  </span>
-                                </div>
 
                                 {/* 장바구니 수량 조절 UI */}
                                 <div className="flex items-center justify-end">
