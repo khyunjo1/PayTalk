@@ -768,54 +768,71 @@ export default function AdminDailyMenu() {
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mb-6">
             <label className="text-sm sm:text-base font-semibold text-gray-700 sm:min-w-0">날짜:</label>
             <div className="flex-1">
-            <input
-              type="date"
-              value={selectedDate}
-              min={getCurrentKoreaTime().toISOString().split('T')[0]}
-                onChange={(e) => {
-                  const selectedDate = e.target.value;
-                  
-                  // 정확한 한국 시간 계산 (UTC+9)
-                  const now = new Date();
-                  const koreaOffset = 9 * 60; // 9시간을 분으로
-                  const koreaTime = new Date(now.getTime() + (koreaOffset * 60 * 1000));
-                  const today = koreaTime.toISOString().split('T')[0];
-                  
-                  const tomorrow = new Date(koreaTime);
-                  tomorrow.setDate(tomorrow.getDate() + 1);
-                  const maxDate = tomorrow.toISOString().split('T')[0];
-                  
-                  console.log('현재 한국 날짜:', today);
-                  console.log('내일 날짜:', maxDate);
-                  console.log('선택된 날짜:', selectedDate);
-                  
-                  // 내일 이후 날짜 선택 시 경고
-                  if (selectedDate > maxDate) {
-                    alert('주문서는 내일까지만 생성가능합니다.');
-                    return;
-                  }
-                  
-                  setSelectedDate(selectedDate);
-                }}
-                max={(() => {
-                  // 정확한 한국 시간 계산 (UTC+9)
-                  const now = new Date();
-                  const koreaOffset = 9 * 60; // 9시간을 분으로
-                  const koreaTime = new Date(now.getTime() + (koreaOffset * 60 * 1000));
-                  const tomorrow = new Date(koreaTime);
-                  tomorrow.setDate(tomorrow.getDate() + 1);
-                  const maxDate = tomorrow.toISOString().split('T')[0];
-                  console.log('max 날짜 설정:', maxDate);
-                  return maxDate;
-                })()}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-500 focus:border-gray-500 text-sm sm:text-base font-medium min-h-[48px] bg-gray-50 focus:bg-white transition-all"
-              />
-              <p className="text-xs text-gray-500 mt-2">
-                <i className="ri-information-line mr-1"></i>
-                주문서는 내일까지만 생성가능합니다 (과거 날짜 선택 가능)
-              </p>
+              {/* 커스텀 날짜 선택 버튼 */}
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    const input = document.getElementById('date-input') as HTMLInputElement;
+                    if (input) (input as any).showPicker?.() || input.click();
+                  }}
+                  className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm sm:text-base font-semibold min-h-[56px] bg-white hover:bg-gray-50 transition-all duration-200 flex items-center justify-between shadow-sm hover:shadow-md"
+                >
+                  <span className="text-gray-900">
+                    {selectedDate ? new Date(selectedDate).toLocaleDateString('ko-KR', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      weekday: 'short'
+                    }) : '날짜를 선택하세요'}
+                  </span>
+                  <i className="ri-calendar-line text-orange-500 text-lg"></i>
+                </button>
+                <input
+                  id="date-input"
+                  type="date"
+                  value={selectedDate}
+                  min={getCurrentKoreaTime().toISOString().split('T')[0]}
+                  onChange={(e) => {
+                    const selectedDate = e.target.value;
+                    
+                    // 정확한 한국 시간 계산 (UTC+9)
+                    const now = new Date();
+                    const koreaOffset = 9 * 60; // 9시간을 분으로
+                    const koreaTime = new Date(now.getTime() + (koreaOffset * 60 * 1000));
+                    const today = koreaTime.toISOString().split('T')[0];
+                    
+                    const tomorrow = new Date(koreaTime);
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    const maxDate = tomorrow.toISOString().split('T')[0];
+                    
+                    console.log('현재 한국 날짜:', today);
+                    console.log('내일 날짜:', maxDate);
+                    console.log('선택된 날짜:', selectedDate);
+                    
+                    // 내일 이후 날짜 선택 시 경고
+                    if (selectedDate > maxDate) {
+                      alert('주문서는 내일까지만 생성가능합니다.');
+                      return;
+                    }
+                    
+                    setSelectedDate(selectedDate);
+                  }}
+                  max={(() => {
+                    // 정확한 한국 시간 계산 (UTC+9)
+                    const now = new Date();
+                    const koreaOffset = 9 * 60; // 9시간을 분으로
+                    const koreaTime = new Date(now.getTime() + (koreaOffset * 60 * 1000));
+                    const tomorrow = new Date(koreaTime);
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    const maxDate = tomorrow.toISOString().split('T')[0];
+                    console.log('max 날짜 설정:', maxDate);
+                    return maxDate;
+                  })()}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+              </div>
+            </div>
           </div>
-        </div>
 
           {/* 주문서 상태 정보 - 날짜 선택 카드 안에 포함 */}
           {dailyMenu && (
@@ -897,10 +914,17 @@ export default function AdminDailyMenu() {
                   <button
                     onClick={handleLoadRecentTemplate}
                     disabled={loading}
-                    className="group flex items-center justify-center gap-2 px-6 py-3 bg-white hover:bg-orange-500 text-gray-800 hover:text-white border border-gray-300 hover:border-orange-500 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed rounded-2xl transition-all duration-300 text-base font-bold w-auto min-w-[200px] shadow-sm hover:shadow-lg disabled:shadow-none"
+                    className="group flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed rounded-2xl transition-all duration-300 text-base font-bold w-auto min-w-[240px] shadow-lg hover:shadow-xl disabled:shadow-md transform hover:scale-105 disabled:transform-none"
                   >
-                    <i className="ri-file-copy-line text-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0"></i>
-                    <span className="whitespace-nowrap">최근 주문서 적용</span>
+                    <div className="flex items-center justify-center w-8 h-8 bg-white bg-opacity-20 rounded-full group-hover:bg-opacity-30 transition-all duration-300">
+                      <i className="ri-file-copy-line text-lg group-hover:scale-110 transition-transform duration-300"></i>
+                    </div>
+                    <span className="whitespace-nowrap">
+                      {loading ? '불러오는 중...' : '최근 주문서 적용'}
+                    </span>
+                    {loading && (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    )}
                   </button>
                 </div>
 
@@ -985,29 +1009,52 @@ export default function AdminDailyMenu() {
                       
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                         <div>
-                          <label className="block text-sm font-semibold mb-2" style={{color: '#111827'}}>주문마감시간</label>
-                          <input
-                            type="time"
-                            value={dailyMenu.order_cutoff_time || ''}
-                            onChange={(e) => handleOrderCutoffTimeChange(e.target.value)}
-                            className="w-full px-3 py-2 sm:px-4 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm font-medium"
-                            style={{borderColor: '#E5E7EB'}}
-                          />
+                          <label className="block text-sm font-semibold mb-3" style={{color: '#111827'}}>주문마감시간</label>
+                          <div className="relative">
+                            <button
+                              onClick={() => {
+                                const input = document.getElementById('cutoff-time-input') as HTMLInputElement;
+                                if (input) (input as any).showPicker?.() || input.click();
+                              }}
+                              className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm font-semibold min-h-[56px] bg-white hover:bg-gray-50 transition-all duration-200 flex items-center justify-between shadow-sm hover:shadow-md"
+                            >
+                              <span className="text-gray-900">
+                                {dailyMenu.order_cutoff_time ? 
+                                  new Date(`2000-01-01T${dailyMenu.order_cutoff_time}`).toLocaleTimeString('ko-KR', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: false
+                                  }) : '시간을 선택하세요'
+                                }
+                              </span>
+                              <i className="ri-time-line text-orange-500 text-lg"></i>
+                            </button>
+                            <input
+                              id="cutoff-time-input"
+                              type="time"
+                              value={dailyMenu.order_cutoff_time || ''}
+                              onChange={(e) => handleOrderCutoffTimeChange(e.target.value)}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            />
+                          </div>
                         </div>
                         <div>
-                          <label className="block text-sm font-semibold mb-2" style={{color: '#111827'}}>최소주문금액 (원)</label>
-                          <input
-                            type="number"
-                            value={minimumOrderAmountInput}
-                            onChange={(e) => {
-                              setMinimumOrderAmountInput(e.target.value);
-                              const value = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
-                              handleMinimumOrderAmountChange(value);
-                            }}
-                            className="w-full px-3 py-2 sm:px-4 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm font-medium"
-                            style={{borderColor: '#E5E7EB'}}
-                            min="0"
-                          />
+                          <label className="block text-sm font-semibold mb-3" style={{color: '#111827'}}>최소주문금액 (원)</label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              value={minimumOrderAmountInput}
+                              onChange={(e) => {
+                                setMinimumOrderAmountInput(e.target.value);
+                                const value = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
+                                handleMinimumOrderAmountChange(value);
+                              }}
+                              className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm font-semibold min-h-[56px] bg-white hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md"
+                              min="0"
+                              placeholder="0"
+                            />
+                            <i className="ri-money-dollar-circle-line text-orange-500 text-lg absolute right-4 top-1/2 transform -translate-y-1/2"></i>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1027,33 +1074,55 @@ export default function AdminDailyMenu() {
                       
                       <div className="flex items-center gap-3">
                         <div className="flex-1">
-                          <label className="block text-sm font-semibold mb-2" style={{color: '#111827'}}>시작 시간</label>
-                          <select
-                            value={dailyMenu.pickup_time_slots?.[0] || '09:00'}
-                            onChange={(e) => handlePickupTimeChange(0, e.target.value)}
-                            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium"
-                            style={{borderColor: '#E5E7EB'}}
-                          >
-                            {['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'].map(time => (
-                              <option key={time} value={time}>{time}</option>
-                            ))}
-                          </select>
+                          <label className="block text-sm font-semibold mb-3" style={{color: '#111827'}}>시작 시간</label>
+                          <div className="relative">
+                            <button
+                              onClick={() => {
+                                const input = document.getElementById('pickup-start-time-input') as HTMLInputElement;
+                                if (input) (input as any).showPicker?.() || input.click();
+                              }}
+                              className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm font-semibold min-h-[56px] bg-white hover:bg-gray-50 transition-all duration-200 flex items-center justify-between shadow-sm hover:shadow-md"
+                            >
+                              <span className="text-gray-900">
+                                {dailyMenu.pickup_time_slots?.[0] || '09:00'}
+                              </span>
+                              <i className="ri-time-line text-orange-500 text-lg"></i>
+                            </button>
+                            <input
+                              id="pickup-start-time-input"
+                              type="time"
+                              value={dailyMenu.pickup_time_slots?.[0] || '09:00'}
+                              onChange={(e) => handlePickupTimeChange(0, e.target.value)}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            />
+                          </div>
                         </div>
-                        <div className="flex items-center justify-center pt-5">
-                          <span className="text-gray-500 text-sm font-medium">~</span>
+                        <div className="flex items-center justify-center pt-8">
+                          <span className="text-gray-500 text-lg font-bold">~</span>
                         </div>
                         <div className="flex-1">
-                          <label className="block text-sm font-semibold mb-2" style={{color: '#111827'}}>종료 시간</label>
-                          <select
-                            value={dailyMenu.pickup_time_slots?.[1] || '20:00'}
-                            onChange={(e) => handlePickupTimeChange(1, e.target.value)}
-                            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium"
-                            style={{borderColor: '#E5E7EB'}}
-                          >
-                            {['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'].map(time => (
-                              <option key={time} value={time}>{time}</option>
-                            ))}
-                          </select>
+                          <label className="block text-sm font-semibold mb-3" style={{color: '#111827'}}>종료 시간</label>
+                          <div className="relative">
+                            <button
+                              onClick={() => {
+                                const input = document.getElementById('pickup-end-time-input') as HTMLInputElement;
+                                if (input) (input as any).showPicker?.() || input.click();
+                              }}
+                              className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm font-semibold min-h-[56px] bg-white hover:bg-gray-50 transition-all duration-200 flex items-center justify-between shadow-sm hover:shadow-md"
+                            >
+                              <span className="text-gray-900">
+                                {dailyMenu.pickup_time_slots?.[1] || '20:00'}
+                              </span>
+                              <i className="ri-time-line text-orange-500 text-lg"></i>
+                            </button>
+                            <input
+                              id="pickup-end-time-input"
+                              type="time"
+                              value={dailyMenu.pickup_time_slots?.[1] || '20:00'}
+                              onChange={(e) => handlePickupTimeChange(1, e.target.value)}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1108,27 +1177,51 @@ export default function AdminDailyMenu() {
                             {/* 시간 입력 - 가로 배치 */}
                             <div className="flex items-center gap-3">
                               <div className="flex-1">
-                                <label className="block text-sm font-semibold mb-2" style={{color: '#111827'}}>시작 시간</label>
-                                <input
-                                  type="time"
-                                  value={slot.start}
-                                  onChange={(e) => handleDeliveryTimeSlotStartChange(index, e.target.value)}
-                                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm font-medium"
-                                  style={{borderColor: '#E5E7EB'}}
-                                />
+                                <label className="block text-sm font-semibold mb-3" style={{color: '#111827'}}>시작 시간</label>
+                                <div className="relative">
+                                  <button
+                                    onClick={() => {
+                                      const input = document.getElementById(`delivery-start-time-${index}`) as HTMLInputElement;
+                                      if (input) (input as any).showPicker?.() || input.click();
+                                    }}
+                                    className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm font-semibold min-h-[56px] bg-white hover:bg-gray-50 transition-all duration-200 flex items-center justify-between shadow-sm hover:shadow-md"
+                                  >
+                                    <span className="text-gray-900">{slot.start}</span>
+                                    <i className="ri-time-line text-orange-500 text-lg"></i>
+                                  </button>
+                                  <input
+                                    id={`delivery-start-time-${index}`}
+                                    type="time"
+                                    value={slot.start}
+                                    onChange={(e) => handleDeliveryTimeSlotStartChange(index, e.target.value)}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                  />
+                                </div>
                               </div>
-                              <div className="flex items-center justify-center pt-5">
-                                <span className="text-gray-500 text-sm font-medium">~</span>
+                              <div className="flex items-center justify-center pt-8">
+                                <span className="text-gray-500 text-lg font-bold">~</span>
                               </div>
                               <div className="flex-1">
-                                <label className="block text-sm font-semibold mb-2" style={{color: '#111827'}}>종료 시간</label>
-                                <input
-                                  type="time"
-                                  value={slot.end}
-                                  onChange={(e) => handleDeliveryTimeSlotEndChange(index, e.target.value)}
-                                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm font-medium"
-                                  style={{borderColor: '#E5E7EB'}}
-                                />
+                                <label className="block text-sm font-semibold mb-3" style={{color: '#111827'}}>종료 시간</label>
+                                <div className="relative">
+                                  <button
+                                    onClick={() => {
+                                      const input = document.getElementById(`delivery-end-time-${index}`) as HTMLInputElement;
+                                      if (input) (input as any).showPicker?.() || input.click();
+                                    }}
+                                    className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm font-semibold min-h-[56px] bg-white hover:bg-gray-50 transition-all duration-200 flex items-center justify-between shadow-sm hover:shadow-md"
+                                  >
+                                    <span className="text-gray-900">{slot.end}</span>
+                                    <i className="ri-time-line text-orange-500 text-lg"></i>
+                                  </button>
+                                  <input
+                                    id={`delivery-end-time-${index}`}
+                                    type="time"
+                                    value={slot.end}
+                                    onChange={(e) => handleDeliveryTimeSlotEndChange(index, e.target.value)}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                  />
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1170,19 +1263,6 @@ export default function AdminDailyMenu() {
                 </button>
               </div>
               
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={handleLoadRecentTemplate}
-                  className="flex items-center gap-2 px-3 py-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg transition-colors text-sm font-medium"
-                >
-                  <i className="ri-file-copy-line text-sm"></i>
-                  최근 주문서 적용
-                </button>
-                <div className="text-sm text-gray-500 flex items-center">
-                  <i className="ri-information-line mr-1"></i>
-                  최근 주문서의 메뉴를 불러온 후 수정/추가/삭제 가능
-                </div>
-              </div>
             </div>
 
             {/* 아코디언 메뉴 선택 */}
