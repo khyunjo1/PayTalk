@@ -28,6 +28,8 @@ interface CartItem {
   name: string;
   price: number;
   available: boolean;
+  quantity?: number;
+  originalMenuId?: string;
 }
 
 interface StoreInfo {
@@ -188,11 +190,13 @@ export default function Cart() {
               if (menuData) {
                 const dailyMenuItems = dailyMenuData.items.map((item: any, index: number) => {
                   const menu = menuData.find(m => m.id === item.menuId);
+                  const quantity = item.quantity || 1; // 수량 정보 사용
                   return {
                     id: `daily-${index}-${Date.now()}-${item.menuId}`,
                     originalMenuId: item.menuId,
                     name: menu?.name || `메뉴-${item.menuId}`,
-                    price: menu?.price || 0,
+                    price: (menu?.price || 0) * quantity, // 수량을 곱한 가격으로 설정
+                    quantity: quantity, // 수량 정보 추가
                     available: menu?.available !== false
                   };
                 });
@@ -201,13 +205,17 @@ export default function Cart() {
               }
             } catch (error) {
               console.error('메뉴 정보 가져오기 오류:', error);
-              const dailyMenuItems = dailyMenuData.items.map((item: any, index: number) => ({
-                id: `daily-${index}-${Date.now()}-${item.menuId}`,
-                originalMenuId: item.menuId,
-                name: `일일메뉴-${item.menuId}`,
-                price: 0,
-                available: true
-              }));
+              const dailyMenuItems = dailyMenuData.items.map((item: any, index: number) => {
+                const quantity = item.quantity || 1;
+                return {
+                  id: `daily-${index}-${Date.now()}-${item.menuId}`,
+                  originalMenuId: item.menuId,
+                  name: `일일메뉴-${item.menuId}`,
+                  price: 0,
+                  quantity: quantity,
+                  available: true
+                };
+              });
               setCart(dailyMenuItems);
             }
           } catch (error) {
@@ -403,7 +411,8 @@ export default function Cart() {
         payment_method: paymentMethod,
         items: cart.filter(item => item.available).map(item => ({
           menu_id: (item as any).originalMenuId || item.id,
-          price: item.price
+          price: item.quantity ? item.price / item.quantity : item.price, // 단가로 저장
+          quantity: item.quantity || 1
         })),
         // 일일 메뉴 데이터 추가
         daily_menu_data: dailyMenuCartData ? {
@@ -854,7 +863,12 @@ export default function Cart() {
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
                     <div className="flex-1">
-                      <div className="font-medium text-gray-800">{item.name}</div>
+                      <div className="font-medium text-gray-800">
+                        {item.name}
+                        {item.quantity && item.quantity > 1 && (
+                          <span className="ml-2 text-sm text-gray-500">x{item.quantity}</span>
+                        )}
+                      </div>
                       <div className="text-sm text-gray-600">{(item.price || 0).toLocaleString()}원</div>
                     </div>
                     <div className="flex items-center gap-2">

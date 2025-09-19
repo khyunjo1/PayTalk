@@ -309,8 +309,9 @@ export default function DailyMenuPage() {
     const dailyMenuData = {
       dailyMenuId: dailyMenu?.id,
       menuDate: dailyMenu?.menu_date,
-      items: Array.from(cart).map(menuId => ({
-        menuId
+      items: Array.from(cart.entries()).map(([menuId, quantity]) => ({
+        menuId,
+        quantity
       })),
     };
     

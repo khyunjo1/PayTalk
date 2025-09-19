@@ -403,6 +403,9 @@ export default function AdminDailyMenu() {
           </div>
         </div>
 
+        {/* Divider */}
+        <div className="my-6 border-t border-gray-200"></div>
+
           {/* 주문서 상태 정보 */}
           {dailyMenu && (
             <div className="bg-white rounded-xl p-4">
@@ -425,15 +428,15 @@ export default function AdminDailyMenu() {
                 </div>
                 
                 {/* 주문서 링크 복사 버튼 */}
-                <button
-                  onClick={handleCopyLink}
-                  className="group flex items-center justify-center gap-2 px-6 py-2.5 sm:px-8 sm:py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl transition-all duration-300 text-xs sm:text-sm font-semibold shadow-lg hover:shadow-xl transform hover:scale-105"
-                >
-                  <div className="w-4 h-4 sm:w-5 sm:h-5 bg-white bg-opacity-20 rounded-full flex items-center justify-center group-hover:bg-opacity-30 transition-all duration-300">
-                    <i className="ri-link text-xs sm:text-sm"></i>
-                  </div>
-                  <span className="whitespace-nowrap">링크 복사</span>
-                </button>
+                <div className="flex justify-center mt-3">
+                  <button
+                    onClick={handleCopyLink}
+                    className="group flex items-center gap-2 px-6 py-3 bg-white hover:bg-orange-500 text-gray-800 hover:text-white border border-gray-300 hover:border-orange-500 rounded-2xl transition-all duration-300 text-base font-bold w-auto min-w-[200px] shadow-sm hover:shadow-lg"
+                  >
+                    <i className="ri-link text-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0"></i>
+                    <span className="whitespace-nowrap">링크 복사</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -449,14 +452,16 @@ export default function AdminDailyMenu() {
               </div>
               <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">주문서가 아직 없습니다</h3>
               <p className="text-sm sm:text-base text-gray-600 mb-8">선택한 날짜의 주문서를 생성해주세요.</p>
-              <button
-                onClick={handleCreateDailyMenu}
-                disabled={saving}
-                className="px-6 py-3 sm:px-8 sm:py-4 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-xl hover:from-gray-600 hover:to-gray-700 transition-all disabled:opacity-50 text-sm sm:text-base font-semibold shadow-lg hover:shadow-xl w-full sm:w-auto"
-              >
-                <i className="ri-add-line mr-2 text-sm sm:text-base"></i>
-                {saving ? '생성 중...' : '주문서 링크 생성'}
-              </button>
+              <div className="flex justify-center">
+                <button
+                  onClick={handleCreateDailyMenu}
+                  disabled={saving}
+                  className="group flex items-center gap-2 px-6 py-3 bg-white hover:bg-gray-500 text-gray-800 hover:text-white border border-gray-300 hover:border-gray-500 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed rounded-2xl transition-all duration-300 text-base font-bold w-auto min-w-[200px] shadow-sm hover:shadow-lg disabled:shadow-none"
+                >
+                  <i className="ri-add-line text-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0"></i>
+                  <span className="whitespace-nowrap">{saving ? '생성 중...' : '주문서 링크 생성'}</span>
+                </button>
+              </div>
             </div>
             </div>
           )}
@@ -465,8 +470,8 @@ export default function AdminDailyMenu() {
         {dailyMenu && (
           <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-4 sm:p-8 mb-4 sm:mb-8">
             <div className="mb-6 sm:mb-8">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-                <div className="flex items-center gap-3 sm:gap-4">
+              <div className="mb-5">
+                <div className="flex items-center gap-3 sm:gap-4 mb-4">
                   <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center">
                     <i className="ri-restaurant-line text-orange-500 text-lg sm:text-xl"></i>
                   </div>
@@ -476,16 +481,16 @@ export default function AdminDailyMenu() {
                 </div>
                 
                 {/* 최근 주문서 가져오기 버튼 */}
-                <button
-                  onClick={handleLoadRecentTemplate}
-                  disabled={loading}
-                  className="group flex items-center justify-center gap-2 px-4 py-2.5 sm:px-6 sm:py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 disabled:from-orange-300 disabled:to-orange-400 text-white rounded-xl transition-all duration-300 text-xs sm:text-sm font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:shadow-md w-full sm:w-auto"
-                >
-                  <div className="w-4 h-4 sm:w-5 sm:h-5 bg-white bg-opacity-20 rounded-full flex items-center justify-center group-hover:bg-opacity-30 transition-all duration-300">
-                    <i className="ri-file-copy-line text-xs sm:text-sm"></i>
-                  </div>
-                  <span className="whitespace-nowrap">최근 주문서 가져오기</span>
-                </button>
+                <div className="flex justify-center">
+                  <button
+                    onClick={handleLoadRecentTemplate}
+                    disabled={loading}
+                    className="group flex items-center gap-2 px-6 py-3 bg-white hover:bg-orange-500 text-gray-800 hover:text-white border border-gray-300 hover:border-orange-500 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed rounded-2xl transition-all duration-300 text-base font-bold w-auto min-w-[200px] shadow-sm hover:shadow-lg disabled:shadow-none"
+                  >
+                    <i className="ri-file-copy-line text-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0"></i>
+                    <span className="whitespace-nowrap">최근 주문서 가져오기</span>
+                  </button>
+                </div>
               </div>
             </div>
             
