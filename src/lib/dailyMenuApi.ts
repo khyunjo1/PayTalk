@@ -6,11 +6,45 @@ import {
   DailyMenu, 
   DailyMenuItem, 
   CreateDailyMenuData, 
-  CreateDailyMenuItemData 
+  CreateDailyMenuItemData,
+  DeliveryTimeSlot,
+  DailyDeliveryArea
 } from '../types';
 
 // 타입들을 re-export
 export type { DailyMenu, DailyMenuItem, CreateDailyMenuItemData };
+
+// JSONB 데이터를 string[]로 변환하는 헬퍼 함수
+const convertPickupTimeSlots = (data: any): string[] => {
+  if (Array.isArray(data)) {
+    return data;
+  }
+  if (typeof data === 'string') {
+    try {
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : ['09:00', '20:00'];
+    } catch {
+      return ['09:00', '20:00'];
+    }
+  }
+  return ['09:00', '20:00'];
+};
+
+// JSONB 데이터를 DeliveryTimeSlot[]로 변환하는 헬퍼 함수
+const convertDeliveryTimeSlots = (data: any): DeliveryTimeSlot[] => {
+  if (Array.isArray(data)) {
+    return data;
+  }
+  if (typeof data === 'string') {
+    try {
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
 
 // 일일 메뉴 페이지 생성
 export const createDailyMenu = async (data: CreateDailyMenuData): Promise<DailyMenu> => {
@@ -41,16 +75,28 @@ export const createDailyMenu = async (data: CreateDailyMenuData): Promise<DailyM
   } catch (rpcError) {
     console.log('RPC 함수 없음, 직접 insert 시도');
     
-    // RPC 함수가 없으면 직접 insert 시도
+    // RPC 함수가 없으면 직접 insert 시도 (설정값들 포함)
     const { data: result, error } = await supabase
       .from('daily_menus')
       .insert({
         store_id: data.store_id,
         menu_date: data.menu_date,
         title: data.title || '오늘의 반찬',
-        description: data.description || null
+        description: data.description || null,
+        pickup_time_slots: data.pickup_time_slots || ['09:00', '20:00'],
+        delivery_time_slots: data.delivery_time_slots || [],
+        delivery_fee: data.delivery_fee || 0,
+        order_cutoff_time: data.order_cutoff_time || null,
+        minimum_order_amount: data.minimum_order_amount || 0
       })
-      .select()
+      .select(`
+        *,
+        pickup_time_slots,
+        delivery_time_slots,
+        delivery_fee,
+        order_cutoff_time,
+        minimum_order_amount
+      `)
       .single();
 
     if (error) {
@@ -82,10 +128,17 @@ export const getDailyMenu = async (storeId: string, menuDate: string): Promise<D
 
     if (error) {
       console.error('일일 메뉴 조회 오류 (RPC):', error);
-      // RPC 함수가 없으면 기존 방식으로 fallback
+      // RPC 함수가 없으면 기존 방식으로 fallback (설정값들 포함)
       const { data: fallbackData, error: fallbackError } = await supabase
         .from('daily_menus')
-        .select('*')
+        .select(`
+          *,
+          pickup_time_slots,
+          delivery_time_slots,
+          delivery_fee,
+          order_cutoff_time,
+          minimum_order_amount
+        `)
         .eq('store_id', storeId)
         .eq('menu_date', menuDate)
         .single();
@@ -95,10 +148,27 @@ export const getDailyMenu = async (storeId: string, menuDate: string): Promise<D
         throw new Error(`일일 메뉴 조회에 실패했습니다: ${fallbackError.message}`);
       }
 
+      // 데이터 변환 적용
+      if (fallbackData) {
+        return {
+          ...fallbackData,
+          pickup_time_slots: convertPickupTimeSlots(fallbackData.pickup_time_slots),
+          delivery_time_slots: convertDeliveryTimeSlots(fallbackData.delivery_time_slots)
+        };
+      }
       return fallbackData;
     }
 
-    return data && data.length > 0 ? data[0] : null;
+    // RPC 함수 결과도 변환 적용
+    if (data && data.length > 0) {
+      const menuData = data[0];
+      return {
+        ...menuData,
+        pickup_time_slots: convertPickupTimeSlots(menuData.pickup_time_slots),
+        delivery_time_slots: convertDeliveryTimeSlots(menuData.delivery_time_slots)
+      };
+    }
+    return null;
   } catch (error) {
     console.error('일일 메뉴 조회 오류:', error);
     throw new Error(`일일 메뉴 조회에 실패했습니다: ${error}`);
@@ -355,10 +425,17 @@ export const getLatestDailyMenu = async (storeId: string, selectedDate?: string)
     
     console.log('해당 매장의 모든 메뉴 (최근 10개):', allMenus);
     
-    // 선택된 날짜 이전의 가장 최근 메뉴 찾기
+    // 선택된 날짜 이전의 가장 최근 메뉴 찾기 (설정값들 포함)
     const { data, error } = await supabase
       .from('daily_menus')
-      .select('*')
+      .select(`
+        *,
+        pickup_time_slots,
+        delivery_time_slots,
+        delivery_fee,
+        order_cutoff_time,
+        minimum_order_amount
+      `)
       .eq('store_id', storeId)
       .lt('menu_date', targetDate) // 선택된 날짜 이전 메뉴만
       .order('menu_date', { ascending: false }) // 날짜 기준으로 최신순
@@ -382,15 +459,262 @@ export const getLatestDailyMenu = async (storeId: string, selectedDate?: string)
     const latestMenu = data[0];
     const items = await getDailyMenuItems(latestMenu.id);
     
+    // 데이터 변환 적용
+    const convertedMenu = {
+      ...latestMenu,
+      pickup_time_slots: convertPickupTimeSlots(latestMenu.pickup_time_slots),
+      delivery_time_slots: convertDeliveryTimeSlots(latestMenu.delivery_time_slots)
+    };
+    
     console.log(`${targetDate} 이전의 가장 최근 메뉴를 찾았습니다:`, {
-      menu: latestMenu,
-      menuDate: latestMenu.menu_date,
+      menu: convertedMenu,
+      menuDate: convertedMenu.menu_date,
       itemsCount: items.length
     });
 
-    return { menu: latestMenu, items };
+    return { menu: convertedMenu, items };
   } catch (error) {
     console.error('최근 일일메뉴 조회 오류:', error);
     return null;
+  }
+};
+
+// 일일 메뉴 설정값 업데이트
+export const updateDailyMenuSettings = async (
+  dailyMenuId: string, 
+  settings: {
+    pickup_time_slots?: string[];
+    delivery_time_slots?: DeliveryTimeSlot[];
+    order_cutoff_time?: string;
+    minimum_order_amount?: number;
+  }
+): Promise<DailyMenu | null> => {
+  try {
+    console.log('일일 메뉴 설정값 업데이트:', { dailyMenuId, settings });
+    
+    const { data, error } = await supabase
+      .from('daily_menus')
+      .update({
+        pickup_time_slots: settings.pickup_time_slots ? JSON.stringify(settings.pickup_time_slots) : null,
+        delivery_time_slots: settings.delivery_time_slots ? JSON.stringify(settings.delivery_time_slots) : null,
+        order_cutoff_time: settings.order_cutoff_time,
+        minimum_order_amount: settings.minimum_order_amount,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', dailyMenuId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('일일 메뉴 설정값 업데이트 오류:', error);
+      throw error;
+    }
+
+    console.log('일일 메뉴 설정값 업데이트 성공:', data);
+    return data;
+  } catch (error) {
+    console.error('일일 메뉴 설정값 업데이트 실패:', error);
+    throw error;
+  }
+};
+
+// 매장의 기본 설정값을 일일 메뉴에 복사
+export const copyStoreSettingsToDailyMenu = async (
+  storeId: string,
+  dailyMenuId: string
+): Promise<DailyMenu | null> => {
+  try {
+    console.log('매장 설정값을 일일 메뉴에 복사:', { storeId, dailyMenuId });
+    
+    // 매장 정보 조회
+    const { data: storeData, error: storeError } = await supabase
+      .from('stores')
+      .select('pickup_time_slots, delivery_time_slots, delivery_fee, order_cutoff_time, minimum_order_amount')
+      .eq('id', storeId)
+      .single();
+
+    if (storeError) {
+      console.error('매장 정보 조회 오류:', storeError);
+      throw storeError;
+    }
+
+    // 일일 메뉴에 설정값 복사
+    const { data, error } = await supabase
+      .from('daily_menus')
+      .update({
+        pickup_time_slots: storeData.pickup_time_slots,
+        delivery_time_slots: storeData.delivery_time_slots,
+        delivery_fee: 0, // 기본 배달비 0원 (delivery_areas 테이블에서 관리)
+        order_cutoff_time: storeData.order_cutoff_time,
+        minimum_order_amount: storeData.minimum_order_amount,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', dailyMenuId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('일일 메뉴 설정값 복사 오류:', error);
+      throw error;
+    }
+
+    console.log('매장 설정값 복사 성공:', data);
+    return data;
+  } catch (error) {
+    console.error('매장 설정값 복사 실패:', error);
+    throw error;
+  }
+};
+
+// 일일 배달지역 관리 함수들
+
+// 일일 메뉴의 배달지역 목록 조회
+export const getDailyDeliveryAreas = async (dailyMenuId: string): Promise<DailyDeliveryArea[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('daily_delivery_areas')
+      .select('*')
+      .eq('daily_menu_id', dailyMenuId)
+      .eq('is_active', true)
+      .order('area_name');
+
+    if (error) {
+      console.error('일일 배달지역 조회 오류:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('일일 배달지역 조회 실패:', error);
+    throw error;
+  }
+};
+
+// 일일 배달지역 추가
+export const addDailyDeliveryArea = async (
+  dailyMenuId: string, 
+  areaName: string, 
+  deliveryFee: number
+): Promise<DailyDeliveryArea> => {
+  try {
+    const { data, error } = await supabase
+      .from('daily_delivery_areas')
+      .insert({
+        daily_menu_id: dailyMenuId,
+        area_name: areaName,
+        delivery_fee: deliveryFee,
+        is_active: true
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('일일 배달지역 추가 오류:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('일일 배달지역 추가 실패:', error);
+    throw error;
+  }
+};
+
+// 일일 배달지역 수정
+export const updateDailyDeliveryArea = async (
+  areaId: string, 
+  areaName: string, 
+  deliveryFee: number
+): Promise<DailyDeliveryArea> => {
+  try {
+    const { data, error } = await supabase
+      .from('daily_delivery_areas')
+      .update({
+        area_name: areaName,
+        delivery_fee: deliveryFee,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', areaId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('일일 배달지역 수정 오류:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('일일 배달지역 수정 실패:', error);
+    throw error;
+  }
+};
+
+// 일일 배달지역 삭제 (비활성화)
+export const removeDailyDeliveryArea = async (areaId: string): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('daily_delivery_areas')
+      .update({
+        is_active: false,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', areaId);
+
+    if (error) {
+      console.error('일일 배달지역 삭제 오류:', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('일일 배달지역 삭제 실패:', error);
+    throw error;
+  }
+};
+
+// 매장의 기본 배달지역을 일일 메뉴에 복사
+export const copyStoreDeliveryAreasToDailyMenu = async (
+  storeId: string,
+  dailyMenuId: string
+): Promise<DailyDeliveryArea[]> => {
+  try {
+    // 매장의 기본 배달지역 조회
+    const { data: storeAreas, error: storeError } = await supabase
+      .from('delivery_areas')
+      .select('area_name, delivery_fee')
+      .eq('store_id', storeId)
+      .eq('is_active', true);
+
+    if (storeError) {
+      console.error('매장 배달지역 조회 오류:', storeError);
+      throw storeError;
+    }
+
+    if (!storeAreas || storeAreas.length === 0) {
+      console.log('매장에 기본 배달지역이 없습니다.');
+      return [];
+    }
+
+    // 일일 메뉴에 배달지역 복사
+    const dailyAreas = storeAreas.map(area => ({
+      daily_menu_id: dailyMenuId,
+      area_name: area.area_name,
+      delivery_fee: area.delivery_fee,
+      is_active: true
+    }));
+
+    const { data, error } = await supabase
+      .from('daily_delivery_areas')
+      .insert(dailyAreas)
+      .select();
+
+    if (error) {
+      console.error('일일 배달지역 복사 오류:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('매장 배달지역 복사 실패:', error);
+    throw error;
   }
 };

@@ -118,6 +118,13 @@ export interface DailyMenu {
   description?: string;
   is_active: boolean;
   cutoff_time?: string;
+  // 일일 설정값들 (JSONB로 저장되지만 string[]로 사용)
+  pickup_time_slots?: string[];
+  delivery_time_slots?: DeliveryTimeSlot[];
+  order_cutoff_time?: string;
+  minimum_order_amount?: number;
+  // 일일 배달지역들
+  delivery_areas?: DailyDeliveryArea[];
   created_at: string;
   updated_at: string;
 }
@@ -137,6 +144,22 @@ export interface CreateDailyMenuData {
   menu_date: string;
   title?: string;
   description?: string;
+  // 일일 설정값들
+  pickup_time_slots?: string[];
+  delivery_time_slots?: DeliveryTimeSlot[];
+  order_cutoff_time?: string;
+  minimum_order_amount?: number;
+}
+
+// 일일 배달지역 인터페이스
+export interface DailyDeliveryArea {
+  id: string;
+  daily_menu_id: string;
+  area_name: string;
+  delivery_fee: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface CreateDailyMenuItemData {

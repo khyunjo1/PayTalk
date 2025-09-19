@@ -20,6 +20,17 @@ interface DailyMenu {
   description?: string;
   is_active: boolean;
   cutoff_time?: string;
+  // 일일 설정값들
+  pickup_time_slots?: string[];
+  delivery_time_slots?: Array<{
+    name: string;
+    start: string;
+    end: string;
+    enabled: boolean;
+  }>;
+  delivery_fee?: number;
+  order_cutoff_time?: string;
+  minimum_order_amount?: number;
   created_at: string;
   updated_at: string;
 }
@@ -68,6 +79,9 @@ export default function DailyMenuPage() {
       return false;
     }
     
+    // 일일 메뉴의 설정값을 우선적으로 사용
+    const cutoffTime = dailyMenu?.order_cutoff_time || storeData.order_cutoff_time || '15:00';
+    
     // 한국 표준시간으로 현재 시간 가져오기
     const now = new Date();
     const koreaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Seoul"}));
@@ -112,8 +126,6 @@ export default function DailyMenuPage() {
       return false;
     }
     
-    // 매장의 주문마감시간 가져오기
-    const cutoffTime = storeData.order_cutoff_time || '15:00';
     
     // 어제 메뉴인 경우 무조건 비활성화 (이미 지난 날)
     if (isYesterday) {
@@ -318,6 +330,16 @@ export default function DailyMenuPage() {
     localStorage.setItem('selectedStore', JSON.stringify(store));
     localStorage.setItem('dailyMenuCart', JSON.stringify(dailyMenuData));
     localStorage.setItem('dailyMenuInfo', JSON.stringify(dailyMenu));
+    
+    // 일일 설정값 저장 (배달비, 최소주문금액 등)
+    const dailySettings = {
+      pickup_time_slots: dailyMenu?.pickup_time_slots,
+      delivery_time_slots: dailyMenu?.delivery_time_slots,
+      delivery_fee: dailyMenu?.delivery_fee,
+      order_cutoff_time: dailyMenu?.order_cutoff_time,
+      minimum_order_amount: dailyMenu?.minimum_order_amount
+    };
+    localStorage.setItem('dailyMenuSettings', JSON.stringify(dailySettings));
 
     // 일반 장바구니는 비워두기 (일일 메뉴만 주문)
     localStorage.setItem('cart', JSON.stringify([]));

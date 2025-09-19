@@ -148,11 +148,13 @@ export default function Cart() {
       const savedCart = localStorage.getItem('cart');
       const savedStoreInfo = localStorage.getItem('storeInfo');
       const dailyMenuCart = localStorage.getItem('dailyMenuCart');
+      const dailyMenuSettings = localStorage.getItem('dailyMenuSettings');
       
       console.log('🔍 localStorage 데이터 확인:', {
         savedCart: savedCart ? JSON.parse(savedCart) : null,
         savedStoreInfo: savedStoreInfo ? JSON.parse(savedStoreInfo) : null,
-        dailyMenuCart: dailyMenuCart ? JSON.parse(dailyMenuCart) : null
+        dailyMenuCart: dailyMenuCart ? JSON.parse(dailyMenuCart) : null,
+        dailyMenuSettings: dailyMenuSettings ? JSON.parse(dailyMenuSettings) : null
       });
       
       if (savedCart && savedStoreInfo) {
@@ -181,6 +183,25 @@ export default function Cart() {
             const dailyMenuData = JSON.parse(dailyMenuCart);
             console.log('일일 메뉴 장바구니 데이터:', dailyMenuData);
             setDailyMenuCartData(dailyMenuData);
+            
+            // 일일 메뉴 설정값 적용
+            if (dailyMenuSettings) {
+              const settings = JSON.parse(dailyMenuSettings);
+              console.log('일일 메뉴 설정값 적용:', settings);
+              
+              // 매장 정보에 일일 설정값 적용
+              const updatedStore = {
+                ...store,
+                pickup_time_slots: settings.pickup_time_slots || store.pickup_time_slots,
+                delivery_time_slots: settings.delivery_time_slots || store.delivery_time_slots,
+                delivery_fee: settings.delivery_fee !== undefined ? settings.delivery_fee : store.delivery_fee,
+                order_cutoff_time: settings.order_cutoff_time || store.order_cutoff_time,
+                minimum_order_amount: settings.minimum_order_amount !== undefined ? settings.minimum_order_amount : store.minimum_order_amount
+              };
+              
+              setStoreInfo(updatedStore);
+              console.log('일일 설정값이 적용된 매장 정보:', updatedStore);
+            }
             
             // 일일 메뉴 날짜로 배달 날짜 설정
             console.log('일일 메뉴 날짜 설정:', dailyMenuData.menuDate);
