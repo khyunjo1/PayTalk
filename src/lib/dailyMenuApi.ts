@@ -53,6 +53,33 @@ const convertDeliveryTimeSlots = (data: any): DeliveryTimeSlot[] => {
   return [];
 };
 
+// daily_menus 테이블 존재 여부 확인
+const checkDailyMenusTableExists = async (): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('daily_menus')
+      .select('id')
+      .limit(1);
+    
+    // PGRST116 오류는 테이블이 존재하지 않음을 의미
+    if (error && error.code === 'PGRST116') {
+      console.warn('daily_menus 테이블이 존재하지 않습니다. 테이블을 생성해주세요.');
+      return false;
+    }
+    
+    // 406 오류도 테이블이 존재하지 않음을 의미할 수 있음
+    if (error && error.message?.includes('406')) {
+      console.warn('daily_menus 테이블에 접근할 수 없습니다. 권한 또는 테이블 존재 여부를 확인해주세요.');
+      return false;
+    }
+    
+    return !error;
+  } catch (err) {
+    console.error('daily_menus 테이블 확인 오류:', err);
+    return false;
+  }
+};
+
 // 일일 메뉴 페이지 생성
 export const createDailyMenu = async (data: CreateDailyMenuData): Promise<DailyMenu> => {
   if (!data.store_id) {
@@ -60,6 +87,12 @@ export const createDailyMenu = async (data: CreateDailyMenuData): Promise<DailyM
   }
   if (!data.menu_date) {
     throw new Error('메뉴 날짜가 필요합니다.');
+  }
+
+  // daily_menus 테이블 존재 여부 확인
+  const tableExists = await checkDailyMenusTableExists();
+  if (!tableExists) {
+    throw new Error('daily_menus 테이블이 존재하지 않습니다. 데이터베이스 스키마를 확인해주세요.');
   }
 
   // 먼저 이미 존재하는지 확인
@@ -121,6 +154,13 @@ export const getDailyMenu = async (storeId: string, menuDate: string): Promise<D
   }
 
   try {
+    // daily_menus 테이블 존재 여부 확인
+    const tableExists = await checkDailyMenusTableExists();
+    if (!tableExists) {
+      console.warn('daily_menus 테이블이 존재하지 않습니다.');
+      return null;
+    }
+
     // 먼저 자동 비활성화 실행
     await supabase.rpc('execute_daily_menu_auto_deactivation');
     

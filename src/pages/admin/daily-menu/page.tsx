@@ -144,7 +144,7 @@ export default function AdminDailyMenu() {
       setAvailableMenus(availableMenus);
       console.log('✅ 메뉴 목록 로드 완료:', availableMenus.length, '개');
 
-      // 2. 선택된 날짜의 일일 메뉴 로드
+      // 4. 선택된 날짜의 일일 메뉴 로드
       console.log('🔍 일일 메뉴 조회 중:', { storeId, selectedDate });
       let existingDailyMenu: DailyMenu | null = null;
       try {
@@ -152,7 +152,15 @@ export default function AdminDailyMenu() {
         console.log('✅ 일일 메뉴 조회 완료:', existingDailyMenu);
       } catch (error) {
         console.error('❌ 일일 메뉴 조회 오류:', error);
-        // 오류가 발생해도 계속 진행
+        
+        // daily_menus 테이블이 없는 경우 사용자에게 알림
+        if (error.message?.includes('daily_menus 테이블이 존재하지 않습니다')) {
+          alert('일일 메뉴 기능을 사용하려면 데이터베이스에 daily_menus 테이블을 생성해야 합니다.\n\ncreate-daily-menus-table.sql 파일의 내용을 Supabase SQL Editor에서 실행해주세요.');
+          setLoading(false);
+          return;
+        }
+        
+        // 다른 오류는 계속 진행
       }
       setDailyMenu(existingDailyMenu);
       
@@ -876,43 +884,11 @@ export default function AdminDailyMenu() {
                   id="date-input"
                   type="date"
                   value={selectedDate}
-                  min={getCurrentKoreaTime().toISOString().split('T')[0]}
                   onChange={(e) => {
                     const selectedDate = e.target.value;
-                    
-                    // 정확한 한국 시간 계산 (UTC+9)
-                    const now = new Date();
-                    const koreaOffset = 9 * 60; // 9시간을 분으로
-                    const koreaTime = new Date(now.getTime() + (koreaOffset * 60 * 1000));
-                    const today = koreaTime.toISOString().split('T')[0];
-                    
-                    const tomorrow = new Date(koreaTime);
-                    tomorrow.setDate(tomorrow.getDate() + 1);
-                    const maxDate = tomorrow.toISOString().split('T')[0];
-                    
-                    console.log('현재 한국 날짜:', today);
-                    console.log('내일 날짜:', maxDate);
                     console.log('선택된 날짜:', selectedDate);
-                    
-                    // 내일 이후 날짜 선택 시 경고
-                    if (selectedDate > maxDate) {
-                      alert('주문서는 내일까지만 생성가능합니다.');
-                      return;
-                    }
-                    
                     setSelectedDate(selectedDate);
                   }}
-                  max={(() => {
-                    // 정확한 한국 시간 계산 (UTC+9)
-                    const now = new Date();
-                    const koreaOffset = 9 * 60; // 9시간을 분으로
-                    const koreaTime = new Date(now.getTime() + (koreaOffset * 60 * 1000));
-                    const tomorrow = new Date(koreaTime);
-                    tomorrow.setDate(tomorrow.getDate() + 1);
-                    const maxDate = tomorrow.toISOString().split('T')[0];
-                    console.log('max 날짜 설정:', maxDate);
-                    return maxDate;
-                  })()}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
               </div>

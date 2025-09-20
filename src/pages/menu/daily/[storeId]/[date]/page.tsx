@@ -206,7 +206,15 @@ export default function DailyMenuPage() {
         }
       } catch (error) {
         console.error('일일 메뉴 로드 중 오류:', error);
-        // 오류가 발생해도 계속 진행 (메뉴가 없다고 표시)
+        
+        // daily_menus 테이블이 없는 경우 사용자에게 알림
+        if (error.message?.includes('daily_menus 테이블이 존재하지 않습니다')) {
+          console.warn('daily_menus 테이블이 존재하지 않습니다. 일반 메뉴로 리다이렉트합니다.');
+          navigate(`/menu/${storeId}`);
+          return;
+        }
+        
+        // 다른 오류는 계속 진행 (메뉴가 없다고 표시)
         return;
       }
       

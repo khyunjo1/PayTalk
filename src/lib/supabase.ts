@@ -315,6 +315,123 @@ export interface Database {
           updated_at?: string
         }
       }
+      daily_menus: {
+        Row: {
+          id: string
+          store_id: string
+          menu_date: string
+          title: string
+          description: string | null
+          is_active: boolean
+          cutoff_time: string | null
+          pickup_time_slots: string[]
+          delivery_time_slots: Array<{
+            name: string
+            start: string
+            end: string
+            enabled: boolean
+          }>
+          delivery_fee: number
+          order_cutoff_time: string | null
+          minimum_order_amount: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          store_id: string
+          menu_date: string
+          title?: string
+          description?: string | null
+          is_active?: boolean
+          cutoff_time?: string | null
+          pickup_time_slots?: string[]
+          delivery_time_slots?: Array<{
+            name: string
+            start: string
+            end: string
+            enabled: boolean
+          }>
+          delivery_fee?: number
+          order_cutoff_time?: string | null
+          minimum_order_amount?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          store_id?: string
+          menu_date?: string
+          title?: string
+          description?: string | null
+          is_active?: boolean
+          cutoff_time?: string | null
+          pickup_time_slots?: string[]
+          delivery_time_slots?: Array<{
+            name: string
+            start: string
+            end: string
+            enabled: boolean
+          }>
+          delivery_fee?: number
+          order_cutoff_time?: string | null
+          minimum_order_amount?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      daily_menu_items: {
+        Row: {
+          id: string
+          daily_menu_id: string
+          menu_id: string
+          is_available: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          daily_menu_id: string
+          menu_id: string
+          is_available?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          daily_menu_id?: string
+          menu_id?: string
+          is_available?: boolean
+          created_at?: string
+        }
+      }
+      daily_delivery_areas: {
+        Row: {
+          id: string
+          daily_menu_id: string
+          area_name: string
+          delivery_fee: number
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          daily_menu_id: string
+          area_name: string
+          delivery_fee?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          daily_menu_id?: string
+          area_name?: string
+          delivery_fee?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
   }
 }
