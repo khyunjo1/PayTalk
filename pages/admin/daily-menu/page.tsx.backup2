@@ -1,0 +1,788 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useNewAuth } from '../../../hooks/useNewAuth';
+import { getMenus } from '../../../lib/menuApi';
+import { 
+  createDailyMenu, 
+  getDailyMenu, 
+  addDailyMenuItem, 
+  getDailyMenuItems,
+  updateDailyMenuItemQuantity,
+  toggleDailyMenuItemAvailability,
+  removeDailyMenuItem,
+  DailyMenu,
+  DailyMenuItem,
+  CreateDailyMenuItemData
+} from '../../../lib/dailyMenuApi';
+import { MenuDB } from '../../../types';
+import Header from '../../../components/Header';
+
+export default function AdminDailyMenu() {
+  const navigate = useNavigate();
+  const { storeId } = useParams<{ storeId: string }>();
+  const { user } = useNewAuth();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  
+  // 상태 관리
+  const [selectedDate, setSelectedDate] = useState('');
+  const [dailyMenu, setDailyMenu] = useState<DailyMenu | null>(null);
+  const [dailyMenuItems, setDailyMenuItems] = useState<DailyMenuItem[]>([]);
+  const [availableMenus, setAvailableMenus] = useState<MenuDB[]>([]);
+  const [selectedMenus, setSelectedMenus] = useState<Set<string>>(new Set());
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [selectedCategory, setSelectedCategory] = useState<string>('전체');
+  const [categories, setCategories] = useState<string[]>([]);
+  
+  // 오늘 날짜 설정 (한국 표준시간 기준)
+  useEffect(() => {
+    const now = new Date();
+    const koreaTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Seoul"}));
+    const today = koreaTime.toISOString().split('T')[0];
+    setSelectedDate(today);
+  }, []);
+
+  // 데이터 로드
+  useEffect(() => {
+    if (!storeId) return;
+    loadData();
+  }, [storeId, selectedDate]);
+
+  const loadData = async () => {
+    if (!storeId) return;
+    
+    try {
+      setLoading(true);
+      
+      // 1. 사용 가능한 메뉴 목록 로드
+      const menus = await getMenus(storeId);
+      const availableMenus = menus.filter(menu => menu.is_available);
+      setAvailableMenus(availableMenus);
+      
+      // 카테고리 추출
+      const uniqueCategories = ['전체', ...new Set(availableMenus.map(menu => menu.category).filter(Boolean))];
+      setCategories(uniqueCategories);
+      
+      // 2. 선택된 날짜의 일일 메뉴 로드
+      let existingDailyMenu: DailyMenu | null = null;
+      try {
+        existingDailyMenu = await getDailyMenu(storeId, selectedDate);
+      } catch (error) {
+        console.error('일일 메뉴 조회 오류:', error);
+        // 오류가 발생해도 계속 진행
+      }
+      setDailyMenu(existingDailyMenu);
+      
+      if (existingDailyMenu) {
+        // 3. 일일 메뉴 아이템들 로드
+        const items = await getDailyMenuItems(existingDailyMenu.id);
+        setDailyMenuItems(items);
+        
+        // 4. 선택된 메뉴와 수량 설정
+        const selectedSet = new Set(items.map(item => item.menu_id));
+        setSelectedMenus(selectedSet);
+        
+        const quantitiesMap: Record<string, number> = {};
+        items.forEach(item => {
+          quantitiesMap[item.menu_id] = item.initial_quantity;
+        });
+        setQuantities(quantitiesMap);
+      } else {
+        // 새로운 일일 메뉴인 경우 초기화
+        setDailyMenuItems([]);
+        setSelectedMenus(new Set());
+        setQuantities({});
+        setTempQuantities({});
+        setItemAvailability({});
+      }
+    } catch (error) {
+      console.error('데이터 로드 오류:', error);
+      alert('데이터를 불러오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 카테고리별 필터링된 메뉴
+  const filteredAvailableMenus = availableMenus.filter(menu => {
+    if (selectedCategory === '전체') return true;
+    return menu.category === selectedCategory;
+  });
+
+  // 일일 메뉴 생성
+  const handleCreateDailyMenu = async () => {
+    if (!storeId || !selectedDate) return;
+    
+    try {
+      setSaving(true);
+      
+      const newDailyMenu = await createDailyMenu({
+        store_id: storeId,
+        menu_date: selectedDate,
+        title: `${selectedDate}의 반찬`,
+        description: '맛있는 반찬을 주문해보세요!'
+      });
+      
+      setDailyMenu(newDailyMenu);
+      alert('일일 메뉴 페이지가 생성되었습니다!');
+    } catch (error) {
+      console.error('일일 메뉴 생성 오류:', error);
+      alert('일일 메뉴 생성에 실패했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 메뉴 선택/해제
+  const handleMenuToggle = (menuId: string) => {
+    const newSelected = new Set(selectedMenus);
+    if (newSelected.has(menuId)) {
+      newSelected.delete(menuId);
+      // 수량도 제거
+      const newQuantities = { ...quantities };
+      delete newQuantities[menuId];
+      setQuantities(newQuantities);
+    } else {
+      newSelected.add(menuId);
+      // 기본 수량 10개로 설정
+      setQuantities(prev => ({ ...prev, [menuId]: 10 }));
+    }
+    setSelectedMenus(newSelected);
+  };
+
+  // 수량 변경
+  const handleQuantityChange = (menuId: string, quantity: number) => {
+    if (quantity < 0) return;
+    setQuantities(prev => ({ ...prev, [menuId]: quantity }));
+    
+    // 수량에 따라 품절 상태 자동 업데이트 (초기 설정 시)
+    const dailyMenuItem = dailyMenuItems.find(item => item.menu_id === menuId);
+    if (dailyMenuItem) {
+      if (quantity === 0) {
+        setItemAvailability(prev => ({
+          ...prev,
+          [dailyMenuItem.id]: false
+        }));
+      } else {
+        setItemAvailability(prev => ({
+          ...prev,
+          [dailyMenuItem.id]: true
+        }));
+      }
+    }
+  };
+
+  // 개별 아이템 수량 변경 (임시 상태만 업데이트)
+  const handleUpdateItemQuantity = (itemId: string, value: string) => {
+    // 빈 문자열이면 0으로 처리하지 않고 빈 상태 유지
+    const newQuantity = value === '' ? '' : (parseInt(value) || 0);
+    
+    if (typeof newQuantity === 'number' && newQuantity < 0) {
+      alert('수량은 0 이상이어야 합니다.');
+      return;
+    }
+
+    // 임시 상태만 업데이트 (실제 저장은 메뉴 저장 버튼에서)
+    const dailyMenuItem = dailyMenuItems.find(item => item.id === itemId);
+    if (dailyMenuItem) {
+      setTempQuantities(prev => ({ ...prev, [dailyMenuItem.menu_id]: newQuantity }));
+      
+      // 수량에 따라 품절 상태 자동 업데이트
+      if (typeof newQuantity === 'number') {
+        if (newQuantity === 0) {
+          setItemAvailability(prev => ({
+            ...prev,
+            [itemId]: false
+          }));
+        } else {
+          setItemAvailability(prev => ({
+            ...prev,
+            [itemId]: true
+          }));
+        }
+      }
+    }
+  };
+
+  // 품절 상태 관리 (로컬 상태)
+  const [itemAvailability, setItemAvailability] = useState<Record<string, boolean>>({});
+  
+  // 수량 변경 로컬 상태 (저장 전까지 임시)
+  const [tempQuantities, setTempQuantities] = useState<Record<string, number>>({});
+
+  // 개별 아이템 품절 처리 (로컬 상태만 업데이트)
+  const handleToggleItemAvailability = (itemId: string, currentAvailability: boolean) => {
+    setItemAvailability(prev => ({
+      ...prev,
+      [itemId]: !currentAvailability
+    }));
+  };
+
+  // 일일 메뉴 아이템 저장
+  const handleSaveItems = async () => {
+    if (!dailyMenu) return;
+    
+    // 수량이 변경되었는지 확인 (임시 상태 포함)
+    const finalQuantities = { ...quantities };
+    Object.keys(tempQuantities).forEach(menuId => {
+      const value = tempQuantities[menuId];
+      finalQuantities[menuId] = value === '' ? 0 : value;
+    });
+    
+    const hasQuantityChanges = dailyMenuItems.some(item => {
+      const currentQuantity = finalQuantities[item.menu_id] || 0;
+      return currentQuantity !== item.initial_quantity;
+    });
+    
+    // 새로운 메뉴가 추가되었는지 확인
+    const hasNewMenus = Array.from(selectedMenus).some(menuId => 
+      !dailyMenuItems.some(item => item.menu_id === menuId)
+    );
+    
+    // 메뉴가 제거되었는지 확인
+    const hasRemovedMenus = dailyMenuItems.some(item => 
+      !selectedMenus.has(item.menu_id)
+    );
+    
+    // 변경사항이 있으면 확인창 표시
+    if (hasQuantityChanges || hasNewMenus || hasRemovedMenus) {
+      const confirmed = window.confirm('메뉴를 변경하시겠습니까?');
+      if (!confirmed) return;
+    }
+    
+    try {
+      setSaving(true);
+      
+      // 1. 기존 아이템들 업데이트
+      for (const item of dailyMenuItems) {
+        const newQuantity = finalQuantities[item.menu_id];
+        const newAvailability = itemAvailability[item.id] !== undefined ? itemAvailability[item.id] : item.is_available;
+        
+        // 수량 업데이트
+        if (newQuantity !== undefined && newQuantity !== item.initial_quantity) {
+          await updateDailyMenuItemQuantity(item.id, newQuantity);
+        }
+        
+        // 품절 상태 업데이트
+        if (newAvailability !== item.is_available) {
+          await toggleDailyMenuItemAvailability(item.id, newAvailability);
+        }
+      }
+      
+      // 2. 제거된 메뉴들 삭제
+      for (const item of dailyMenuItems) {
+        if (!selectedMenus.has(item.menu_id)) {
+          await removeDailyMenuItem(item.id);
+        }
+      }
+      
+      // 3. 새로운 메뉴들 추가
+      for (const menuId of selectedMenus) {
+        const quantity = finalQuantities[menuId] || 0;
+        const existingItem = dailyMenuItems.find(item => item.menu_id === menuId);
+        
+        if (!existingItem && quantity > 0) {
+          await addDailyMenuItem({
+            daily_menu_id: dailyMenu.id,
+            menu_id: menuId,
+            initial_quantity: quantity
+          });
+        }
+      }
+      
+      // 4. 임시 수량 상태를 실제 상태로 적용
+      setQuantities(finalQuantities);
+      
+      // 5. 로컬 상태 초기화
+      setItemAvailability({});
+      setTempQuantities({});
+      
+      // 데이터 다시 로드
+      await loadData();
+      setToastMessage('메뉴가 성공적으로 저장되었습니다');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (error) {
+      console.error('아이템 저장 오류:', error);
+      alert('아이템 저장에 실패했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 링크 생성
+  const generateLink = () => {
+    if (!dailyMenu) return '';
+    return `${window.location.origin}/menu/${storeId}/daily/${selectedDate}`;
+  };
+
+  // 링크 복사
+  const handleCopyLink = async () => {
+    const link = generateLink();
+    try {
+      await navigator.clipboard.writeText(link);
+      setToastMessage('링크가 클립보드에 복사되었습니다');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (error) {
+      console.error('링크 복사 오류:', error);
+      alert('링크 복사에 실패했습니다.');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#F7FAFB]">
+      <Header />
+      
+      {/* 헤더 */}
+      <div className="bg-white shadow-sm border-b border-[#E6E9EE]">
+        <div className="px-4 sm:px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <button
+                onClick={() => navigate('/admin-dashboard')}
+                className="mr-4 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                title="뒤로가기"
+                aria-label="뒤로가기"
+              >
+                <i className="ri-arrow-left-line text-xl text-[#6B7280]"></i>
+              </button>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-[#F36B26] bg-opacity-10 rounded-lg flex items-center justify-center">
+                  <i className="ri-calendar-check-line text-[#F36B26] text-lg"></i>
+                </div>
+                <h1 className="text-xl font-bold text-[#1F2937]">일일메뉴 관리</h1>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 sm:px-6 py-4 sm:py-6">
+        {/* 날짜 선택 */}
+        <div className="bg-white rounded-xl shadow-[0_8px_20px_rgba(20,24,39,0.06)] border border-[#E6E9EE] p-6 mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-[#F36B26] bg-opacity-10 rounded-xl flex items-center justify-center">
+              <i className="ri-calendar-line text-[#F36B26] text-lg"></i>
+            </div>
+            <h2 className="text-xl font-bold text-[#1F2937]">메뉴 날짜 선택</h2>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex-1 relative">
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-full px-4 py-3 pl-12 border border-[#E6E9EE] rounded-xl focus:ring-2 focus:ring-[#F36B26] focus:border-[#F36B26] text-base font-medium bg-white"
+                aria-label="메뉴 날짜 선택"
+              />
+              <i className="ri-calendar-line absolute left-4 top-1/2 transform -translate-y-1/2 text-[#6B7280] text-lg"></i>
+            </div>
+            <button
+              onClick={loadData}
+              className="px-6 py-3 bg-[#F36B26] text-white rounded-xl hover:bg-[#E55A1F] transition-colors text-base font-semibold shadow-sm"
+              aria-label="날짜 조회"
+            >
+              <i className="ri-search-line mr-2"></i>
+              조회
+            </button>
+          </div>
+        </div>
+
+        {/* 일일 메뉴 생성/상태 */}
+        <div className="bg-white rounded-xl shadow-[0_8px_20px_rgba(20,24,39,0.06)] border border-[#E6E9EE] p-6 mb-6">
+          
+          {!dailyMenu ? (
+            <div className="text-center py-8">
+              <div className="w-16 h-16 bg-[#F36B26] bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i className="ri-calendar-line text-2xl text-[#F36B26]"></i>
+              </div>
+              <h3 className="text-lg font-bold text-[#1F2937] mb-2">일일 메뉴 페이지가 없습니다</h3>
+              <p className="text-[#6B7280] mb-6">선택한 날짜의 일일 메뉴를 생성해보세요.</p>
+              <button
+                onClick={handleCreateDailyMenu}
+                disabled={saving}
+                className="px-6 py-3 bg-[#F36B26] text-white rounded-xl hover:bg-[#E55A1F] transition-colors disabled:opacity-50 text-base font-semibold shadow-sm"
+                aria-label="일일 메뉴 페이지 생성"
+              >
+                {saving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    생성 중...
+                  </>
+                ) : (
+                  <>
+                    <i className="ri-add-line mr-2"></i>
+                    일일 메뉴 페이지 생성
+                  </>
+                )}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-[#1F2937] mb-2">{dailyMenu.title}</h3>
+                  <p className="text-[#6B7280] mb-3">날짜: {dailyMenu.menu_date}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-[#6B7280]">상태:</span>
+                    <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold ${
+                      dailyMenu.is_active 
+                        ? 'bg-green-50 text-green-700 border border-green-200' 
+                        : 'bg-red-50 text-red-700 border border-red-200'
+                    }`}>
+                      <i className={`ri-${dailyMenu.is_active ? 'check' : 'close'}-circle-line text-sm`}></i>
+                      {dailyMenu.is_active ? '주문접수중' : '주문마감'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* 링크 표시 */}
+              <div className="bg-[#F7FAFB] border border-[#E6E9EE] rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <i className="ri-link text-[#6B7280]"></i>
+                    <span className="text-sm font-semibold text-[#1F2937]">공유 링크</span>
+                  </div>
+                  <button
+                    onClick={handleCopyLink}
+                    className="px-3 py-1.5 bg-[#F36B26] text-white rounded-lg hover:bg-[#E55A1F] transition-colors text-sm font-medium"
+                    aria-label="링크 복사"
+                  >
+                    <i className="ri-file-copy-line mr-1"></i>
+                    복사
+                  </button>
+                </div>
+                <div className="bg-white border border-[#E6E9EE] rounded-lg p-3">
+                  <p className="text-sm font-mono text-[#6B7280] break-all">{generateLink()}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 메뉴 선택 및 수량 설정 */}
+        {dailyMenu && (
+          <div className="bg-white rounded-xl shadow-[0_8px_20px_rgba(20,24,39,0.06)] border border-[#E6E9EE] p-6 mb-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-[#F36B26] bg-opacity-10 rounded-xl flex items-center justify-center">
+                <i className="ri-restaurant-line text-[#F36B26] text-lg"></i>
+              </div>
+              <h2 className="text-xl font-bold text-[#1F2937]">메뉴 선택 및 수량 설정</h2>
+            </div>
+            
+            {/* 안내문구 */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+              <div className="flex items-start gap-3">
+                <i className="ri-information-line text-blue-500 text-lg mt-0.5"></i>
+                <div>
+                  <h3 className="text-sm font-semibold text-blue-800 mb-1">수량 변경 안내</h3>
+                  <p className="text-sm text-blue-700">
+                    수량을 변경하고 저장하면 <strong>실시간으로 고객에게 반영</strong>됩니다. 
+                    고객이 주문할 때마다 수량이 자동으로 차감됩니다.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            {/* 카테고리 필터 */}
+            <div className="mb-6">
+              <div className="flex items-center gap-3 mb-4">
+                <i className="ri-menu-line text-[#6B7280] text-lg"></i>
+                <h3 className="text-lg font-bold text-[#1F2937]">카테고리 필터</h3>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {categories.map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => setSelectedCategory(category)}
+                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                      selectedCategory === category
+                        ? 'bg-[#F36B26] text-white shadow-sm'
+                        : 'bg-white text-[#6B7280] hover:bg-[#F7FAFB] border border-[#E6E9EE]'
+                    }`}
+                    aria-label={`${category} 카테고리 필터`}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              {filteredAvailableMenus.map((menu) => (
+                <div
+                  key={menu.id}
+                  className={`relative bg-white rounded-xl border transition-all duration-200 ${
+                    selectedMenus.has(menu.id)
+                      ? 'border-[#F36B26] shadow-[0_8px_20px_rgba(243,107,38,0.15)]'
+                      : 'border-[#E6E9EE] hover:border-[#F36B26] hover:shadow-[0_8px_20px_rgba(20,24,39,0.06)]'
+                  }`}
+                >
+                  {/* 카테고리 컬러 바 */}
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#F36B26] to-[#E55A1F] rounded-t-xl"></div>
+                  
+                  <div className="p-5">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-[#1F2937] text-lg break-words mb-1">{menu.name}</h3>
+                        <p className="text-sm text-[#6B7280] font-medium mb-2">{menu.category}</p>
+                        <p className="text-xl font-bold text-[#F36B26]">
+                          {menu.price.toLocaleString()}원
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleMenuToggle(menu.id)}
+                        className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
+                          selectedMenus.has(menu.id)
+                            ? 'border-[#F36B26] bg-[#F36B26] shadow-sm'
+                            : 'border-[#E6E9EE] bg-white hover:border-[#F36B26]'
+                        }`}
+                        aria-label={`${menu.name} 메뉴 ${selectedMenus.has(menu.id) ? '선택 해제' : '선택'}`}
+                      >
+                        {selectedMenus.has(menu.id) && (
+                          <i className="ri-check-line text-white text-sm"></i>
+                        )}
+                      </button>
+                    </div>
+                  
+                  {selectedMenus.has(menu.id) && (
+                    <div className="space-y-4">
+                      {/* 초기 설정 시 수량 입력 */}
+                      {!dailyMenuItems.find(item => item.menu_id === menu.id) && (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <label className="text-sm font-semibold text-[#1F2937]">수량 설정</label>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => {
+                                  const currentValue = tempQuantities[menu.id] !== undefined ? tempQuantities[menu.id] : (quantities[menu.id] || 0);
+                                  const newQuantity = Math.max(0, (currentValue === '' ? 0 : currentValue) - 1);
+                                  setTempQuantities(prev => ({ ...prev, [menu.id]: newQuantity }));
+                                  handleQuantityChange(menu.id, newQuantity);
+                                  
+                                  if (newQuantity === 0) {
+                                    setItemAvailability(prev => ({ ...prev, [menu.id]: false }));
+                                  } else {
+                                    setItemAvailability(prev => ({ ...prev, [menu.id]: true }));
+                                  }
+                                }}
+                                className="w-8 h-8 flex items-center justify-center bg-[#F7FAFB] border border-[#E6E9EE] rounded-lg hover:bg-[#F36B26] hover:text-white transition-colors"
+                                aria-label="수량 감소"
+                              >
+                                <i className="ri-subtract-line text-sm"></i>
+                              </button>
+                              <input
+                                type="number"
+                                min="0"
+                                value={tempQuantities[menu.id] !== undefined ? tempQuantities[menu.id] : (quantities[menu.id] || 0)}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  const newQuantity = value === '' ? '' : (parseInt(value) || 0);
+                                  setTempQuantities(prev => ({ ...prev, [menu.id]: newQuantity }));
+                                  
+                                  if (typeof newQuantity === 'number') {
+                                    if (newQuantity === 0) {
+                                      setItemAvailability(prev => ({ ...prev, [menu.id]: false }));
+                                    } else {
+                                      setItemAvailability(prev => ({ ...prev, [menu.id]: true }));
+                                    }
+                                  }
+                                  
+                                  handleQuantityChange(menu.id, typeof newQuantity === 'number' ? newQuantity : 0);
+                                }}
+                                className="w-16 px-2 py-1 text-center border border-[#E6E9EE] rounded-lg text-sm font-medium focus:ring-2 focus:ring-[#F36B26] focus:border-[#F36B26] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              />
+                              <button
+                                onClick={() => {
+                                  const currentValue = tempQuantities[menu.id] !== undefined ? tempQuantities[menu.id] : (quantities[menu.id] || 0);
+                                  const newQuantity = (currentValue === '' ? 0 : currentValue) + 1;
+                                  setTempQuantities(prev => ({ ...prev, [menu.id]: newQuantity }));
+                                  handleQuantityChange(menu.id, newQuantity);
+                                  setItemAvailability(prev => ({ ...prev, [menu.id]: true }));
+                                }}
+                                className="w-8 h-8 flex items-center justify-center bg-[#F7FAFB] border border-[#E6E9EE] rounded-lg hover:bg-[#F36B26] hover:text-white transition-colors"
+                                aria-label="수량 증가"
+                              >
+                                <i className="ri-add-line text-sm"></i>
+                              </button>
+                            </div>
+                          </div>
+                          
+                          {/* 초기 설정 시 품절 상태 표시 */}
+                          {(() => {
+                            const currentValue = tempQuantities[menu.id] !== undefined ? tempQuantities[menu.id] : (quantities[menu.id] || 0);
+                            const displayValue = currentValue === '' ? 0 : currentValue;
+                            return displayValue === 0 && (
+                              <div className="text-center">
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-red-50 text-red-700 border border-red-200">
+                                  <i className="ri-close-line mr-1"></i>
+                                  품절 (수량 0개)
+                                </span>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
+                      
+                      {/* 설정 완료 후 수량 정보 및 관리 */}
+                      {(() => {
+                        const dailyMenuItem = dailyMenuItems.find(item => item.menu_id === menu.id);
+                        if (dailyMenuItem) {
+                          const soldQuantity = dailyMenuItem.initial_quantity - dailyMenuItem.current_quantity;
+                          const isAvailable = itemAvailability[dailyMenuItem.id] !== undefined ? itemAvailability[dailyMenuItem.id] : dailyMenuItem.is_available;
+                          return (
+                            <div className="space-y-4">
+                              {/* 수량 정보 표시 */}
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between text-xs text-[#6B7280]">
+                                  <span>초기 수량: {tempQuantities[dailyMenuItem.menu_id] !== undefined ? (tempQuantities[dailyMenuItem.menu_id] === '' ? 0 : tempQuantities[dailyMenuItem.menu_id]) : dailyMenuItem.initial_quantity}개</span>
+                                  <span>현재 재고: {dailyMenuItem.current_quantity}개</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                                    <i className="ri-shopping-cart-line mr-1"></i>
+                                    {soldQuantity}개 판매됨
+                                  </span>
+                                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                    isAvailable
+                                      ? 'bg-green-50 text-green-700 border border-green-200' 
+                                      : 'bg-red-50 text-red-700 border border-red-200'
+                                  }`}>
+                                    <i className={`ri-${isAvailable ? 'check' : 'close'}-line mr-1`}></i>
+                                    {isAvailable ? '판매중' : '품절'}
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              {/* 수량 수정 및 품절 처리 */}
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <label className="text-sm font-semibold text-[#1F2937]">수량 수정</label>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => {
+                                        const currentValue = tempQuantities[dailyMenuItem.menu_id] !== undefined ? tempQuantities[dailyMenuItem.menu_id] : dailyMenuItem.initial_quantity;
+                                        const newQuantity = Math.max(0, (currentValue === '' ? 0 : currentValue) - 1);
+                                        handleUpdateItemQuantity(dailyMenuItem.id, newQuantity.toString());
+                                      }}
+                                      className="w-7 h-7 flex items-center justify-center bg-[#F7FAFB] border border-[#E6E9EE] rounded-lg hover:bg-[#F36B26] hover:text-white transition-colors"
+                                      aria-label="수량 감소"
+                                    >
+                                      <i className="ri-subtract-line text-xs"></i>
+                                    </button>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={tempQuantities[dailyMenuItem.menu_id] !== undefined ? tempQuantities[dailyMenuItem.menu_id] : dailyMenuItem.initial_quantity}
+                                      onChange={(e) => {
+                                        handleUpdateItemQuantity(dailyMenuItem.id, e.target.value);
+                                      }}
+                                      className="w-16 px-2 py-1 text-center border border-[#E6E9EE] rounded-lg text-sm font-medium focus:ring-2 focus:ring-[#F36B26] focus:border-[#F36B26] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    />
+                                    <button
+                                      onClick={() => {
+                                        const currentValue = tempQuantities[dailyMenuItem.menu_id] !== undefined ? tempQuantities[dailyMenuItem.menu_id] : dailyMenuItem.initial_quantity;
+                                        const newQuantity = (currentValue === '' ? 0 : currentValue) + 1;
+                                        handleUpdateItemQuantity(dailyMenuItem.id, newQuantity.toString());
+                                      }}
+                                      className="w-7 h-7 flex items-center justify-center bg-[#F7FAFB] border border-[#E6E9EE] rounded-lg hover:bg-[#F36B26] hover:text-white transition-colors"
+                                      aria-label="수량 증가"
+                                    >
+                                      <i className="ri-add-line text-xs"></i>
+                                    </button>
+                                  </div>
+                                </div>
+                                
+                                <button
+                                  onClick={() => handleToggleItemAvailability(dailyMenuItem.id, isAvailable)}
+                                  className={`w-full px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                                    isAvailable
+                                      ? 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'
+                                      : 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100'
+                                  }`}
+                                >
+                                  <i className={`ri-${isAvailable ? 'close' : 'check'}-line mr-1`}></i>
+                                  {isAvailable ? '품절 처리' : '판매 재개'}
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Sticky 저장 버튼 */}
+        {dailyMenu && (
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#E6E9EE] p-4 shadow-[0_-8px_20px_rgba(20,24,39,0.06)] z-50">
+            <div className="max-w-7xl mx-auto">
+              <button
+                onClick={handleSaveItems}
+                disabled={saving || selectedMenus.size === 0}
+                className={`w-full px-6 py-4 rounded-xl font-semibold text-base transition-all duration-200 ${
+                  saving || selectedMenus.size === 0
+                    ? 'bg-[#E6E9EE] text-[#6B7280] cursor-not-allowed'
+                    : 'bg-[#F36B26] text-white hover:bg-[#E55A1F] shadow-lg hover:shadow-xl transform hover:scale-[1.02]'
+                }`}
+                aria-label="메뉴 저장"
+              >
+                <div className="flex items-center justify-center gap-2">
+                  {saving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      <span>저장 중...</span>
+                    </>
+                  ) : (
+                    <>
+                      <i className="ri-save-line text-lg"></i>
+                      <span>메뉴 저장 ({selectedMenus.size}개 선택됨)</span>
+                    </>
+                  )}
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 하단 여백 (sticky 버튼을 위한 공간) */}
+        {dailyMenu && <div className="h-24"></div>}
+      </div>
+
+      {/* 토스트 알림 */}
+      {showToast && (
+        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-right-5 duration-300">
+          <div className="bg-white border border-[#E6E9EE] rounded-xl shadow-[0_8px_20px_rgba(20,24,39,0.06)] p-4 flex items-center gap-3">
+            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+              <i className="ri-check-line text-green-600 text-sm"></i>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-[#1F2937]">성공</p>
+              <p className="text-xs text-[#6B7280]">{toastMessage}</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
