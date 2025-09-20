@@ -315,18 +315,9 @@ export default function OrderComplete() {
         {/* 문의 안내 카드 */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 text-center">
           <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">문의 안내</h3>
-          <p className="text-gray-500 text-xs sm:text-sm mb-3 sm:mb-4">주문 취소나 문의사항이 있으시면</p>
-          <a 
-            href={`tel:${orderData.stores.phone}`}
-            className="text-xl sm:text-2xl font-bold text-orange-600 hover:text-orange-700 transition-colors block mb-2"
-          >
-            {orderData.stores.phone}
-          </a>
-          <p className="text-gray-500 text-xs sm:text-sm mb-3 sm:mb-2">로 연락해주세요</p>
-          <div className="flex items-center justify-center gap-2 mt-3">
-            <i className="ri-information-line text-gray-600 text-sm sm:text-base"></i>
-            <p className="text-gray-700 text-sm sm:text-base font-medium">입금 후 주문 상태는 밴드 글 링크에서 확인하세요</p>
-          </div>
+          <p className="text-gray-700 text-sm sm:text-base font-medium">
+            주문취소는 <span className="font-bold text-orange-600">{orderData.stores.phone}</span>로 문의주세요
+          </p>
         </div>
 
         {/* 하단 고객센터 정보 */}
