@@ -148,6 +148,13 @@ export default function AdminDailyMenu() {
         // 오류가 발생해도 계속 진행
       }
       setDailyMenu(existingDailyMenu);
+      
+      if (existingDailyMenu) {
+        console.log('🔍 로드된 일일 메뉴:', existingDailyMenu);
+        console.log('🔍 로드된 배달 시간대:', existingDailyMenu.delivery_time_slots);
+        console.log('🔍 로드된 배달 시간대 타입:', typeof existingDailyMenu.delivery_time_slots);
+        console.log('🔍 로드된 배달 시간대 JSON:', JSON.stringify(existingDailyMenu.delivery_time_slots));
+      }
 
       if (existingDailyMenu) {
         // 3. 일일 메뉴 아이템들 로드
@@ -345,6 +352,7 @@ export default function AdminDailyMenu() {
   };
 
   const handleDeliveryTimeSlotToggle = (index: number, enabled: boolean) => {
+    console.log('🔍 배달 시간대 토글:', { index, enabled });
     if (!dailyMenu) return;
     
     const newDeliveryTimeSlots = [...(dailyMenu.delivery_time_slots || [])];
@@ -357,9 +365,12 @@ export default function AdminDailyMenu() {
       ...dailyMenu,
       delivery_time_slots: newDeliveryTimeSlots
     });
+    setSettingsChanged(true);
+    console.log('✅ settingsChanged를 true로 설정');
   };
 
   const handleDeliveryTimeSlotNameChange = (index: number, name: string) => {
+    console.log('🔍 배달 시간대 이름 변경:', { index, name });
     if (!dailyMenu) return;
     
     const newDeliveryTimeSlots = [...(dailyMenu.delivery_time_slots || [])];
@@ -372,6 +383,8 @@ export default function AdminDailyMenu() {
       ...dailyMenu,
       delivery_time_slots: newDeliveryTimeSlots
     });
+    setSettingsChanged(true);
+    console.log('✅ settingsChanged를 true로 설정');
   };
 
   const handleDeliveryTimeSlotStartChange = (index: number, start: string) => {
@@ -387,6 +400,7 @@ export default function AdminDailyMenu() {
       ...dailyMenu,
       delivery_time_slots: newDeliveryTimeSlots
     });
+    setSettingsChanged(true);
   };
 
   const handleDeliveryTimeSlotEndChange = (index: number, end: string) => {
@@ -402,6 +416,7 @@ export default function AdminDailyMenu() {
       ...dailyMenu,
       delivery_time_slots: newDeliveryTimeSlots
     });
+    setSettingsChanged(true);
   };
 
   const handleAddDeliveryTimeSlot = () => {
@@ -421,6 +436,7 @@ export default function AdminDailyMenu() {
       ...dailyMenu,
       delivery_time_slots: newDeliveryTimeSlots
     });
+    setSettingsChanged(true);
   };
 
   const handleRemoveDeliveryTimeSlot = (index: number) => {
@@ -432,6 +448,7 @@ export default function AdminDailyMenu() {
       ...dailyMenu,
       delivery_time_slots: newDeliveryTimeSlots
     });
+    setSettingsChanged(true);
   };
 
 
@@ -636,6 +653,10 @@ export default function AdminDailyMenu() {
 
   // 일일 메뉴 아이템 저장
   const handleSaveItems = async () => {
+    console.log('🔍 저장 버튼 클릭됨');
+    console.log('🔍 settingsChanged 상태:', settingsChanged);
+    console.log('🔍 dailyMenu 상태:', dailyMenu);
+    
     if (!dailyMenu) return;
     
     // 새로운 메뉴가 추가되었는지 확인
@@ -686,10 +707,36 @@ export default function AdminDailyMenu() {
       }
       }
 
-      // 4. 로컬 상태 초기화
+      // 4. 일일 메뉴 설정값 저장 (배달 시간대, 최소주문금액 등)
+      if (settingsChanged && dailyMenu) {
+        console.log('🔍 설정값 저장 시작:', {
+          dailyMenuId: dailyMenu.id,
+          settings: {
+            delivery_time_slots: dailyMenu.delivery_time_slots,
+            pickup_time_slots: dailyMenu.pickup_time_slots,
+            order_cutoff_time: dailyMenu.order_cutoff_time,
+            minimum_order_amount: dailyMenu.minimum_order_amount
+          }
+        });
+        
+        await copyStoreSettingsToDailyMenu(
+          dailyMenu.id,
+          {
+            delivery_time_slots: dailyMenu.delivery_time_slots,
+            pickup_time_slots: dailyMenu.pickup_time_slots,
+            order_cutoff_time: dailyMenu.order_cutoff_time,
+            minimum_order_amount: dailyMenu.minimum_order_amount
+          }
+        );
+        
+        console.log('✅ 설정값 저장 완료');
+      }
+
+      // 5. 로컬 상태 초기화
       setItemAvailability({});
       setSelectedMenus(new Set());
       setHasChanges(false);
+      setSettingsChanged(false);
 
       // 데이터 다시 로드
       await loadData();
@@ -1346,7 +1393,7 @@ export default function AdminDailyMenu() {
                             </button>
                           </div>
                           
-                          {existingItem && (
+                          {existingItem && isSelected && (
                             <button
                               onClick={() => handleToggleItemAvailability(existingItem.id, isAvailable)}
                               className={`py-1 px-2 rounded text-xs font-medium transition-all duration-200 border ${

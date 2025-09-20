@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { getDailyMenu } from '../../lib/dailyMenuApi';
 import { createOrder } from '../../lib/orderApi';
 import { getDeliveryAreas, getDeliveryFeeByAreaId } from '../../lib/deliveryAreaApi';
 import { supabase } from '../../lib/supabase';
@@ -59,6 +60,7 @@ const formatDate = (dateString: string): string => {
 
 export default function Cart() {
   const navigate = useNavigate();
+  const { storeId } = useParams<{ storeId?: string }>();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [storeInfo, setStoreInfo] = useState<StoreInfo | null>(null);
   const [orderType, setOrderType] = useState<'delivery' | 'pickup'>('delivery');
@@ -144,6 +146,14 @@ export default function Cart() {
     hasLoaded.current = true;
     
     console.log('🔍 장바구니 페이지 useEffect 실행됨');
+    console.log('🔍 URL 파라미터 storeId:', storeId);
+    console.log('🔍 현재 URL:', window.location.href);
+    console.log('🔍 localStorage 데이터 확인:', {
+      cart: localStorage.getItem('cart'),
+      storeInfo: localStorage.getItem('storeInfo'),
+      dailyMenuCart: localStorage.getItem('dailyMenuCart'),
+      user: localStorage.getItem('user')
+    });
     const loadCartData = async () => {
       const savedCart = localStorage.getItem('cart');
       const savedStoreInfo = localStorage.getItem('storeInfo');
@@ -162,6 +172,8 @@ export default function Cart() {
         const store = JSON.parse(savedStoreInfo);
         console.log('로드된 매장 정보:', store);
         console.log('배달 시간대 슬롯:', store.delivery_time_slots);
+        console.log('배달 시간대 슬롯 타입:', typeof store.delivery_time_slots);
+        console.log('배달 시간대 슬롯 길이:', store.delivery_time_slots?.length);
         setStoreInfo(store);
         
         // 배달지역 데이터 로드
@@ -184,23 +196,43 @@ export default function Cart() {
             console.log('일일 메뉴 장바구니 데이터:', dailyMenuData);
             setDailyMenuCartData(dailyMenuData);
             
-            // 일일 메뉴 설정값 적용
-            if (dailyMenuSettings) {
-              const settings = JSON.parse(dailyMenuSettings);
-              console.log('일일 메뉴 설정값 적용:', settings);
+            // 해당 일자의 일일 메뉴 설정값을 데이터베이스에서 직접 조회
+            if (store.id && dailyMenuData.menuDate) {
+              console.log('🔍 일일 메뉴 설정값 조회 시작:', {
+                storeId: store.id,
+                menuDate: dailyMenuData.menuDate
+              });
               
-              // 매장 정보에 일일 설정값 적용
-              const updatedStore = {
-                ...store,
-                pickup_time_slots: settings.pickup_time_slots || store.pickup_time_slots,
-                delivery_time_slots: settings.delivery_time_slots || store.delivery_time_slots,
-                delivery_fee: settings.delivery_fee !== undefined ? settings.delivery_fee : store.delivery_fee,
-                order_cutoff_time: settings.order_cutoff_time || store.order_cutoff_time,
-                minimum_order_amount: settings.minimum_order_amount !== undefined ? settings.minimum_order_amount : store.minimum_order_amount
-              };
-              
-              setStoreInfo(updatedStore);
-              console.log('일일 설정값이 적용된 매장 정보:', updatedStore);
+              try {
+                const dailyMenu = await getDailyMenu(store.id, dailyMenuData.menuDate);
+                console.log('🔍 조회된 일일 메뉴:', dailyMenu);
+                
+                if (dailyMenu) {
+                  // 매장 정보에 일일 설정값 적용
+                  const updatedStore = {
+                    ...store,
+                    pickup_time_slots: dailyMenu.pickup_time_slots || store.pickup_time_slots,
+                    // 배달 시간대는 빈 배열이 아닌 경우에만 덮어쓰기
+                    delivery_time_slots: (dailyMenu.delivery_time_slots && dailyMenu.delivery_time_slots.length > 0) 
+                      ? dailyMenu.delivery_time_slots 
+                      : store.delivery_time_slots,
+                    delivery_fee: dailyMenu.delivery_fee !== undefined ? dailyMenu.delivery_fee : store.delivery_fee,
+                    order_cutoff_time: dailyMenu.order_cutoff_time || store.order_cutoff_time,
+                    minimum_order_amount: dailyMenu.minimum_order_amount !== undefined ? dailyMenu.minimum_order_amount : store.minimum_order_amount
+                  };
+                  
+                  setStoreInfo(updatedStore);
+                  console.log('✅ 일일 설정값이 적용된 매장 정보:', updatedStore);
+                  console.log('🔍 적용된 배달 시간대:', updatedStore.delivery_time_slots);
+                  console.log('🔍 적용된 픽업 시간대:', updatedStore.pickup_time_slots);
+                  console.log('🔍 적용된 최소 주문 금액:', updatedStore.minimum_order_amount);
+                  console.log('🔍 적용된 주문 마감 시간:', updatedStore.order_cutoff_time);
+                } else {
+                  console.log('⚠️ 해당 날짜의 일일 메뉴를 찾을 수 없음');
+                }
+              } catch (error) {
+                console.error('일일 메뉴 설정값 조회 오류:', error);
+              }
             }
             
             // 일일 메뉴 날짜로 배달 날짜 설정
@@ -211,21 +243,21 @@ export default function Cart() {
               console.log('🔍 일일 메뉴 데이터:', dailyMenuData);
               
               // 일일 메뉴 데이터에 메뉴 정보가 포함되어 있는지 확인
-              const hasMenuInfo = dailyMenuData.items.some((item: any) => item.menuInfo);
+              const hasMenuInfo = dailyMenuData.items.some((item: any) => item.menu);
               
               if (hasMenuInfo) {
                 // 메뉴 정보가 포함된 경우 직접 사용
                 const dailyMenuItems = dailyMenuData.items.map((item: any, index: number) => {
                   const quantity = item.quantity || 1;
-                  const menuInfo = item.menuInfo;
+                  const menuInfo = item.menu;
                   
                   return {
-                    id: `daily-${index}-${Date.now()}-${item.menuId}`,
-                    originalMenuId: item.menuId,
-                    name: menuInfo?.name || `메뉴-${item.menuId}`,
+                    id: `daily-${index}-${Date.now()}-${item.menu_id}`,
+                    originalMenuId: item.menu_id,
+                    name: menuInfo?.name || `메뉴-${item.menu_id}`,
                     price: (menuInfo?.price || 0) * quantity,
                     quantity: quantity,
-                    available: menuInfo?.is_available !== false
+                    available: item.is_available !== false
                   };
                 });
                 
@@ -233,7 +265,7 @@ export default function Cart() {
                 setCart(dailyMenuItems);
               } else {
                 // 메뉴 정보가 없는 경우 API 호출로 가져오기 (기존 방식)
-                const menuIds = dailyMenuData.items.map((item: any) => item.menuId);
+                const menuIds = dailyMenuData.items.map((item: any) => item.menu_id);
                 console.log('🔍 메뉴 ID 목록:', menuIds);
                 
                 if (!menuIds || menuIds.length === 0) {
@@ -263,12 +295,12 @@ export default function Cart() {
 
                 if (menuData) {
                   const dailyMenuItems = dailyMenuData.items.map((item: any, index: number) => {
-                    const menu = menuData.find(m => m.id === item.menuId);
+                    const menu = menuData.find(m => m.id === item.menu_id);
                     const quantity = item.quantity || 1;
                     return {
-                      id: `daily-${index}-${Date.now()}-${item.menuId}`,
-                      originalMenuId: item.menuId,
-                      name: menu?.name || `메뉴-${item.menuId}`,
+                      id: `daily-${index}-${Date.now()}-${item.menu_id}`,
+                      originalMenuId: item.menu_id,
+                      name: menu?.name || `메뉴-${item.menu_id}`,
                       price: (menu?.price || 0) * quantity,
                       quantity: quantity,
                       available: menu?.is_available !== false
@@ -284,9 +316,9 @@ export default function Cart() {
               const dailyMenuItems = dailyMenuData.items.map((item: any, index: number) => {
                 const quantity = item.quantity || 1;
                 return {
-                  id: `daily-${index}-${Date.now()}-${item.menuId}`,
-                  originalMenuId: item.menuId,
-                  name: `메뉴-${item.menuId}`,
+                  id: `daily-${index}-${Date.now()}-${item.menu_id}`,
+                  originalMenuId: item.menu_id,
+                  name: `메뉴-${item.menu_id}`,
                   price: 0,
                   quantity: quantity,
                   available: true
@@ -494,13 +526,20 @@ export default function Cart() {
       console.log('🔍 디버깅 - deliveryTime:', deliveryTime);
       console.log('🔍 디버깅 - pickupTime:', pickupTime);
 
+      // 배달/픽업 날짜 설정 (일일 메뉴 날짜 사용)
+      const deliveryDate = dailyMenuCartData?.menuDate || new Date().toISOString().split('T')[0];
+      
+      // 배달/픽업 시간에 날짜 포함하여 저장
+      const deliveryDateTime = orderType === 'delivery' && deliveryTime ? `${deliveryDate} ${deliveryTime}` : undefined;
+      const pickupDateTime = orderType === 'pickup' && pickupTime ? `${deliveryDate} ${pickupTime}` : undefined;
+      
       const orderData = {
         user_id: generateUUID(),
         store_id: storeInfo.id,
         order_type: orderType,
         delivery_address: orderType === 'delivery' ? deliveryAddress : undefined,
-        delivery_time: orderType === 'delivery' ? deliveryTime : undefined,
-        pickup_time: orderType === 'pickup' ? pickupTime : undefined,
+        delivery_time: deliveryDateTime,
+        pickup_time: pickupDateTime,
         special_requests: specialRequests || undefined,
         depositor_name: paymentMethod === 'bank_transfer' ? depositorName : undefined,
         customer_name: customerName,
@@ -530,6 +569,13 @@ export default function Cart() {
           items: dailyMenuCartData.items
         } : undefined
       };
+      
+      console.log('🔍 주문 데이터:', {
+        ...orderData,
+        delivery_time_with_date: orderData.delivery_time,
+        pickup_time_with_date: orderData.pickup_time,
+        daily_menu_date: dailyMenuCartData?.menuDate
+      });
 
       // 주문 생성
       const order = await createOrder(orderData);
@@ -728,7 +774,15 @@ export default function Cart() {
                   배달 시간대 선택 <span className="text-red-500">*</span>
                 </label>
                 <div className="grid grid-cols-1 gap-3">
-                  {(storeInfo as any)?.delivery_time_slots?.filter((slot: any) => slot.enabled).map((slot: any) => (
+                  {(() => {
+                    console.log('🔍 배달 시간대 렌더링 체크:', {
+                      storeInfo: !!storeInfo,
+                      deliveryTimeSlots: storeInfo?.delivery_time_slots,
+                      slotsType: typeof storeInfo?.delivery_time_slots,
+                      slotsLength: storeInfo?.delivery_time_slots?.length,
+                      enabledSlots: storeInfo?.delivery_time_slots?.filter((slot: any) => slot.enabled)
+                    });
+                    return (storeInfo as any)?.delivery_time_slots?.filter((slot: any) => slot.enabled).map((slot: any) => (
                     <button
                       key={slot.name}
                       onClick={() => setDeliveryTime(`${slot.name} (${slot.start}-${slot.end})`)}
@@ -755,7 +809,8 @@ export default function Cart() {
                         </div>
                       </div>
                     </button>
-                  ))}
+                  ));
+                  })()}
                 </div>
                 <div className="text-xs text-gray-500 mt-2">
                   원하는 배달 시간대를 선택하세요
@@ -981,13 +1036,6 @@ export default function Cart() {
                       <div className="text-sm text-gray-600">{(item.price || 0).toLocaleString()}원</div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className={`px-3 py-1 rounded-full text-xs font-bold ${
-                        item.available
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {item.available ? '판매가능' : '품절'}
-                      </div>
                       <button
                         onClick={() => removeItem(item.id)}
                         className="w-8 h-8 flex items-center justify-center text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors"

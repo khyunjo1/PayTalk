@@ -55,6 +55,10 @@ const routes: RouteObject[] = [
     element: <Cart />,
   },
   {
+    path: "/cart/:storeId",
+    element: <Cart />,
+  },
+  {
     path: "/order-complete/:orderId",
     element: <OrderComplete />,
   },

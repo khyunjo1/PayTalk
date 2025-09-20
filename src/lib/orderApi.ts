@@ -2,7 +2,7 @@
 // 요구사항 5: 주문 상태 변경 + 푸시 알림
 
 import { supabase } from './supabase';
-import { sendPushNotification, getStoreOrderNotificationMessage, checkUserPushSubscription, sendPushNotificationByPhone } from './pushApi';
+import { getStoreOrderNotificationMessage } from './pushApi';
 
 // 주문 생성
 export const createOrder = async (orderData: {

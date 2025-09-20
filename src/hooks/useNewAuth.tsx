@@ -26,7 +26,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    console.error('useAuth must be used within an AuthProvider');
+    // 에러를 던지지 않고 기본값을 반환
+    return {
+      user: null,
+      loading: false,
+      login: async () => {},
+      loginSuperAdmin: async () => {},
+      logout: () => {}
+    };
   }
   return context;
 };
@@ -100,7 +108,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 export const useNewAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useNewAuth must be used within an AuthProvider');
+    console.error('useNewAuth must be used within an AuthProvider');
+    // 에러를 던지지 않고 기본값을 반환
+    return {
+      user: null,
+      loading: false,
+      login: async () => {},
+      loginSuperAdmin: async () => {},
+      logout: () => {}
+    };
   }
   return context;
 };

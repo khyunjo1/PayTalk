@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useNewAuth } from '../../../../../hooks/useNewAuth';
 import { 
   getDailyMenu, 
   getDailyMenuItems, 
@@ -53,7 +52,6 @@ interface DailyMenuItem {
 export default function DailyMenuPage() {
   const { storeId, date } = useParams<{ storeId: string; date?: string }>();
   const navigate = useNavigate();
-  const { } = useNewAuth();
   const [loading, setLoading] = useState(true);
   const [dailyMenu, setDailyMenu] = useState<DailyMenu | null>(null);
   const [dailyMenuItems, setDailyMenuItems] = useState<DailyMenuItem[]>([]);
@@ -215,13 +213,57 @@ export default function DailyMenuPage() {
       setDailyMenu(menuData);
       setDailyMenuItems(menuItems);
       
-      // 3. 주문 마감 상태 체크
+      // 3. 매장 정보에 일일 메뉴 설정값 적용
+      if (menuData) {
+        console.log('🔍 일일 메뉴 설정값을 매장 정보에 적용:', {
+          storeId,
+          menuDate: menuData.menu_date,
+          dailyMenuSettings: {
+            pickup_time_slots: menuData.pickup_time_slots,
+            delivery_time_slots: menuData.delivery_time_slots,
+            delivery_fee: menuData.delivery_fee,
+            order_cutoff_time: menuData.order_cutoff_time,
+            minimum_order_amount: menuData.minimum_order_amount
+          }
+        });
+        
+        const updatedStore = {
+          ...storeData,
+          pickup_time_slots: menuData.pickup_time_slots || storeData.pickup_time_slots,
+          delivery_time_slots: (menuData.delivery_time_slots && menuData.delivery_time_slots.length > 0) 
+            ? menuData.delivery_time_slots 
+            : storeData.delivery_time_slots,
+          delivery_fee: menuData.delivery_fee !== undefined ? menuData.delivery_fee : storeData.delivery_fee,
+          order_cutoff_time: menuData.order_cutoff_time || storeData.order_cutoff_time,
+          minimum_order_amount: menuData.minimum_order_amount !== undefined ? menuData.minimum_order_amount : storeData.minimum_order_amount
+        };
+        
+        setStore(updatedStore);
+        console.log('✅ 일일 설정값이 적용된 매장 정보:', updatedStore);
+        console.log('🔍 적용된 배달 시간대:', updatedStore.delivery_time_slots);
+        console.log('🔍 적용된 픽업 시간대:', updatedStore.pickup_time_slots);
+        console.log('🔍 적용된 최소 주문 금액:', updatedStore.minimum_order_amount);
+        console.log('🔍 적용된 주문 마감 시간:', updatedStore.order_cutoff_time);
+      }
+      
+      // 4. 주문 마감 상태 체크 (업데이트된 매장 정보 사용)
       if (menuData && menuDate) {
-        const orderClosed = checkOrderClosed(storeData, menuDate);
+        const finalStoreData = menuData ? {
+          ...storeData,
+          pickup_time_slots: menuData.pickup_time_slots || storeData.pickup_time_slots,
+          delivery_time_slots: (menuData.delivery_time_slots && menuData.delivery_time_slots.length > 0) 
+            ? menuData.delivery_time_slots 
+            : storeData.delivery_time_slots,
+          delivery_fee: menuData.delivery_fee !== undefined ? menuData.delivery_fee : storeData.delivery_fee,
+          order_cutoff_time: menuData.order_cutoff_time || storeData.order_cutoff_time,
+          minimum_order_amount: menuData.minimum_order_amount !== undefined ? menuData.minimum_order_amount : storeData.minimum_order_amount
+        } : storeData;
+        
+        const orderClosed = checkOrderClosed(finalStoreData, menuDate);
         console.log('주문 마감 상태 체크:', {
           menuDate,
           currentTime: getCurrentKoreaTime().toLocaleString("en-US", {timeZone: "Asia/Seoul"}),
-          cutoffTime: storeData.order_cutoff_time,
+          cutoffTime: finalStoreData.order_cutoff_time,
           orderClosed
         });
         setIsOrderClosed(orderClosed);
@@ -330,8 +372,14 @@ export default function DailyMenuPage() {
     console.log('🔍 저장할 일일 메뉴 데이터:', dailyMenuData);
 
     // 매장 정보를 localStorage에 저장 (장바구니에서 필요)
-    localStorage.setItem('selectedStore', JSON.stringify(store));
-    localStorage.setItem('dailyMenuCart', JSON.stringify(dailyMenuData));
+    console.log('🔍 저장할 매장 정보:', store);
+    console.log('🔍 매장 배달 시간대:', store.delivery_time_slots);
+    localStorage.setItem('storeInfo', JSON.stringify(store));
+    localStorage.setItem('dailyMenuCart', JSON.stringify({
+      items: dailyMenuData,
+      menuDate: dailyMenu?.menu_date || date,
+      dailyMenuId: dailyMenu?.id
+    }));
     localStorage.setItem('dailyMenuInfo', JSON.stringify(dailyMenu));
     
     // 일일 설정값 저장 (배달비, 최소주문금액 등)

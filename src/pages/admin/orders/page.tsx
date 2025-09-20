@@ -218,7 +218,19 @@ export default function AdminOrders() {
         );
       }
       
-      // 일반 주문인 경우 주문 생성 시간으로 필터링 (한국 시간 기준)
+      // 일반 주문인 경우 배달/픽업 시간에서 날짜 추출하여 필터링
+      if (order.order_type === 'delivery' && order.delivery_time) {
+        // "2025-09-21 14:00" 형식에서 날짜 부분만 추출
+        const deliveryDate = order.delivery_time.split(' ')[0];
+        return deliveryDate === targetDate;
+      }
+      if (order.order_type === 'pickup' && order.pickup_time) {
+        // "2025-09-21 14:00" 형식에서 날짜 부분만 추출
+        const pickupDate = order.pickup_time.split(' ')[0];
+        return pickupDate === targetDate;
+      }
+      
+      // 배달/픽업 시간이 없는 경우 주문 생성 시간으로 필터링 (한국 시간 기준)
       const orderDate = new Date(order.created_at);
       const orderDateStr = formatDateForComparison(orderDate);
       return orderDateStr === targetDate;

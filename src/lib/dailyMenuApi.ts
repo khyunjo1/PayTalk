@@ -32,17 +32,24 @@ const convertPickupTimeSlots = (data: any): string[] => {
 
 // JSONB 데이터를 DeliveryTimeSlot[]로 변환하는 헬퍼 함수
 const convertDeliveryTimeSlots = (data: any): DeliveryTimeSlot[] => {
+  console.log('🔍 convertDeliveryTimeSlots 입력 데이터:', data);
+  console.log('🔍 convertDeliveryTimeSlots 데이터 타입:', typeof data);
+  
   if (Array.isArray(data)) {
+    console.log('✅ 배열로 인식됨:', data);
     return data;
   }
   if (typeof data === 'string') {
     try {
       const parsed = JSON.parse(data);
+      console.log('✅ JSON 파싱 성공:', parsed);
       return Array.isArray(parsed) ? parsed : [];
-    } catch {
+    } catch (error) {
+      console.error('❌ JSON 파싱 실패:', error);
       return [];
     }
   }
+  console.log('⚠️ 알 수 없는 데이터 타입, 빈 배열 반환');
   return [];
 };
 
@@ -119,54 +126,42 @@ export const getDailyMenu = async (storeId: string, menuDate: string): Promise<D
     // 먼저 자동 비활성화 실행
     await supabase.rpc('execute_daily_menu_auto_deactivation');
     
-    // 자동 비활성화 체크가 포함된 함수 사용
+    // RPC 함수 대신 직접 테이블 조회 (delivery_time_slots 데이터 손실 문제 해결)
+    console.log('🔍 직접 테이블 조회 시작:', { storeId, menuDate });
     const { data, error } = await supabase
-      .rpc('get_daily_menu_with_auto_check', {
-        p_menu_date: menuDate,
-        p_store_id: storeId
-      });
+      .from('daily_menus')
+      .select(`
+        *,
+        pickup_time_slots,
+        delivery_time_slots,
+        delivery_fee,
+        order_cutoff_time,
+        minimum_order_amount
+      `)
+      .eq('store_id', storeId)
+      .eq('menu_date', menuDate)
+      .single();
 
-    if (error) {
-      console.error('일일 메뉴 조회 오류 (RPC):', error);
-      // RPC 함수가 없으면 기존 방식으로 fallback (설정값들 포함)
-      const { data: fallbackData, error: fallbackError } = await supabase
-        .from('daily_menus')
-        .select(`
-          *,
-          pickup_time_slots,
-          delivery_time_slots,
-          delivery_fee,
-          order_cutoff_time,
-          minimum_order_amount
-        `)
-        .eq('store_id', storeId)
-        .eq('menu_date', menuDate)
-        .single();
-
-      if (fallbackError && fallbackError.code !== 'PGRST116') {
-        console.error('일일 메뉴 조회 오류 (fallback):', fallbackError);
-        throw new Error(`일일 메뉴 조회에 실패했습니다: ${fallbackError.message}`);
-      }
-
-      // 데이터 변환 적용
-      if (fallbackData) {
-        return {
-          ...fallbackData,
-          pickup_time_slots: convertPickupTimeSlots(fallbackData.pickup_time_slots),
-          delivery_time_slots: convertDeliveryTimeSlots(fallbackData.delivery_time_slots)
-        };
-      }
-      return fallbackData;
+    if (error && error.code !== 'PGRST116') {
+      console.error('일일 메뉴 조회 오류:', error);
+      throw new Error(`일일 메뉴 조회에 실패했습니다: ${error.message}`);
     }
 
-    // RPC 함수 결과도 변환 적용
-    if (data && data.length > 0) {
-      const menuData = data[0];
-      return {
-        ...menuData,
-        pickup_time_slots: convertPickupTimeSlots(menuData.pickup_time_slots),
-        delivery_time_slots: convertDeliveryTimeSlots(menuData.delivery_time_slots)
+    // 데이터 변환 적용
+    if (data) {
+      console.log('🔍 원본 데이터:', data);
+      console.log('🔍 원본 delivery_time_slots:', data.delivery_time_slots);
+      
+      const convertedData = {
+        ...data,
+        pickup_time_slots: convertPickupTimeSlots(data.pickup_time_slots),
+        delivery_time_slots: convertDeliveryTimeSlots(data.delivery_time_slots)
       };
+      
+      console.log('🔍 변환된 데이터:', convertedData);
+      console.log('🔍 변환된 delivery_time_slots:', convertedData.delivery_time_slots);
+      
+      return convertedData;
     }
     return null;
   } catch (error) {
@@ -524,33 +519,40 @@ export const updateDailyMenuSettings = async (
 
 // 매장의 기본 설정값을 일일 메뉴에 복사
 export const copyStoreSettingsToDailyMenu = async (
-  storeId: string,
-  dailyMenuId: string
+  dailyMenuId: string,
+  settings: {
+    delivery_time_slots?: any[];
+    pickup_time_slots?: string[];
+    delivery_fee?: number;
+    order_cutoff_time?: string;
+    minimum_order_amount?: number;
+  }
 ): Promise<DailyMenu | null> => {
   try {
-    console.log('매장 설정값을 일일 메뉴에 복사:', { storeId, dailyMenuId });
-    
-    // 매장 정보 조회
-    const { data: storeData, error: storeError } = await supabase
-      .from('stores')
-      .select('pickup_time_slots, delivery_time_slots, delivery_fee, order_cutoff_time, minimum_order_amount')
-      .eq('id', storeId)
-      .single();
+    console.log('일일 메뉴 설정값 저장:', { dailyMenuId, settings });
+    console.log('🔍 저장할 배달 시간대:', settings.delivery_time_slots);
 
-    if (storeError) {
-      console.error('매장 정보 조회 오류:', storeError);
-      throw storeError;
+    // 먼저 daily_menus 테이블의 현재 데이터를 확인
+    const { data: currentData, error: fetchError } = await supabase
+      .from('daily_menus')
+      .select('*')
+      .eq('id', dailyMenuId)
+      .single();
+    
+    if (fetchError) {
+      console.error('현재 daily_menus 데이터 조회 오류:', fetchError);
+    } else {
+      console.log('🔍 현재 daily_menus 데이터:', currentData);
     }
 
-    // 일일 메뉴에 설정값 복사
+    // 일일 메뉴에 설정값 저장
     const { data, error } = await supabase
       .from('daily_menus')
       .update({
-        pickup_time_slots: storeData.pickup_time_slots,
-        delivery_time_slots: storeData.delivery_time_slots,
-        delivery_fee: 0, // 기본 배달비 0원 (delivery_areas 테이블에서 관리)
-        order_cutoff_time: storeData.order_cutoff_time,
-        minimum_order_amount: storeData.minimum_order_amount,
+        pickup_time_slots: settings.pickup_time_slots,
+        delivery_time_slots: settings.delivery_time_slots,
+        order_cutoff_time: settings.order_cutoff_time,
+        minimum_order_amount: settings.minimum_order_amount,
         updated_at: new Date().toISOString()
       })
       .eq('id', dailyMenuId)
@@ -558,11 +560,14 @@ export const copyStoreSettingsToDailyMenu = async (
       .single();
 
     if (error) {
-      console.error('일일 메뉴 설정값 복사 오류:', error);
+      console.error('일일 메뉴 설정값 저장 오류:', error);
       throw error;
     }
 
-    console.log('매장 설정값 복사 성공:', data);
+    console.log('✅ 일일 메뉴 설정값 저장 성공:', data);
+    console.log('🔍 저장된 배달 시간대:', data.delivery_time_slots);
+    console.log('🔍 저장된 배달 시간대 타입:', typeof data.delivery_time_slots);
+    console.log('🔍 저장된 배달 시간대 JSON:', JSON.stringify(data.delivery_time_slots));
     return data;
   } catch (error) {
     console.error('매장 설정값 복사 실패:', error);
