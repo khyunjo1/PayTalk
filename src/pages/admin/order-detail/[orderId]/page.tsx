@@ -328,8 +328,18 @@ export default function OrderDetail() {
         <div className="space-y-6">
           
           {/* 상단 영역 - 주문 번호 & 상태 */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 relative">
+            {/* 복사 버튼 - 카드의 제일 상단 오른쪽 */}
+            <button
+              onClick={copyOrderToClipboard}
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 px-2 py-1.5 sm:px-3 sm:py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-1 sm:gap-2 border border-blue-200 z-10"
+              title="주문상세내역 복사"
+            >
+              <i className="ri-file-copy-line text-xs sm:text-sm"></i>
+              <span>주문 복사</span>
+            </button>
+            
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pr-16 sm:pr-20">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
                   {order.customer_name ? `${order.customer_name}님의 주문` : '주문 상세'}
@@ -347,21 +357,9 @@ export default function OrderDetail() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="text-left sm:text-right">
-                  <p className="text-sm text-gray-500">{date}</p>
-                  <p className="text-sm text-gray-500">{time}</p>
-                </div>
-                {/* 복사 버튼 - 제목과 같은 가로선상의 오른쪽 */}
-                <button
-                  onClick={copyOrderToClipboard}
-                  className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 border border-blue-200 flex-shrink-0"
-                  title="주문상세내역 복사"
-                >
-                  <i className="ri-file-copy-line text-sm"></i>
-                  <span className="hidden sm:inline">주문 복사</span>
-                  <span className="sm:hidden">복사</span>
-                </button>
+              <div className="text-left sm:text-right">
+                <p className="text-sm text-gray-500">{date}</p>
+                <p className="text-sm text-gray-500">{time}</p>
               </div>
             </div>
             

@@ -663,54 +663,37 @@ export default function AdminOrders() {
       <div className="p-4 flex-1">
 
         {/* 통합 검색, 필터, 주문 현황 카드 */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-lg mb-6 overflow-hidden">
-          {/* 1. 상단 - 주문 현황 */}
-          <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-orange-50 to-amber-50">
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl flex items-center justify-center shadow-lg">
-                  <i className="ri-shopping-cart-line text-white text-lg"></i>
-                </div>
-                <div>
-                  <p className="text-orange-600 text-sm font-semibold">
-                    {getActualPeriodTitle()}
-                  </p>
-                  <h3 className="text-xl font-bold text-gray-900">
-                    주문 현황
-                  </h3>
-                </div>
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-3 overflow-hidden">
+          {/* 1. 상단 - 통계 정보만 */}
+          <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-orange-50 to-amber-50">
+            <div className="flex items-center justify-center gap-4">
+              <div>
+                <p className="text-gray-500 text-xs">주문 건수</p>
+                <p className="font-bold text-gray-900 text-sm">{finalFilteredOrders.length}건</p>
               </div>
-              
-              {/* 세로로 깔끔하게 배치된 통계 정보 */}
-              <div className="bg-white border border-orange-200 rounded-2xl p-4 space-y-4 shadow-sm">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-700 text-sm font-semibold">주문 건수</span>
-                  <span className="font-bold text-gray-900 text-lg">{finalFilteredOrders.length}건</span>
+              {unreadOrdersCount > 0 && (
+                <div>
+                  <p className="text-red-500 text-xs">입금대기</p>
+                  <p className="font-bold text-red-600 text-sm animate-pulse">{unreadOrdersCount}건</p>
                 </div>
-                {unreadOrdersCount > 0 && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-red-600 text-sm font-semibold">입금대기</span>
-                    <span className="font-bold text-red-600 text-lg animate-pulse">{unreadOrdersCount}건</span>
-                  </div>
-                )}
-                <div className="flex justify-between items-center pt-3 border-t border-orange-100">
-                  <span className="text-gray-700 text-sm font-semibold">총 결제금액</span>
-                  <span className="font-bold text-orange-600 text-xl">
-                    {formatKoreanCurrency(finalFilteredOrders.reduce((sum, order) => sum + (order.total || 0), 0))}
-                  </span>
-                </div>
+              )}
+              <div>
+                <p className="text-gray-500 text-xs">총 결제금액</p>
+                <p className="font-bold text-orange-600 text-sm">
+                  {formatKoreanCurrency(finalFilteredOrders.reduce((sum, order) => sum + (order.total || 0), 0))}
+                </p>
               </div>
             </div>
           </div>
 
           {/* 2. 중단 - 필터 영역 */}
-          <div className="p-6 border-b border-gray-100 bg-white">
+          <div className="p-4 border-b border-gray-100 bg-white">
             <div className="flex flex-wrap items-center gap-3">
               {/* 기간 필터 버튼 */}
               <div className="relative period-dropdown-container flex-shrink-0">
                 <button
                   onClick={() => setShowPeriodDropdown(!showPeriodDropdown)}
-                  className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-2xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-orange-300 cursor-pointer transition-all duration-200 hover:from-orange-600 hover:to-amber-600 shadow-md hover:shadow-lg"
+                  className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg text-xs font-medium focus:outline-none focus:ring-2 focus:ring-orange-300 cursor-pointer transition-all duration-200 hover:from-orange-600 hover:to-amber-600 shadow-sm hover:shadow-md"
                 >
                   <i className="ri-filter-line text-white text-sm"></i>
                   <span className="whitespace-nowrap">
@@ -780,7 +763,7 @@ export default function AdminOrders() {
                       const input = document.getElementById('orders-date-input');
                       if (input) (input as any).showPicker?.() || input.click();
                     }}
-                    className="flex items-center justify-between gap-2 px-4 py-3 bg-white border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm font-semibold min-h-[48px] hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md min-w-[160px]"
+                    className="flex items-center justify-between gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-xs font-medium hover:bg-gray-50 transition-all duration-200 shadow-sm hover:shadow-md min-w-[140px]"
                   >
                     <span className="text-gray-900">
                       {selectedDate ? new Date(selectedDate).toLocaleDateString('ko-KR', {
@@ -807,24 +790,24 @@ export default function AdminOrders() {
           </div>
 
           {/* 3. 하단 - 검색 영역 */}
-          <div className="p-6 bg-gradient-to-r from-gray-50 to-orange-50">
-            <div className="flex items-center gap-4">
+          <div className="p-4 bg-gradient-to-r from-gray-50 to-orange-50">
+            <div className="flex items-center gap-3">
               {/* 검색 입력창 */}
               <div className="flex-1 relative">
-                <i className="ri-search-line absolute left-4 top-1/2 transform -translate-y-1/2 text-orange-500 text-lg"></i>
+                <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-orange-500 text-sm"></i>
                 <input
                   type="text"
                   placeholder="입금자명, 주소, 고객명 검색"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 border-2 border-orange-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-500 hover:border-orange-300 transition-all duration-200 shadow-sm hover:shadow-md bg-white"
+                  className="w-full pl-10 pr-3 py-2 border border-orange-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-500 hover:border-orange-300 transition-all duration-200 bg-white"
                 />
               </div>
               
               {/* 인쇄 버튼 */}
               <button
                 onClick={handlePrint}
-                className="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-2xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl"
+                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-2 shadow-sm hover:shadow-md"
               >
                 <i className="ri-printer-line text-lg"></i>
                 <span>인쇄</span>
