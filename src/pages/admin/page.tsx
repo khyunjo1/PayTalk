@@ -26,6 +26,7 @@ interface Order {
   subtotal: number;
   total: number;
   status: '입금대기' | '입금확인' | '배달완료';
+  menu_date?: string | null;
   created_at: string;
   updated_at: string;
   order_items?: Array<{
@@ -653,6 +654,11 @@ export default function Admin() {
 
   // 배달날짜 추출 함수
   const getDeliveryDate = (order: Order) => {
+    // 일일 메뉴 주문인 경우 메뉴 날짜를 우선 사용
+    if (order.menu_date) {
+      return order.menu_date;
+    }
+    
     if (order.delivery_time) {
       // "2024-01-20 점심배송 (11:00-13:00)" 형태에서 날짜 추출
       const dateMatch = order.delivery_time.match(/(\d{4}-\d{2}-\d{2})/);

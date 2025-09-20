@@ -217,6 +217,7 @@ export interface Database {
           delivery_fee: number
           total: number
           delivery_area_id: string | null
+          menu_date: string | null
           created_at: string
           updated_at: string
         }
@@ -235,6 +236,7 @@ export interface Database {
           delivery_fee: number
           total: number
           delivery_area_id?: string | null
+          menu_date?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -253,6 +255,7 @@ export interface Database {
           delivery_fee?: number
           total?: number
           delivery_area_id?: string | null
+          menu_date?: string | null
           created_at?: string
           updated_at?: string
         }

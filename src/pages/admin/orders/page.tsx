@@ -24,6 +24,7 @@ interface Order {
   total: number;
   delivery_area_id?: string;
   status: '입금대기' | '입금확인' | '배달완료' | '주문취소';
+  menu_date?: string | null;
   read_at?: string;
   created_at: string;
   updated_at: string;
@@ -211,11 +212,9 @@ export default function AdminOrders() {
     const targetDate = getTargetDate();
     
     return orders.filter(order => {
-      // 일일 메뉴 주문인 경우 일일 메뉴 날짜로 필터링
-      if (order.daily_menu_orders && order.daily_menu_orders.length > 0) {
-        return order.daily_menu_orders.some(dailyOrder => 
-          dailyOrder.daily_menus.menu_date === targetDate
-        );
+      // 일일 메뉴 주문인 경우 메뉴 날짜로 필터링 (menu_date 필드 사용)
+      if (order.menu_date) {
+        return order.menu_date === targetDate;
       }
       
       // 일반 주문인 경우 배달/픽업 시간에서 날짜 추출하여 필터링

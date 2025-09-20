@@ -22,6 +22,7 @@ interface Order {
   subtotal: number;
   total: number;
   status: '입금대기' | '입금확인' | '배달완료' | '주문취소';
+  menu_date?: string | null;
   created_at: string;
   updated_at: string;
   order_items?: Array<{
@@ -184,12 +185,9 @@ export default function AdminAnalytics() {
     const dateRange = getDateRange();
     
     return orders.filter(order => {
-      // 일일 메뉴 주문인 경우 일일 메뉴 날짜로 필터링
-      if (order.daily_menu_orders && order.daily_menu_orders.length > 0) {
-        return order.daily_menu_orders.some(dailyOrder => {
-          const menuDate = dailyOrder.daily_menus.menu_date;
-          return menuDate >= dateRange.start && menuDate <= dateRange.end;
-        });
+      // 일일 메뉴 주문인 경우 메뉴 날짜로 필터링 (menu_date 필드 사용)
+      if (order.menu_date) {
+        return order.menu_date >= dateRange.start && order.menu_date <= dateRange.end;
       }
       
       // 일반 주문인 경우 주문 생성 시간으로 필터링 (한국 시간 기준)
