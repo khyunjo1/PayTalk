@@ -22,6 +22,7 @@ interface Order {
   subtotal: number;
   total: number;
   status: '입금대기' | '입금확인' | '배달완료' | '주문취소';
+  menu_date?: string | null;
   created_at: string;
   updated_at: string;
   order_items?: Array<{
@@ -184,17 +185,36 @@ export default function AdminAnalytics() {
     const dateRange = getDateRange();
     
     return orders.filter(order => {
-      // 일일 메뉴 주문인 경우 일일 메뉴 날짜로 필터링
-      if (order.daily_menu_orders && order.daily_menu_orders.length > 0) {
-        return order.daily_menu_orders.some(dailyOrder => {
-          const menuDate = dailyOrder.daily_menus.menu_date;
-          return menuDate >= dateRange.start && menuDate <= dateRange.end;
-        });
+      // menu_date가 있는 경우 메뉴 날짜로 필터링
+      if (order.menu_date) {
+        return order.menu_date >= dateRange.start && order.menu_date <= dateRange.end;
       }
       
-      // 일반 주문인 경우 주문 생성 시간으로 필터링 (한국 시간 기준)
-      const orderDate = new Date(order.created_at);
-      const orderDateStr = formatDateForComparison(orderDate);
+      // menu_date가 없는 경우 delivery_time 또는 pickup_time에서 날짜 추출
+      let orderDate = null;
+      
+      if (order.delivery_time) {
+        const dateMatch = order.delivery_time.match(/(\d{4}-\d{2}-\d{2})/);
+        if (dateMatch) {
+          orderDate = dateMatch[1];
+        }
+      }
+      
+      if (!orderDate && order.pickup_time) {
+        const dateMatch = order.pickup_time.match(/(\d{4}-\d{2}-\d{2})/);
+        if (dateMatch) {
+          orderDate = dateMatch[1];
+        }
+      }
+      
+      // 날짜를 찾은 경우 해당 날짜로 필터링
+      if (orderDate) {
+        return orderDate >= dateRange.start && orderDate <= dateRange.end;
+      }
+      
+      // 날짜를 찾지 못한 경우 주문 생성 시간으로 필터링 (한국 시간 기준)
+      const createdDate = new Date(order.created_at);
+      const orderDateStr = formatDateForComparison(createdDate);
       return orderDateStr >= dateRange.start && orderDateStr <= dateRange.end;
     });
   };

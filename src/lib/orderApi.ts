@@ -56,7 +56,9 @@ export const createOrder = async (orderData: {
       total: orderData.total,
       delivery_area_id: orderData.delivery_area_id && orderData.delivery_area_id.trim() !== '' ? orderData.delivery_area_id : null,
       payment_method: orderData.payment_method,
-      status: '입금대기'
+      status: '입금대기',
+      // 일일 메뉴 주문인 경우 메뉴 날짜 저장
+      menu_date: orderData.daily_menu_data?.menu_date || null
     })
     .select()
     .single();
@@ -130,11 +132,11 @@ export const createOrder = async (orderData: {
     ]);
 
     if (storeData.data && menuData.data) {
-      // 주문 아이템 이름 생성
-      const orderItemsText = orderData.items.map(item => {
-        const menu = menuData.data.find(m => m.id === item.menu_id);
-        return `${menu?.name || '메뉴'} x${item.quantity}`;
-      }).join(', ');
+      // 주문 아이템 이름 생성 (현재 사용하지 않음)
+      // const orderItemsText = orderData.items.map(item => {
+      //   const menu = menuData.data.find(m => m.id === item.menu_id);
+      //   return `${menu?.name || '메뉴'} x${item.quantity}`;
+      // }).join(', ');
 
       // 고객 알림은 제거 - 사장님에게만 알림 발송
       console.log('고객 알림은 발송하지 않습니다. 사장님에게만 알림을 발송합니다.');
@@ -250,13 +252,13 @@ export const getStoreOrders = async (storeId: string) => {
       }
 
       // 일일 메뉴 주문 (임시 비활성화)
-      const dailyMenuOrders = []; // 빈 배열로 설정
+      const dailyMenuOrders: any[] = []; // 빈 배열로 설정
       console.log('일일 메뉴 주문 조회는 임시로 비활성화되었습니다.');
 
       return { 
         ...order, 
         order_items: items || [],
-        daily_menu_orders: dailyMenuOrders || []
+        daily_menu_orders: dailyMenuOrders
       };
     })
   );

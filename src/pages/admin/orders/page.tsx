@@ -24,6 +24,7 @@ interface Order {
   total: number;
   delivery_area_id?: string;
   status: '입금대기' | '입금확인' | '배달완료' | '주문취소';
+  menu_date?: string | null;
   read_at?: string;
   created_at: string;
   updated_at: string;
@@ -211,28 +212,36 @@ export default function AdminOrders() {
     const targetDate = getTargetDate();
     
     return orders.filter(order => {
-      // 일일 메뉴 주문인 경우 일일 메뉴 날짜로 필터링
-      if (order.daily_menu_orders && order.daily_menu_orders.length > 0) {
-        return order.daily_menu_orders.some(dailyOrder => 
-          dailyOrder.daily_menus.menu_date === targetDate
-        );
+      // menu_date가 있는 경우 메뉴 날짜로 필터링
+      if (order.menu_date) {
+        return order.menu_date === targetDate;
       }
       
-      // 일반 주문인 경우 배달/픽업 시간에서 날짜 추출하여 필터링
-      if (order.order_type === 'delivery' && order.delivery_time) {
-        // "2025-09-21 14:00" 형식에서 날짜 부분만 추출
-        const deliveryDate = order.delivery_time.split(' ')[0];
-        return deliveryDate === targetDate;
-      }
-      if (order.order_type === 'pickup' && order.pickup_time) {
-        // "2025-09-21 14:00" 형식에서 날짜 부분만 추출
-        const pickupDate = order.pickup_time.split(' ')[0];
-        return pickupDate === targetDate;
+      // menu_date가 없는 경우 delivery_time 또는 pickup_time에서 날짜 추출
+      let orderDate = null;
+      
+      if (order.delivery_time) {
+        const dateMatch = order.delivery_time.match(/(\d{4}-\d{2}-\d{2})/);
+        if (dateMatch) {
+          orderDate = dateMatch[1];
+        }
       }
       
-      // 배달/픽업 시간이 없는 경우 주문 생성 시간으로 필터링 (한국 시간 기준)
-      const orderDate = new Date(order.created_at);
-      const orderDateStr = formatDateForComparison(orderDate);
+      if (!orderDate && order.pickup_time) {
+        const dateMatch = order.pickup_time.match(/(\d{4}-\d{2}-\d{2})/);
+        if (dateMatch) {
+          orderDate = dateMatch[1];
+        }
+      }
+      
+      // 날짜를 찾은 경우 해당 날짜로 필터링
+      if (orderDate) {
+        return orderDate === targetDate;
+      }
+      
+      // 날짜를 찾지 못한 경우 주문 생성 시간으로 필터링 (한국 시간 기준)
+      const createdDate = new Date(order.created_at);
+      const orderDateStr = formatDateForComparison(createdDate);
       return orderDateStr === targetDate;
     });
   };

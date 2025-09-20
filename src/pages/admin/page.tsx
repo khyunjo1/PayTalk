@@ -26,6 +26,7 @@ interface Order {
   subtotal: number;
   total: number;
   status: '입금대기' | '입금확인' | '배달완료';
+  menu_date?: string | null;
   created_at: string;
   updated_at: string;
   order_items?: Array<{
@@ -627,6 +628,75 @@ export default function Admin() {
     navigate('/admin-login');
   };
 
+  // 기존 주문들의 menu_date 업데이트 함수
+  const updateMenuDates = async () => {
+    if (!confirm('기존 주문들의 menu_date를 업데이트하시겠습니까?')) {
+      return;
+    }
+
+    try {
+      const { data: orders, error: fetchError } = await supabase
+        .from('orders')
+        .select('*')
+        .is('menu_date', null)
+        .order('created_at', { ascending: false });
+
+      if (fetchError) {
+        console.error('주문 조회 오류:', fetchError);
+        alert('주문 조회에 실패했습니다.');
+        return;
+      }
+
+      console.log(`총 ${orders.length}개의 주문을 업데이트합니다.`);
+
+      let updatedCount = 0;
+      for (const order of orders) {
+        let menuDate = null;
+
+        // delivery_time에서 날짜 추출
+        if (order.delivery_time) {
+          const dateMatch = order.delivery_time.match(/(\d{4}-\d{2}-\d{2})/);
+          if (dateMatch) {
+            menuDate = dateMatch[1];
+          }
+        }
+
+        // pickup_time에서 날짜 추출 (delivery_time이 없는 경우)
+        if (!menuDate && order.pickup_time) {
+          const dateMatch = order.pickup_time.match(/(\d{4}-\d{2}-\d{2})/);
+          if (dateMatch) {
+            menuDate = dateMatch[1];
+          }
+        }
+
+        // 날짜를 찾지 못한 경우 created_at 사용
+        if (!menuDate) {
+          const createdDate = new Date(order.created_at);
+          menuDate = createdDate.toISOString().split('T')[0];
+        }
+
+        // menu_date 업데이트
+        const { error: updateError } = await supabase
+          .from('orders')
+          .update({ menu_date: menuDate })
+          .eq('id', order.id);
+
+        if (updateError) {
+          console.error(`주문 ${order.id} 업데이트 오류:`, updateError);
+        } else {
+          updatedCount++;
+          console.log(`주문 ${order.id} 업데이트 완료: ${menuDate}`);
+        }
+      }
+
+      alert(`${updatedCount}개의 주문이 업데이트되었습니다.`);
+      loadOrders(); // 주문 목록 새로고침
+    } catch (error) {
+      console.error('업데이트 오류:', error);
+      alert('업데이트 중 오류가 발생했습니다.');
+    }
+  };
+
   const handleDateSelect = (date: string) => {
     console.log('날짜 선택됨:', date);
     if (date) {
@@ -653,21 +723,28 @@ export default function Admin() {
 
   // 배달날짜 추출 함수
   const getDeliveryDate = (order: Order) => {
+    // menu_date가 있는 경우 메뉴 날짜를 우선 사용
+    if (order.menu_date) {
+      return order.menu_date;
+    }
+    
+    // delivery_time에서 날짜 추출
     if (order.delivery_time) {
-      // "2024-01-20 점심배송 (11:00-13:00)" 형태에서 날짜 추출
       const dateMatch = order.delivery_time.match(/(\d{4}-\d{2}-\d{2})/);
       if (dateMatch) {
         return dateMatch[1];
       }
     }
+    
+    // pickup_time에서 날짜 추출
     if (order.pickup_time) {
-      // 픽업 시간에서도 날짜 추출 시도
       const dateMatch = order.pickup_time.match(/(\d{4}-\d{2}-\d{2})/);
       if (dateMatch) {
         return dateMatch[1];
       }
     }
-    // 배달/픽업 시간이 없으면 주문 날짜 사용
+    
+    // 날짜를 찾지 못한 경우 주문 생성 날짜 사용
     return new Date(order.created_at).toISOString().split('T')[0];
   };
 
@@ -1266,6 +1343,13 @@ export default function Admin() {
               </h1>
             </div>
             <div className="flex items-center gap-3">
+            <button
+              onClick={updateMenuDates}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-md flex items-center whitespace-nowrap cursor-pointer text-sm mr-2"
+            >
+              <i className="ri-refresh-line mr-1.5 text-xs"></i>
+              매출 날짜 수정
+            </button>
             <button
               onClick={handleLogout}
                 className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-md flex items-center whitespace-nowrap cursor-pointer text-sm"
