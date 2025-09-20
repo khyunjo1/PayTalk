@@ -119,6 +119,83 @@ export default function OrderDetail() {
     }
   };
 
+  // 주문 번호 계산 함수
+  const getOrderNumber = (order: Order, allOrders: Order[]) => {
+    const sortedOrders = [...allOrders].sort((a, b) => 
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+    const index = sortedOrders.findIndex(o => o.id === order.id);
+    return index + 1;
+  };
+
+  // 주문 정보를 텍스트로 포맷팅하는 함수
+  const formatOrderToText = (order: Order) => {
+    const orderNumber = getOrderNumber(order, allOrders);
+    const date = new Date(order.created_at).toLocaleDateString('ko-KR');
+    const time = new Date(order.created_at).toLocaleTimeString('ko-KR', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+
+    let orderText = '';
+    orderText += `📋 주문번호: ${orderNumber}\n`;
+    orderText += `📊 주문상태: ${order.status}\n`;
+    orderText += `🚚 주문타입: ${order.order_type === 'delivery' ? '배달' : '픽업'}\n\n`;
+
+    orderText += `===== 고객정보 =====\n`;
+    if (order.customer_name) orderText += `👤 고객명: ${order.customer_name}\n`;
+    if (order.customer_phone) orderText += `📞 연락처: ${order.customer_phone}\n`;
+    if (order.depositor_name) orderText += `💳 입금자명: ${order.depositor_name}\n`;
+    if (order.delivery_address) orderText += `📍 배달주소: ${order.delivery_address}\n`;
+    if (order.delivery_time) orderText += `⏰ 배달시간: ${order.delivery_time}\n`;
+    if (order.pickup_time) orderText += `⏰ 픽업시간: ${order.pickup_time}\n`;
+    if (order.special_requests) orderText += `📝 요청사항: ${order.special_requests}\n`;
+    orderText += `💰 결제방식: ${order.payment_method === 'bank_transfer' ? '무통장입금' : '제로페이'}\n\n`;
+
+    orderText += `===== 주문메뉴 =====\n`;
+
+    // 일일 메뉴 주문 표시
+    if (order.daily_menu_orders && order.daily_menu_orders.length > 0) {
+      order.daily_menu_orders.forEach((item, index) => {
+        orderText += `${index + 1}. ${item.menus?.name || '메뉴'} (${item.quantity}개) - ${((item.menus?.price || 0) * (item.quantity || 0)).toLocaleString()}원\n`;
+      });
+    }
+
+    // 일반 주문 메뉴 표시
+    if (order.order_items && order.order_items.length > 0) {
+      order.order_items.forEach((item, index) => {
+        orderText += `${index + 1}. ${item.menus?.name || '메뉴'} (${item.quantity}개) - ${(item.price * item.quantity).toLocaleString()}원\n`;
+      });
+    }
+
+    orderText += `\n===== 결제정보 =====\n`;
+    orderText += `🛒 상품금액: ${(order.subtotal || 0).toLocaleString()}원\n`;
+    if (order.order_type === 'delivery') {
+      orderText += `🚚 배달비: ${(order.delivery_fee || (order.total - order.subtotal) || 0).toLocaleString()}원\n`;
+    }
+    orderText += `💵 총 결제금액: ${(order.total || 0).toLocaleString()}원\n\n`;
+
+    orderText += `📅 주문일시: ${date} ${time}\n`;
+    orderText += `📄 생성일시: ${new Date().toLocaleString('ko-KR')}\n`;
+
+    return orderText;
+  };
+
+  // 주문 복사 함수
+  const copyOrderToClipboard = async () => {
+    if (!order) return;
+
+    try {
+      const orderText = formatOrderToText(order);
+      await navigator.clipboard.writeText(orderText);
+
+      alert('주문상세내역이 클립보드에 복사되었습니다!');
+    } catch (error) {
+      console.error('복사 실패:', error);
+      alert('복사에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case '입금대기': return 'bg-yellow-100 text-yellow-800';
@@ -227,17 +304,6 @@ export default function OrderDetail() {
     })
   };
 
-  // 주문 번호 생성 (주문내역과 동일한 방식)
-  const getOrderNumber = () => {
-    if (!order || !allOrders.length) return 1;
-    
-    // 주문내역 페이지와 동일하게 순차 번호 사용
-    const sortedOrders = [...allOrders].sort((a, b) => 
-      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-    );
-    const index = sortedOrders.findIndex(o => o.id === order.id);
-    return index + 1;
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -281,15 +347,29 @@ export default function OrderDetail() {
                   </div>
                 </div>
               </div>
-              <div className="text-left sm:text-right">
-                <p className="text-sm text-gray-500">{date}</p>
-                <p className="text-sm text-gray-500">{time}</p>
+              <div className="flex items-center gap-4">
+                <div className="text-left sm:text-right">
+                  <p className="text-sm text-gray-500">{date}</p>
+                  <p className="text-sm text-gray-500">{time}</p>
+                </div>
+                {/* 복사 버튼 - 제목과 같은 가로선상의 오른쪽 */}
+                <button
+                  onClick={copyOrderToClipboard}
+                  className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 border border-blue-200 flex-shrink-0"
+                  title="주문상세내역 복사"
+                >
+                  <i className="ri-file-copy-line text-sm"></i>
+                  <span className="hidden sm:inline">주문 복사</span>
+                  <span className="sm:hidden">복사</span>
+                </button>
               </div>
             </div>
             
             {/* 상태 변경 버튼들 - 날짜 바로 밑에 배치 */}
             <div className="mt-4 pt-4 border-t border-gray-100">
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex flex-col sm:flex-row gap-3 items-start">
+                {/* 상태 변경 버튼들 */}
+                <div className="flex flex-wrap gap-2">
                 {(() => {
                   const getAvailableStatuses = () => {
                     switch (order.status) {
@@ -328,6 +408,7 @@ export default function OrderDetail() {
                     </button>
                   ));
                 })()}
+                </div>
               </div>
             </div>
           </div>
@@ -427,10 +508,31 @@ export default function OrderDetail() {
             </div>
             
             <div className="space-y-3">
+              {/* 일반 주문 아이템 표시 */}
+              {order.order_items && order.order_items.length > 0 ? (
+                <>
+                  {order.order_items.map((item, index) => (
+                    <div key={index} className="flex justify-between items-start sm:items-center py-3 gap-3">
+                      <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                        <span className="text-base sm:text-lg">🍽️</span>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-gray-900 text-sm sm:text-base break-words">{item.menus?.name || '메뉴'}</p>
+                          <p className="text-xs sm:text-sm text-gray-500">{item.quantity || 0}개</p>
+                        </div>
+                      </div>
+                      <span className="text-base sm:text-lg font-bold text-gray-900 whitespace-nowrap">
+                        {((item.price || 0) * (item.quantity || 0)).toLocaleString()}원
+                      </span>
+                    </div>
+                  ))}
+                </>
+              ) : null}
+              
+              {/* 일일 메뉴 주문 표시 */}
               {order.daily_menu_orders && order.daily_menu_orders.length > 0 ? (
                 <>
                   {order.daily_menu_orders.map((item, index) => (
-                    <div key={index} className="flex justify-between items-start sm:items-center py-3 gap-3">
+                    <div key={`daily-${index}`} className="flex justify-between items-start sm:items-center py-3 gap-3">
                       <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
                         <span className="text-base sm:text-lg">🍽️</span>
                         <div className="min-w-0 flex-1">
@@ -484,7 +586,11 @@ export default function OrderDetail() {
                     </div>
                   </div>
                 </>
-              ) : (
+              ) : null}
+              
+              {/* 빈 상태 표시 - 일반 주문 아이템과 일일 메뉴 주문이 모두 없을 때만 */}
+              {(!order.order_items || order.order_items.length === 0) && 
+               (!order.daily_menu_orders || order.daily_menu_orders.length === 0) && (
                 <div className="text-center py-8 sm:py-12 text-gray-500">
                   <i className="ri-shopping-cart-line text-4xl sm:text-6xl mb-4"></i>
                   <p className="text-base sm:text-lg">주문 상품 정보가 없습니다.</p>

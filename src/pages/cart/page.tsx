@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getDailyMenu } from '../../lib/dailyMenuApi';
 import { createOrder } from '../../lib/orderApi';
-import { getDeliveryAreas, getDeliveryFeeByAreaId } from '../../lib/deliveryAreaApi';
+import { getDeliveryAreas, getDeliveryFeeByAreaId, getDailyDeliveryAreas, getDailyDeliveryFeeByAreaId } from '../../lib/deliveryAreaApi';
 import { supabase } from '../../lib/supabase';
 import Footer from '../../components/Footer';
 
@@ -176,19 +176,6 @@ export default function Cart() {
         console.log('배달 시간대 슬롯 길이:', store.delivery_time_slots?.length);
         setStoreInfo(store);
         
-        // 배달지역 데이터 로드
-        try {
-          const areas = await getDeliveryAreas(store.id);
-          setDeliveryAreas(areas);
-          
-          // 첫 번째 배달지역을 기본 선택으로 설정
-          if (areas.length > 0) {
-            setSelectedDeliveryArea(areas[0].id);
-          }
-        } catch (error) {
-          console.error('배달지역 로드 실패:', error);
-        }
-        
         // 일일 메뉴 장바구니 데이터 처리
         if (dailyMenuCart) {
           try {
@@ -336,6 +323,38 @@ export default function Cart() {
           console.log('일반 메뉴 날짜 설정:', calculatedDate);
         }
         
+        // 배달지역 데이터 로드 (일일 메뉴 데이터 처리 완료 후)
+        try {
+          let areas = [];
+          
+          // 일일 메뉴인 경우 일일 배달지역 사용, 아니면 일반 배달지역 사용
+          if (dailyMenuCart) {
+            const dailyMenuData = JSON.parse(dailyMenuCart);
+            if (dailyMenuData && dailyMenuData.dailyMenuId) {
+              console.log('🔍 일일 메뉴 배달지역 로드:', dailyMenuData.dailyMenuId);
+              areas = await getDailyDeliveryAreas(dailyMenuData.dailyMenuId);
+              console.log('✅ 일일 배달지역 로드 완료:', areas);
+            } else {
+              console.log('🔍 dailyMenuId가 없어서 일반 배달지역 로드:', store.id);
+              areas = await getDeliveryAreas(store.id);
+              console.log('✅ 일반 배달지역 로드 완료:', areas);
+            }
+          } else {
+            console.log('🔍 일반 메뉴이므로 일반 배달지역 로드:', store.id);
+            areas = await getDeliveryAreas(store.id);
+            console.log('✅ 일반 배달지역 로드 완료:', areas);
+          }
+          
+          setDeliveryAreas(areas);
+          
+          // 첫 번째 배달지역을 기본 선택으로 설정
+          if (areas.length > 0) {
+            setSelectedDeliveryArea(areas[0].id);
+          }
+        } catch (error) {
+          console.error('배달지역 로드 실패:', error);
+        }
+        
         // 배달 가능 시간이 있으면 첫 번째 시간을 기본값으로 설정
         if (store.delivery_time_slots && store.delivery_time_slots.length > 0) {
           const enabledSlots = store.delivery_time_slots.filter((slot: { enabled: boolean }) => slot.enabled);
@@ -363,12 +382,23 @@ export default function Cart() {
   // 배달지역 변경 시 배달비 업데이트
   useEffect(() => {
     const updateDeliveryFee = async () => {
-      console.log('🔍 배달비 업데이트 시도:', { selectedDeliveryArea, orderType });
+      console.log('🔍 배달비 업데이트 시도:', { selectedDeliveryArea, orderType, dailyMenuCartData });
       
       if (selectedDeliveryArea && orderType === 'delivery') {
         try {
-          const fee = await getDeliveryFeeByAreaId(selectedDeliveryArea);
-          console.log('✅ 배달비 조회 성공:', fee);
+          let fee = 0;
+          
+          // 일일 메뉴인 경우 일일 배달비 사용, 아니면 일반 배달비 사용
+          if (dailyMenuCartData && dailyMenuCartData.dailyMenuId) {
+            console.log('🔍 일일 메뉴 배달비 조회:', selectedDeliveryArea);
+            fee = await getDailyDeliveryFeeByAreaId(selectedDeliveryArea);
+            console.log('✅ 일일 배달비 조회 성공:', fee);
+          } else {
+            console.log('🔍 일반 배달비 조회:', selectedDeliveryArea);
+            fee = await getDeliveryFeeByAreaId(selectedDeliveryArea);
+            console.log('✅ 일반 배달비 조회 성공:', fee);
+          }
+          
           setDeliveryFee(fee);
         } catch (error) {
           console.error('❌ 배달비 조회 실패:', error);
@@ -381,7 +411,7 @@ export default function Cart() {
     };
 
     updateDeliveryFee();
-  }, [selectedDeliveryArea, orderType]);
+  }, [selectedDeliveryArea, orderType, dailyMenuCartData]);
 
   // 로딩 중일 때
   if (loading) {
@@ -658,10 +688,13 @@ export default function Cart() {
         {/* 배달지역 선택 */}
         {orderType === 'delivery' && deliveryAreas.length > 0 && (
           <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <h3 className="text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
               <i className="ri-map-pin-line text-orange-500"></i>
               배달지역 선택
             </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              배달받을 지역을 선택하시면 해당 지역의 배달비가 자동으로 적용됩니다
+            </p>
             
             {/* 최소주문금액 안내 */}
             {!isMinimumOrderMet && (
@@ -700,6 +733,24 @@ export default function Cart() {
                   </div>
                 </button>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* 배달지역이 없는 경우 안내 */}
+        {orderType === 'delivery' && deliveryAreas.length === 0 && (
+          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <h3 className="text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
+              <i className="ri-map-pin-line text-orange-500"></i>
+              배달지역 안내
+            </h3>
+            <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl">
+              <div className="flex items-center gap-2 text-gray-600">
+                <i className="ri-information-line text-gray-500"></i>
+                <p className="text-sm">
+                  현재 배달 가능한 지역이 설정되지 않았습니다. 매장에 문의해주세요.
+                </p>
+              </div>
             </div>
           </div>
         )}

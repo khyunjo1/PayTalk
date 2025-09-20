@@ -378,7 +378,10 @@ export const getOrderDetails = async (orderId: string) => {
 
 // 주문 ID로 주문 정보 가져오기 (배민 스타일 주문상세용)
 export const getOrderById = async (orderId: string) => {
-  const { data, error } = await supabase
+  console.log('🔍 getOrderById 호출:', orderId);
+  
+  // 1. 주문 기본 정보 조회
+  const { data: orderData, error: orderError } = await supabase
     .from('orders')
     .select(`
       *,
@@ -388,28 +391,50 @@ export const getOrderById = async (orderId: string) => {
         phone,
         bank_account,
         account_holder
-      ),
-      order_items (
-        id,
-        quantity,
-        price,
-        menus (
-          id,
-          name,
-          price,
-          description
-        )
       )
     `)
     .eq('id', orderId)
     .single();
 
-  if (error) {
-    console.error('주문 정보 가져오기 오류:', error);
-    throw error;
+  if (orderError) {
+    console.error('❌ 주문 정보 가져오기 오류:', orderError);
+    throw orderError;
   }
 
-  return data;
+  console.log('✅ 주문 기본 정보 조회 성공:', orderData);
+
+  // 2. 주문 아이템들 별도 조회
+  const { data: orderItems, error: itemsError } = await supabase
+    .from('order_items')
+    .select(`
+      id,
+      quantity,
+      price,
+      menus (
+        id,
+        name,
+        price,
+        description
+      )
+    `)
+    .eq('order_id', orderId);
+
+  if (itemsError) {
+    console.error('❌ 주문 아이템 가져오기 오류:', itemsError);
+  }
+
+  console.log('✅ 주문 아이템 조회 성공:', orderItems);
+  console.log('🔍 주문 아이템 개수:', orderItems?.length || 0);
+
+  // 3. 주문 정보와 아이템 정보 결합
+  const result = {
+    ...orderData,
+    order_items: orderItems || []
+  };
+
+  console.log('🔍 최종 결과:', result);
+  
+  return result;
 };
 
 // 주문 읽음 처리

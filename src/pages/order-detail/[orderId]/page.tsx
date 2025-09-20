@@ -55,10 +55,13 @@ export default function OrderDetail() {
   const loadOrderDetail = async () => {
     try {
       setLoading(true);
+      console.log('🔍 주문 상세 로드 시작:', orderId);
       const orderData = await getOrderById(orderId!);
+      console.log('✅ 주문 데이터 로드 완료:', orderData);
+      console.log('🔍 주문 아이템들:', orderData.order_items);
       setOrder(orderData);
     } catch (error) {
-      console.error('주문 상세 로드 실패:', error);
+      console.error('❌ 주문 상세 로드 실패:', error);
       setError('주문 정보를 불러올 수 없습니다.');
     } finally {
       setLoading(false);
@@ -273,25 +276,34 @@ export default function OrderDetail() {
         <div className="bg-white rounded-2xl p-6 shadow-sm mb-4">
           <h3 className="text-lg font-bold text-gray-800 mb-4">주문 메뉴</h3>
           <div className="space-y-3">
-            {order.order_items.map((item, index) => (
-              <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                <div className="flex-1">
-                  <h4 className="font-medium text-gray-800">{item.menus.name}</h4>
-                  {item.menus.description && (
-                    <p className="text-sm text-gray-600 mt-1">{item.menus.description}</p>
-                  )}
-                  <p className="text-sm text-gray-500 mt-1">수량: {item.quantity}개</p>
+            {order.order_items && order.order_items.length > 0 ? (
+              order.order_items.map((item, index) => (
+                <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                  <div className="flex-1">
+                    <h4 className="font-medium text-gray-800">{item.menus.name}</h4>
+                    {item.menus.description && (
+                      <p className="text-sm text-gray-600 mt-1">{item.menus.description}</p>
+                    )}
+                    <p className="text-sm text-gray-500 mt-1">수량: {item.quantity}개</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-800">
+                      {formatPrice(item.price * item.quantity)}원
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {formatPrice(item.price)}원 × {item.quantity}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-semibold text-gray-800">
-                    {formatPrice(item.price * item.quantity)}원
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {formatPrice(item.price)}원 × {item.quantity}
-                  </p>
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <i className="ri-shopping-cart-line text-2xl text-gray-400"></i>
                 </div>
+                <p className="text-gray-500">주문 상품 정보가 없습니다.</p>
               </div>
-            ))}
+            )}
           </div>
         </div>
 

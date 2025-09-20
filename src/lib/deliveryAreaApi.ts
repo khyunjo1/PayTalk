@@ -182,3 +182,37 @@ export const getDeliveryFeeByAreaId = async (areaId: string): Promise<number> =>
 
   return data?.delivery_fee || 0;
 };
+
+// 일일 메뉴 배달지역 목록 조회
+export const getDailyDeliveryAreas = async (dailyMenuId: string): Promise<any[]> => {
+  const { data, error } = await supabase
+    .from('daily_delivery_areas')
+    .select('*')
+    .eq('daily_menu_id', dailyMenuId)
+    .eq('is_active', true)
+    .order('area_name');
+
+  if (error) {
+    console.error('일일 배달지역 조회 오류:', error);
+    throw error;
+  }
+
+  return data || [];
+};
+
+// 일일 메뉴 배달지역 ID로 배달비 조회
+export const getDailyDeliveryFeeByAreaId = async (areaId: string): Promise<number> => {
+  const { data, error } = await supabase
+    .from('daily_delivery_areas')
+    .select('delivery_fee')
+    .eq('id', areaId)
+    .eq('is_active', true)
+    .single();
+
+  if (error) {
+    console.error('일일 배달비 조회 오류:', error);
+    return 0;
+  }
+
+  return data?.delivery_fee || 0;
+};

@@ -860,156 +860,64 @@ export default function AdminOrders() {
               return (
                 <div 
                   key={order.id} 
-                  className="bg-white rounded-2xl border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group mb-6 overflow-hidden"
+                  className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer group mb-3 overflow-hidden"
                   onClick={() => navigate(`/admin/${storeId}/order-detail/${order.id}`)}
                 >
-                  <div className="p-6">
-                    {/* 1. 모바일 최적화된 헤더 */}
-                    <div className="flex items-start justify-between mb-6">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-xl font-bold text-gray-900 leading-tight mb-3">주문 #{getOrderNumber(order, finalFilteredOrders)}</h3>
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <div className={`px-4 py-2 rounded-2xl text-sm font-semibold shadow-sm ${
-                            order.status === '입금대기' ? 'bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-800 border border-yellow-200' :
-                            order.status === '입금확인' ? 'bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 border border-blue-200' :
-                            order.status === '배달완료' ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border border-green-200' :
-                            order.status === '주문취소' ? 'bg-gradient-to-r from-red-100 to-rose-100 text-red-800 border border-red-200' : 'bg-gradient-to-r from-gray-100 to-slate-100 text-gray-800 border border-gray-200'
-                          }`}>
-                            {order.status}
-                          </div>
+                  <div className="p-3">
+                    {/* 간소화된 주문 카드 - 두 줄 레이아웃 */}
+                    
+                    {/* 첫 번째 줄: 주문 번호, 상태, 총 금액 */}
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <h3 className="text-sm font-bold text-gray-900 flex-shrink-0">#{getOrderNumber(order, finalFilteredOrders)}</h3>
+                        <div className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          order.status === '입금대기' ? 'bg-yellow-100 text-yellow-800' :
+                          order.status === '입금확인' ? 'bg-blue-100 text-blue-800' :
+                          order.status === '배달완료' ? 'bg-green-100 text-green-800' :
+                          order.status === '주문취소' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {order.status}
                         </div>
                       </div>
                       
-                      {/* 버튼 그룹 - 모바일 최적화 */}
-                      <div className="flex gap-2 flex-shrink-0">
+                      <div className="text-right flex-shrink-0">
+                        <span className="text-sm font-bold text-orange-600">
+                          {(order.total || 0).toLocaleString()}원
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 두 번째 줄: 고객명과 액션 버튼들 */}
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                        <i className="ri-user-line text-gray-500 text-xs flex-shrink-0"></i>
+                        <span className="font-medium text-gray-900 text-xs">
+                          {(order.payment_method === 'bank_transfer' ? order.depositor_name : order.customer_name) || '-'}님의 주문
+                        </span>
+                      </div>
+
+                      {/* 오른쪽: 액션 버튼들 */}
+                      <div className="flex gap-1.5 flex-shrink-0">
                         <button
                           onClick={(e) => copyOrderToClipboard(order, e)}
-                          className="h-8 px-3 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1"
+                          className="h-7 px-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md text-xs font-medium transition-all duration-200 flex items-center gap-1"
                           title="주문상세내역 복사"
                         >
                           <i className="ri-file-copy-line text-xs"></i>
-                          <span>복사</span>
+                          <span className="hidden sm:inline">복사</span>
                         </button>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             navigate(`/admin/${storeId}/order-detail/${order.id}`);
                           }}
-                          className="h-8 px-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1"
+                          className="h-7 px-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-md text-xs font-medium transition-all duration-200 flex items-center gap-1"
                         >
                           <i className="ri-eye-line text-xs"></i>
-                          <span>상세보기</span>
+                          <span className="hidden sm:inline">상세보기</span>
                         </button>
                       </div>
                     </div>
-
-                    {/* 2. 고객 정보 미리보기 - 모바일 최적화 */}
-                    <div className="mb-6 p-5 bg-gradient-to-r from-orange-50 to-amber-50 rounded-2xl border border-orange-200 shadow-sm">
-                      <div className="space-y-4 text-sm">
-                        {/* 무통장입금일 때는 입금자명, 제로페이일 때는 고객명 표시 */}
-                        {(order.payment_method === 'bank_transfer' ? order.depositor_name : order.customer_name) && (
-                          <div className="flex items-center gap-3">
-                            <i className="ri-user-line text-gray-500 text-lg"></i>
-                            <span className="font-bold text-gray-900 text-base">
-                              {order.payment_method === 'bank_transfer' ? order.depositor_name : order.customer_name}
-                            </span>
-                          </div>
-                        )}
-                        {order.delivery_address && (
-                          <div className="flex items-start gap-3">
-                            <i className="ri-map-pin-line text-gray-500 text-lg mt-0.5 flex-shrink-0"></i>
-                            <span className="font-bold text-gray-900 break-words leading-relaxed text-base">{order.delivery_address}</span>
-                          </div>
-                        )}
-                        {/* 결제 방식 표시 */}
-                        <div className="flex items-center gap-3">
-                          <i className="ri-bank-card-line text-gray-500 text-lg"></i>
-                          <span className="font-bold text-gray-900 text-base">
-                            {order.payment_method === 'bank_transfer' ? '무통장입금' : '제로페이'}
-                          </span>
-                        </div>
-                        {/* 배달/픽업 정보 표시 */}
-                        <div className="flex items-center gap-3">
-                          <i className={`${order.order_type === 'delivery' ? 'ri-truck-line' : 'ri-walk-line'} text-gray-500 text-lg`}></i>
-                          <span className="font-bold text-gray-900 text-base">
-                            {order.order_type === 'delivery' ? '배달' : '픽업'}
-                          </span>
-                        </div>
-                        {/* 배송 시간 정보 표시 */}
-                        {(order.delivery_time || order.pickup_time) && (
-                          <div className="flex items-center gap-3">
-                            <i className="ri-time-line text-gray-500 text-lg"></i>
-                            <span className="font-bold text-gray-900 text-base">
-                              {order.order_type === 'delivery' ? order.delivery_time : order.pickup_time}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* 3. 주문 상품과 결제 금액 - 모바일 최적화 */}
-                    <div className="bg-white rounded-2xl p-5 mb-6 border border-gray-200 shadow-sm">
-                      <div className="space-y-4">
-                        {/* 상품 정보 - 모바일 최적화 */}
-                        <div className="space-y-2">
-                          {/* 일일 메뉴 주문만 표시 */}
-                          {order.daily_menu_orders && order.daily_menu_orders.length > 0 && order.daily_menu_orders.map((item, index) => (
-                            <div key={`daily-${index}`} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
-                              <div className="flex items-center gap-3 min-w-0 flex-1">
-                                <i className="ri-restaurant-line text-gray-400 text-sm flex-shrink-0"></i>
-                                <span className="font-medium text-gray-900 text-sm truncate">{item.menus?.name || '메뉴'}</span>
-                                <span className="text-xs text-gray-500 flex-shrink-0">({item.quantity}개)</span>
-                              </div>
-                              <span className="font-semibold text-gray-700 text-sm ml-2">{((item.menus?.price || 0) * (item.quantity || 0)).toLocaleString()}원</span>
-                            </div>
-                          ))}
-                          
-                          {/* 일일 메뉴가 없는 경우에만 일반 주문 메뉴 표시 */}
-                          {(!order.daily_menu_orders || order.daily_menu_orders.length === 0) && order.order_items && order.order_items.length > 0 && order.order_items.map((item, index) => (
-                            <div key={`order-${index}`} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
-                              <div className="flex items-center gap-3 min-w-0 flex-1">
-                                <i className="ri-restaurant-line text-gray-400 text-sm flex-shrink-0"></i>
-                                <span className="font-medium text-gray-900 text-sm truncate">{item.menus?.name || '메뉴'}</span>
-                                <span className="text-xs text-gray-500 flex-shrink-0">({item.quantity}개)</span>
-                              </div>
-                              <span className="font-semibold text-gray-700 text-sm ml-2">{(item.price * item.quantity).toLocaleString()}원</span>
-                            </div>
-                          ))}
-                          
-                          {/* 메뉴가 없는 경우 */}
-                          {(!order.daily_menu_orders || order.daily_menu_orders.length === 0) && 
-                           (!order.order_items || order.order_items.length === 0) && (
-                            <div className="text-center py-4 text-gray-500">
-                              <i className="ri-shopping-cart-line text-2xl mb-2 block text-gray-400"></i>
-                              <p className="text-sm">주문 메뉴 정보를 불러올 수 없습니다</p>
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* 주문 요약 - 모바일 최적화 */}
-                        <div className="space-y-2 pt-3 border-t border-gray-200">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-600">상품 금액</span>
-                            <span className="font-semibold text-gray-900 text-sm">{(order.subtotal || 0).toLocaleString()}원</span>
-                          </div>
-                          {order.order_type === 'delivery' && (
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-600">배달비</span>
-                              <span className="font-semibold text-gray-900 text-sm">
-                                {(order.delivery_fee || (order.total - order.subtotal) || 0).toLocaleString()}원
-                              </span>
-                            </div>
-                          )}
-                          <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                            <span className="text-base font-bold text-gray-900">총 결제금액</span>
-                            <span className="text-lg font-bold text-orange-600">
-                              {(order.total || 0).toLocaleString()}원
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
                   </div>
                 </div>
               );
