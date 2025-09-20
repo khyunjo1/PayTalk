@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { getUserOwnedStores, getMenus, createMenu, updateMenu, deleteMenu } from '../../../lib/database';
+import { getCategoryDisplayName } from '../../../lib/categoryMapping';
 
 interface Menu {
   id: string;
@@ -288,7 +289,7 @@ export default function OwnerMenu() {
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
-                {category === 'all' ? '전체' : category}
+                {category === 'all' ? '전체' : getCategoryDisplayName(category)}
               </button>
             ))}
           </div>

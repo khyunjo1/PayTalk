@@ -5,6 +5,7 @@ import { getUserStores } from '../../lib/database';
 import { getStores } from '../../lib/storeApi';
 import { getStoreOrders, updateOrderStatus } from '../../lib/orderApi';
 import { getMenus, createMenu, updateMenu, deleteMenu } from '../../lib/menuApi';
+import { getCategoryDisplayName } from '../../lib/categoryMapping';
 import { getMenuCategoriesByStoreCategory } from '../../lib/categoryMapping';
 import { getCurrentKoreaTime } from '../../lib/dateUtils';
 import { supabase } from '../../lib/supabase';
@@ -2218,7 +2219,7 @@ export default function Admin() {
                         }`}
                       >
                         <i className={`ri-restaurant-line mr-1.5 ${selectedMenuCategory === category ? 'text-white' : 'text-gray-600'}`}></i>
-                        {category}
+                        {getCategoryDisplayName(category)}
                       </button>
                     );
                   })}

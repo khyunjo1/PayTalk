@@ -18,7 +18,7 @@ import {
   copyStoreDeliveryAreasToDailyMenu
 } from '../../../lib/dailyMenuApi';
 import { getStore } from '../../../lib/storeApi';
-import { getMenuCategoriesByStoreCategory } from '../../../lib/categoryMapping';
+import { getMenuCategoriesByStoreCategory, getCategoryDisplayName } from '../../../lib/categoryMapping';
 import { getCurrentKoreaTime } from '../../../lib/dateUtils';
 import type { DailyMenu, DailyMenuItem } from '../../../lib/dailyMenuApi';
 import type { MenuDB, DailyDeliveryArea } from '../../../types';
@@ -1362,7 +1362,19 @@ export default function AdminDailyMenu() {
 
             {/* 아코디언 메뉴 선택 */}
             <div className={`space-y-2 sm:space-y-3 mb-4 sm:mb-6 ${(hasChanges || settingsChanged) ? 'pb-20' : ''}`}>
-              {Object.entries(menuByCategory).map(([category, menus]) => {
+              {Object.entries(menuByCategory)
+                .sort(([categoryA], [categoryB]) => {
+                  const indexA = menuCategories.indexOf(categoryA);
+                  const indexB = menuCategories.indexOf(categoryB);
+                  
+                  // 순서에 없는 카테고리는 맨 뒤로
+                  if (indexA === -1 && indexB === -1) return categoryA.localeCompare(categoryB);
+                  if (indexA === -1) return 1;
+                  if (indexB === -1) return -1;
+                  
+                  return indexA - indexB;
+                })
+                .map(([category, menus]) => {
                 const isExpanded = expandedCategories.has(category);
                 const selectedCount = menus.filter(menu => selectedMenus.has(menu.id)).length;
                       
@@ -1375,7 +1387,7 @@ export default function AdminDailyMenu() {
                     >
                   <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                         <div className="min-w-0 flex-1">
-                          <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">{category}</h3>
+                          <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">{getCategoryDisplayName(category)}</h3>
                           <p className="text-xs sm:text-sm text-gray-500 truncate">
                             {selectedCount > 0 ? `${selectedCount}개 선택됨` : `${menus.length}개 메뉴`}
                           </p>

@@ -9,7 +9,7 @@ import {
 } from '../../../../../lib/dailyMenuApi';
 import { getStore } from '../../../../../lib/storeApi';
 import { getCurrentKoreaTime } from '../../../../../lib/dateUtils';
-import { getMenuCategoriesByStoreCategory } from '../../../../../lib/categoryMapping';
+import { getMenuCategoriesByStoreCategory, getCategoryDisplayName } from '../../../../../lib/categoryMapping';
 import Header from '../../../../../components/Header';
 import Footer from '../../../../../components/Footer';
 
@@ -637,7 +637,7 @@ export default function DailyMenuPage() {
                     >
                       <div className="flex items-center gap-3">
                         <div className="text-left">
-                          <h3 className="text-base font-bold text-gray-900">{category}</h3>
+                          <h3 className="text-base font-bold text-gray-900">{getCategoryDisplayName(category)}</h3>
                           <p className="text-xs text-gray-500">{categoryItems.length}개 메뉴</p>
                         </div>
                       </div>
