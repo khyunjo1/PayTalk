@@ -314,7 +314,7 @@ export default function OrderComplete() {
 
         {/* 문의 안내 카드 */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 text-center">
-          <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">문의 안내</h3>
+          <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">주문취소 문의</h3>
           <p className="text-gray-700 text-sm sm:text-base font-medium">
             주문취소는 <span className="font-bold text-orange-600">{orderData.stores.phone}</span>로 문의주세요
           </p>
