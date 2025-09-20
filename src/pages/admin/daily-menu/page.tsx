@@ -749,6 +749,24 @@ export default function AdminDailyMenu() {
     }
   };
 
+  // 모든 메뉴 선택/해제 함수
+  const handleSelectAllMenus = () => {
+    // 현재 모든 메뉴가 선택되어 있는지 확인
+    const allSelected = availableMenus.length > 0 && 
+      availableMenus.every(menu => selectedMenus.has(menu.id));
+    
+    if (allSelected) {
+      // 모든 메뉴 선택 해제
+      setSelectedMenus(new Set());
+      console.log('🔍 모든 메뉴 선택 해제');
+    } else {
+      // 모든 메뉴 선택
+      const allMenuIds = new Set(availableMenus.map(menu => menu.id));
+      setSelectedMenus(allMenuIds);
+      console.log('🔍 모든 메뉴 선택:', allMenuIds.size, '개');
+    }
+  };
+
   // 링크 생성
   const generateLink = () => {
     if (!dailyMenu) return '';
@@ -1294,18 +1312,52 @@ export default function AdminDailyMenu() {
             
             {/* 메뉴 관리 버튼 */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-6 mb-4 sm:mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <i className="ri-restaurant-line text-blue-600 text-sm"></i>
-                  </div>
-                  <h3 className="text-lg font-bold text-gray-900">메뉴 관리</h3>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <i className="ri-restaurant-line text-blue-600 text-sm"></i>
                 </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">메뉴 관리</h3>
+                  <p className="text-sm text-gray-500">
+                    {selectedMenus.size}개 선택됨 / 전체 {availableMenus.length}개
+                  </p>
+                </div>
+              </div>
+              
+              {/* 모던한 버튼들을 가로 한 줄로 배치 */}
+              <div className="flex gap-3">
+                {/* 모두 선택 버튼 - 모던 디자인 */}
+                <button
+                  onClick={handleSelectAllMenus}
+                  className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-sm hover:shadow-md ${
+                    availableMenus.length > 0 && availableMenus.every(menu => selectedMenus.has(menu.id))
+                      ? 'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white border-0'
+                      : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white border-0'
+                  }`}
+                >
+                  <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                    availableMenus.length > 0 && availableMenus.every(menu => selectedMenus.has(menu.id))
+                      ? 'border-white bg-white'
+                      : 'border-white'
+                  }`}>
+                    {availableMenus.length > 0 && availableMenus.every(menu => selectedMenus.has(menu.id)) && (
+                      <i className="ri-check-line text-emerald-600 text-xs font-bold"></i>
+                    )}
+                  </div>
+                  {availableMenus.length > 0 && availableMenus.every(menu => selectedMenus.has(menu.id))
+                    ? '전체 해제'
+                    : '모두 선택'
+                  }
+                </button>
+                
+                {/* 메뉴 추가 버튼 - 모던 디자인 */}
                 <button
                   onClick={() => openMenuModal()}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm font-semibold"
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-semibold text-sm transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-sm hover:shadow-md"
                 >
-                  <i className="ri-add-line text-sm"></i>
+                  <div className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center">
+                    <i className="ri-add-line text-white text-xs font-bold"></i>
+                  </div>
                   메뉴 추가
                 </button>
               </div>
