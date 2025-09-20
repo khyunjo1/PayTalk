@@ -126,25 +126,32 @@ export default function AdminDailyMenu() {
 
     try {
       setLoading(true);
+      console.log('🔍 loadData 시작:', { storeId, selectedDate });
 
       // 1. 매장 정보 로드
+      console.log('🔍 매장 정보 로드 중...');
       const store = await getStore(storeId);
+      console.log('✅ 매장 정보 로드 완료:', store);
       
       // 2. 매장 카테고리에 맞는 메뉴 카테고리 설정
       const categories = getMenuCategoriesByStoreCategory(store.category);
       setMenuCategories(categories);
 
       // 3. 사용 가능한 메뉴 목록 로드
+      console.log('🔍 메뉴 목록 로드 중...');
       const menus = await getMenus(storeId);
       const availableMenus = menus.filter(menu => menu.is_available);
       setAvailableMenus(availableMenus);
+      console.log('✅ 메뉴 목록 로드 완료:', availableMenus.length, '개');
 
       // 2. 선택된 날짜의 일일 메뉴 로드
+      console.log('🔍 일일 메뉴 조회 중:', { storeId, selectedDate });
       let existingDailyMenu: DailyMenu | null = null;
       try {
         existingDailyMenu = await getDailyMenu(storeId, selectedDate);
+        console.log('✅ 일일 메뉴 조회 완료:', existingDailyMenu);
       } catch (error) {
-        console.error('일일 메뉴 조회 오류:', error);
+        console.error('❌ 일일 메뉴 조회 오류:', error);
         // 오류가 발생해도 계속 진행
       }
       setDailyMenu(existingDailyMenu);
@@ -235,6 +242,7 @@ export default function AdminDailyMenu() {
 
     try {
       setSaving(true);
+      console.log('🔍 일일 메뉴 생성 시작:', { storeId, selectedDate });
       
       const newDailyMenu = await createDailyMenu({
         store_id: storeId,
@@ -243,10 +251,22 @@ export default function AdminDailyMenu() {
         description: '맛있는 반찬을 주문해보세요!'
       });
 
+      console.log('🔍 생성된 일일 메뉴:', newDailyMenu);
       setDailyMenu(newDailyMenu);
+      
+      // 생성 후 데이터 다시 로드
+      console.log('🔍 데이터 다시 로드 시작');
+      await loadData();
+      console.log('🔍 데이터 다시 로드 완료');
+      
       alert('일일 메뉴 페이지가 생성되었습니다!');
     } catch (error) {
-      console.error('일일 메뉴 생성 오류:', error);
+      console.error('❌ 일일 메뉴 생성 오류:', error);
+      console.error('❌ 오류 상세 정보:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
       alert('일일 메뉴 생성에 실패했습니다.');
     } finally {
       setSaving(false);
@@ -840,7 +860,7 @@ export default function AdminDailyMenu() {
                     const input = document.getElementById('date-input') as HTMLInputElement;
                     if (input) (input as any).showPicker?.() || input.click();
                   }}
-                  className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm sm:text-base font-semibold min-h-[56px] bg-white hover:bg-gray-50 transition-all duration-200 flex items-center justify-between shadow-sm hover:shadow-md"
+                  className="w-auto px-6 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm sm:text-base font-semibold min-h-[56px] bg-white hover:bg-gray-50 transition-all duration-200 flex items-center justify-between shadow-sm hover:shadow-md"
                 >
                   <span className="text-gray-900">
                     {selectedDate ? new Date(selectedDate).toLocaleDateString('ko-KR', {

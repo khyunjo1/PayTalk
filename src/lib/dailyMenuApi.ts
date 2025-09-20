@@ -62,57 +62,55 @@ export const createDailyMenu = async (data: CreateDailyMenuData): Promise<DailyM
     throw new Error('메뉴 날짜가 필요합니다.');
   }
 
-  // RLS 우회를 위해 rpc 함수 사용 시도
-  try {
-    const { data: result, error } = await supabase
-      .rpc('create_daily_menu', {
-        p_store_id: data.store_id,
-        p_menu_date: data.menu_date,
-        p_title: data.title || '오늘의 반찬',
-        p_description: data.description || null
-      });
-
-    if (error) {
-      console.error('RPC 함수 오류, 직접 insert 시도:', error);
-      throw error;
-    }
-
-    // RPC 함수는 배열을 반환하므로 첫 번째 요소 반환
-    return result && result.length > 0 ? result[0] : null;
-  } catch (rpcError) {
-    console.log('RPC 함수 없음, 직접 insert 시도');
-    
-    // RPC 함수가 없으면 직접 insert 시도 (설정값들 포함)
-    const { data: result, error } = await supabase
-      .from('daily_menus')
-      .insert({
-        store_id: data.store_id,
-        menu_date: data.menu_date,
-        title: data.title || '오늘의 반찬',
-        description: data.description || null,
-        pickup_time_slots: data.pickup_time_slots || ['09:00', '20:00'],
-        delivery_time_slots: data.delivery_time_slots || [],
-        delivery_fee: data.delivery_fee || 0,
-        order_cutoff_time: data.order_cutoff_time || null,
-        minimum_order_amount: data.minimum_order_amount || 0
-      })
-      .select(`
-        *,
-        pickup_time_slots,
-        delivery_time_slots,
-        delivery_fee,
-        order_cutoff_time,
-        minimum_order_amount
-      `)
-      .single();
-
-    if (error) {
-      console.error('일일 메뉴 생성 오류:', error);
-      throw new Error(`일일 메뉴 생성에 실패했습니다: ${error.message}`);
-    }
-
-    return result;
+  // 먼저 이미 존재하는지 확인
+  console.log('🔍 기존 일일 메뉴 확인 중:', { storeId: data.store_id, menuDate: data.menu_date });
+  const existingDailyMenu = await getDailyMenu(data.store_id, data.menu_date);
+  if (existingDailyMenu) {
+    console.log('✅ 이미 존재하는 일일 메뉴 발견:', existingDailyMenu);
+    return existingDailyMenu;
   }
+  console.log('🔍 새로운 일일 메뉴 생성 필요');
+
+  // RPC 함수 오류로 인해 직접 insert만 사용
+  console.log('🔍 직접 insert로 일일 메뉴 생성 시도');
+  
+  // 직접 insert 시도 (설정값들 포함)
+  console.log('🔍 직접 insert 시도:', {
+    store_id: data.store_id,
+    menu_date: data.menu_date,
+    title: data.title || '오늘의 반찬'
+  });
+  
+  const { data: result, error } = await supabase
+    .from('daily_menus')
+    .insert({
+      store_id: data.store_id,
+      menu_date: data.menu_date,
+      title: data.title || '오늘의 반찬',
+      description: data.description || null,
+      pickup_time_slots: data.pickup_time_slots || ['09:00', '20:00'],
+      delivery_time_slots: data.delivery_time_slots || [],
+      delivery_fee: data.delivery_fee || 0,
+      order_cutoff_time: data.order_cutoff_time || null,
+      minimum_order_amount: data.minimum_order_amount || 0
+    })
+    .select(`
+      *,
+      pickup_time_slots,
+      delivery_time_slots,
+      delivery_fee,
+      order_cutoff_time,
+      minimum_order_amount
+    `)
+    .single();
+
+  if (error) {
+    console.error('❌ 일일 메뉴 생성 오류:', error);
+    throw new Error(`일일 메뉴 생성에 실패했습니다: ${error.message}`);
+  }
+
+  console.log('✅ 직접 insert로 일일 메뉴 생성 성공:', result);
+  return result;
 };
 
 // 특정 매장의 일일 메뉴 페이지 조회
