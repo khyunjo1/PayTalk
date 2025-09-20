@@ -537,7 +537,6 @@ export default function AdminOrders() {
 
     let orderText = `===== 주문상세내역 =====\n\n`;
     orderText += `📋 주문번호: ${getOrderNumber(order, finalFilteredOrders)}\n`;
-    orderText += `📅 주문일시: ${formattedDate} ${formattedTime}\n`;
     orderText += `📊 주문상태: ${order.status}\n`;
     orderText += `🚚 주문타입: ${order.order_type === 'delivery' ? '배달' : '픽업'}\n\n`;
 

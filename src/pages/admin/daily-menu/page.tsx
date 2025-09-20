@@ -985,30 +985,30 @@ export default function AdminDailyMenu() {
           <div className="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-4 sm:p-8 mb-4 sm:mb-8">
             <div className="mb-6 sm:mb-8">
               <div className="mb-5">
-                <div className="flex items-center gap-3 sm:gap-4 mb-4">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center">
-                    <i className="ri-restaurant-line text-orange-500 text-lg sm:text-xl"></i>
+                <div className="flex items-center justify-between gap-3 sm:gap-4 mb-4">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center">
+                      <i className="ri-restaurant-line text-orange-500 text-lg sm:text-xl"></i>
+                    </div>
+                    <div>
+                      <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">주문서 수정</h2>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">주문서 수정</h2>
-                  </div>
-                </div>
-                
-                {/* 최근 주문서 적용 버튼 */}
-                <div className="flex justify-start mb-6">
+                  
+                  {/* 최근 주문서 적용 버튼 - 작게 만들어서 헤딩 옆에 배치 */}
                   <button
                     onClick={handleLoadRecentTemplate}
                     disabled={loading}
-                    className="group flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed rounded-2xl transition-all duration-300 text-base font-bold w-auto min-w-[240px] shadow-lg hover:shadow-xl disabled:shadow-md transform hover:scale-105 disabled:transform-none"
+                    className="group flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed rounded-lg transition-all duration-300 text-sm font-semibold shadow-md hover:shadow-lg disabled:shadow-sm transform hover:scale-105 disabled:transform-none"
                   >
-                    <div className="flex items-center justify-center w-8 h-8 bg-white bg-opacity-20 rounded-full group-hover:bg-opacity-30 transition-all duration-300">
-                      <i className="ri-file-copy-line text-lg group-hover:scale-110 transition-transform duration-300"></i>
+                    <div className="flex items-center justify-center w-5 h-5 bg-white bg-opacity-20 rounded-full group-hover:bg-opacity-30 transition-all duration-300">
+                      <i className="ri-file-copy-line text-sm group-hover:scale-110 transition-transform duration-300"></i>
                     </div>
                     <span className="whitespace-nowrap">
                       {loading ? '불러오는 중...' : '최근 주문서 적용'}
                     </span>
                     {loading && (
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     )}
                   </button>
                 </div>
