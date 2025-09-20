@@ -215,6 +215,15 @@ export default function OrderComplete() {
                 <div className="text-xs text-blue-600 mt-3">
                   QR 코드를 스캔하여 결제를 완료해주세요
                 </div>
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <i className="ri-alarm-warning-line text-red-500 text-sm"></i>
+                    <span className="text-red-700 font-bold text-sm">중요 안내</span>
+                  </div>
+                  <p className="text-red-800 font-semibold text-sm leading-relaxed">
+                    영수증은 <span className="bg-red-100 px-1 rounded font-bold">{orderData.stores.phone}</span>로 문자주세요
+                  </p>
+                </div>
               </div>
             </div>
           )}
