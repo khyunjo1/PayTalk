@@ -37,7 +37,7 @@ interface Store {
   updated_at: string;
 }
 
-const CATEGORIES = ['고기반찬', '계절메뉴', '국', '김치류', '나물류', '조림류', '튀김류', '밑반찬', '세트메뉴', '3000원 반찬', '오늘의 특가', '오늘의 메인반찬', '서비스반찬', '기타'];
+const CATEGORIES = ['서비스반찬', '월식메뉴', '메인요리', '세트메뉴', '국', '고기반찬', '나물류', '조림류', '튀김류', '김치류', '3000원 반찬', '기타', '젓갈류', '밑반찬'];
 
 export default function OwnerMenu() {
   const navigate = useNavigate();

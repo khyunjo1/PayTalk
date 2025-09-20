@@ -9,6 +9,7 @@ import {
 } from '../../../../../lib/dailyMenuApi';
 import { getStore } from '../../../../../lib/storeApi';
 import { getCurrentKoreaTime } from '../../../../../lib/dateUtils';
+import { getMenuCategoriesByStoreCategory } from '../../../../../lib/categoryMapping';
 import Header from '../../../../../components/Header';
 import Footer from '../../../../../components/Footer';
 
@@ -278,9 +279,27 @@ export default function DailyMenuPage() {
         console.log('setIsOrderClosed 호출됨:', orderClosed);
       }
       
-      // 4. 카테고리 추출
+      // 4. 카테고리 추출 및 정렬
       const uniqueCategories = [...new Set(menuItems.map(item => item.menu?.category).filter(Boolean))];
-      setCategories(uniqueCategories);
+      
+      // 매장 카테고리에 따른 정렬 순서 가져오기
+      const storeCategory = storeData?.category || '한식반찬';
+      const categoryOrder = getMenuCategoriesByStoreCategory(storeCategory);
+      
+      // 카테고리를 지정된 순서대로 정렬
+      const sortedCategories = uniqueCategories.sort((a, b) => {
+        const indexA = categoryOrder.indexOf(a);
+        const indexB = categoryOrder.indexOf(b);
+        
+        // 순서에 없는 카테고리는 맨 뒤로
+        if (indexA === -1 && indexB === -1) return a.localeCompare(b);
+        if (indexA === -1) return 1;
+        if (indexB === -1) return -1;
+        
+        return indexA - indexB;
+      });
+      
+      setCategories(sortedCategories);
       
       // 5. 카테고리를 접힌 상태로 설정 (기본값)
       setExpandedCategories(new Set());
